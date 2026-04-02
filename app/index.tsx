@@ -1,8 +1,7 @@
 // app\index.tsx
 
-import { SafeAreaView, StyleSheet, Text, View } from 'react-native';
-import BiofeedbackHomeScreen from '../src/features/biofeedback/screens/BiofeedbackHomeScreen';
+import BiofeedbackEntryCreateScreen from '../src/features/biofeedback/screens/BiofeedbackEntryCreateScreen';
 
 export default function Page() {
-  return <BiofeedbackHomeScreen />;
+  return <BiofeedbackEntryCreateScreen />;
 }

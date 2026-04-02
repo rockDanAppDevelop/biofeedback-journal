@@ -17,7 +17,7 @@ export type BiofeedbackEntry = {
   id: string;
 
   measuredAt: string;
-  date: string;
+  dateKey: string;
   timeOfDay: TimeOfDay;
 
   exerciseName: string;
