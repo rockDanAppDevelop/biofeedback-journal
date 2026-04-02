@@ -1,6 +1,7 @@
 // src\features\biofeedback\screens\BiofeedbackHomeScreen.tsx
 
-import { SafeAreaView, StyleSheet, Text, View } from 'react-native';
+import { Button, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function BiofeedbackHomeScreen() {
   return (

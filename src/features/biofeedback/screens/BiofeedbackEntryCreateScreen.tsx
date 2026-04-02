@@ -4,13 +4,13 @@ import { useMemo, useState } from 'react';
 import {
   Alert,
   Button,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { createDefaultBiofeedbackEntryFormValues } from '../forms/biofeedback-entry-form.defaults';
 import { validateBiofeedbackEntryForm } from '../forms/biofeedback-entry-form.validation';

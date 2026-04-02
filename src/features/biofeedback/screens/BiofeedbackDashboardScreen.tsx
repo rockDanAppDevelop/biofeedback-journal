@@ -1,19 +1,17 @@
 // src\features\biofeedback\screens\BiofeedbackDashboardScreen.tsx
 
 import { router } from 'expo-router';
-import { Button, SafeAreaView, StyleSheet, Text, View } from 'react-native';
+import { Button, StyleSheet, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+import DaysStrip from '../components/DaysStrip';
 
 export default function BiofeedbackDashboardScreen() {
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
       <View style={styles.container}>
-        <Text style={styles.title}>Biofeedback Journal</Text>
-        <Text style={styles.subtitle}>מעקב יומי</Text>
-
-        <View style={styles.calendarPlaceholder}>
-          <Text style={styles.placeholderTitle}>כאן יהיה לוח המעקב</Text>
-          <Text style={styles.placeholderText}>ירוק = יש דיווח</Text>
-          <Text style={styles.placeholderText}>אדום = אין דיווח</Text>
+        <View style={styles.daysSection}>
+          <DaysStrip />
         </View>
 
         <Button title="הוסף מדידה" onPress={() => router.push('/entries/new')} />
@@ -29,32 +27,11 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    padding: 20,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 20,
   },
-  title: {
-    fontSize: 28,
-    fontWeight: '700',
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 18,
+  daysSection: {
     marginBottom: 20,
-  },
-  calendarPlaceholder: {
-    marginBottom: 24,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: '#d7d7d7',
-    borderRadius: 12,
-    backgroundColor: '#fafafa',
-  },
-  placeholderTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    marginBottom: 8,
-  },
-  placeholderText: {
-    fontSize: 15,
-    marginBottom: 4,
   },
 });
