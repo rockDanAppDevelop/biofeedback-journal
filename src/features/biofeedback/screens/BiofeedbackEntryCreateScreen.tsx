@@ -1,5 +1,6 @@
 // src\features\biofeedback\screens\BiofeedbackEntryCreateScreen.tsx
 
+import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import {
   Alert,
@@ -12,7 +13,9 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { createBiofeedbackEntry } from '../data/biofeedback-entry.repository';
 import { createDefaultBiofeedbackEntryFormValues } from '../forms/biofeedback-entry-form.defaults';
+import { toCreateBiofeedbackEntryInput } from '../forms/biofeedback-entry-form.mapper';
 import { validateBiofeedbackEntryForm } from '../forms/biofeedback-entry-form.validation';
 
 export default function BiofeedbackEntryCreateScreen() {
@@ -27,7 +30,7 @@ export default function BiofeedbackEntryCreateScreen() {
     }));
   }
 
-  function handleSave() {
+  async function handleSave() {
     const nextErrors = validateBiofeedbackEntryForm(values);
     const hasErrors = Object.keys(nextErrors).length > 0;
 
@@ -36,7 +39,23 @@ export default function BiofeedbackEntryCreateScreen() {
       return;
     }
 
-    Alert.alert('נשמר בהמשך', 'הטופס תקין. בשלב הבא נחבר שמירה מקומית.');
+    try {
+      const input = toCreateBiofeedbackEntryInput(values);
+
+      await createBiofeedbackEntry(input);
+
+      Alert.alert('נשמר', 'המדידה נשמרה בהצלחה.', [
+        {
+          text: 'אישור',
+          onPress: () => {
+            setValues(createDefaultBiofeedbackEntryFormValues());
+            router.back();
+          },
+        },
+      ]);
+    } catch {
+      Alert.alert('שגיאה', 'שמירת המדידה נכשלה.');
+    }
   }
 
   return (

@@ -9,6 +9,10 @@ type CalendarDay = {
   hasEntry: boolean;
 };
 
+type MonthGridProps = {
+  entryDateKeys: string[];
+};
+
 function toDateKey(date: Date): string {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -17,7 +21,7 @@ function toDateKey(date: Date): string {
   return `${year}-${month}-${day}`;
 }
 
-function buildMonthDays(referenceDate = new Date()): CalendarDay[] {
+function buildMonthDays(referenceDate: Date, entryDateKeys: string[]): CalendarDay[] {
   const year = referenceDate.getFullYear();
   const month = referenceDate.getMonth();
 
@@ -31,35 +35,42 @@ function buildMonthDays(referenceDate = new Date()): CalendarDay[] {
 
   for (let i = mondayBasedStartDay; i > 0; i--) {
     const date = new Date(year, month, 1 - i);
+    const dateKey = toDateKey(date);
+
     days.push({
-      dateKey: toDateKey(date),
+      dateKey,
       dayNumber: date.getDate(),
       isCurrentMonth: false,
-      hasEntry: false,
+      hasEntry: entryDateKeys.includes(dateKey),
     });
   }
 
   for (let day = 1; day <= lastDayOfMonth.getDate(); day++) {
     const date = new Date(year, month, day);
+    const dateKey = toDateKey(date);
 
     days.push({
-      dateKey: toDateKey(date),
+      dateKey,
       dayNumber: day,
       isCurrentMonth: true,
-      hasEntry: Math.random() > 0.5,
+      hasEntry: entryDateKeys.includes(dateKey),
     });
   }
 
+  let nextDay = 1;
+
   while (days.length % 7 !== 0) {
-    const nextDayIndex = days.length - (mondayBasedStartDay + lastDayOfMonth.getDate()) + 1;
-    const date = new Date(year, month + 1, nextDayIndex);
+    const date = new Date(year, month + 1, nextDay);
+    const dateKey = toDateKey(date);
 
     days.push({
-      dateKey: toDateKey(date),
+      dateKey,
       dayNumber: date.getDate(),
       isCurrentMonth: false,
-      hasEntry: false,
+      hasEntry: entryDateKeys.includes(dateKey),
     });
+
+    nextDay += 1;
   }
 
   return days;
@@ -74,9 +85,9 @@ function getMonthTitle(referenceDate = new Date()): string {
 
 const weekDayLabels = ['ב׳', 'ג׳', 'ד׳', 'ה׳', 'ו׳', 'ש׳', 'א׳'];
 
-export default function MonthGrid() {
+export default function MonthGrid({ entryDateKeys }: MonthGridProps) {
   const referenceDate = new Date();
-  const monthDays = buildMonthDays(referenceDate);
+  const monthDays = buildMonthDays(referenceDate, entryDateKeys);
   const todayKey = toDateKey(new Date());
 
   return (
@@ -101,7 +112,7 @@ export default function MonthGrid() {
               style={[
                 styles.dayCell,
                 !day.isCurrentMonth && styles.dayCellOutsideMonth,
-                day.isCurrentMonth && day.hasEntry && styles.dayCellDone,
+                day.hasEntry && styles.dayCellDone,
                 isToday && styles.dayCellToday,
               ]}
             >
@@ -109,7 +120,7 @@ export default function MonthGrid() {
                 style={[
                   styles.dayText,
                   !day.isCurrentMonth && styles.dayTextOutsideMonth,
-                  day.isCurrentMonth && day.hasEntry && styles.dayTextDone,
+                  day.hasEntry && styles.dayTextDone,
                 ]}
               >
                 {day.dayNumber}

@@ -1,16 +1,33 @@
 // src\features\biofeedback\screens\BiofeedbackDashboardScreen.tsx
 
+import { useFocusEffect } from 'expo-router';
+import { useCallback, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import FloatingAddButton from '../components/FloatingAddButton';
 import MonthGrid from '../components/MonthGrid';
+import { listBiofeedbackEntries } from '../data/biofeedback-entry.repository';
 
 export default function BiofeedbackDashboardScreen() {
+  const [entryDateKeys, setEntryDateKeys] = useState<string[]>([]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadEntries();
+    }, []),
+  );
+
+  async function loadEntries() {
+    const entries = await listBiofeedbackEntries();
+    const uniqueDateKeys = Array.from(new Set(entries.map((entry) => entry.dateKey)));
+    setEntryDateKeys(uniqueDateKeys);
+  }
+
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <View style={styles.container}>
-        <MonthGrid />
+        <MonthGrid entryDateKeys={entryDateKeys} />
         <FloatingAddButton />
       </View>
     </SafeAreaView>
