@@ -1,20 +1,17 @@
 // src\features\biofeedback\screens\BiofeedbackDashboardScreen.tsx
 
-import { router } from 'expo-router';
-import { Button, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import DaysStrip from '../components/DaysStrip';
+import FloatingAddButton from '../components/FloatingAddButton';
+import MonthGrid from '../components/MonthGrid';
 
 export default function BiofeedbackDashboardScreen() {
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
       <View style={styles.container}>
-        <View style={styles.daysSection}>
-          <DaysStrip />
-        </View>
-
-        <Button title="הוסף מדידה" onPress={() => router.push('/entries/new')} />
+        <MonthGrid />
+        <FloatingAddButton />
       </View>
     </SafeAreaView>
   );
@@ -27,11 +24,9 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingTop: 12,
     paddingBottom: 20,
-  },
-  daysSection: {
-    marginBottom: 20,
+    backgroundColor: '#ffffff',
   },
 });
