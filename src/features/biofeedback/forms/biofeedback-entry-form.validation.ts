@@ -4,13 +4,29 @@ import { BiofeedbackEntryFormValues } from '../types/biofeedback-entry-form.type
 
 export type ValidationErrorMap = Partial<Record<keyof BiofeedbackEntryFormValues, string>>;
 
+function isValidDateInput(value: string): boolean {
+  return /^\d{4}-\d{2}-\d{2}$/.test(value);
+}
+
+function isValidTimeInput(value: string): boolean {
+  return /^\d{2}:\d{2}$/.test(value);
+}
+
 export function validateBiofeedbackEntryForm(
   values: BiofeedbackEntryFormValues,
 ): ValidationErrorMap {
   const errors: ValidationErrorMap = {};
 
-  if (!values.measuredAt) {
-    errors.measuredAt = 'יש לבחור תאריך ושעה';
+  if (!values.measurementDate) {
+    errors.measurementDate = 'יש לבחור תאריך';
+  } else if (!isValidDateInput(values.measurementDate)) {
+    errors.measurementDate = 'פורמט תאריך צריך להיות YYYY-MM-DD';
+  }
+
+  if (!values.measurementTime) {
+    errors.measurementTime = 'יש לבחור שעה';
+  } else if (!isValidTimeInput(values.measurementTime)) {
+    errors.measurementTime = 'פורמט שעה צריך להיות HH:mm';
   }
 
   if (!values.exerciseName.trim()) {

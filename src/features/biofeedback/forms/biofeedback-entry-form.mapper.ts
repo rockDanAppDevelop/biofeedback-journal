@@ -19,11 +19,15 @@ export type CreateBiofeedbackEntryInput = {
   rawSourceData?: Record<string, unknown>;
 };
 
+function buildMeasuredAt(dateValue: string, timeValue: string): string {
+  return `${dateValue}T${timeValue}:00`;
+}
+
 export function toCreateBiofeedbackEntryInput(
   values: BiofeedbackEntryFormValues,
 ): CreateBiofeedbackEntryInput {
   return {
-    measuredAt: values.measuredAt,
+    measuredAt: buildMeasuredAt(values.measurementDate, values.measurementTime),
     exerciseName: values.exerciseName.trim(),
     durationMinutes: values.durationMinutes || 8,
     hrvDistribution: {

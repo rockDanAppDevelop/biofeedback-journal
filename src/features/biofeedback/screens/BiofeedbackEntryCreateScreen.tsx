@@ -66,14 +66,25 @@ export default function BiofeedbackEntryCreateScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>פרטי מדידה</Text>
 
-          <Text style={styles.label}>תאריך ושעה (ISO כרגע)</Text>
-          <TextInput
-            value={values.measuredAt}
-            onChangeText={(text) => updateField('measuredAt', text)}
-            style={styles.input}
-            autoCapitalize="none"
-          />
-          {errors.measuredAt ? <Text style={styles.errorText}>{errors.measuredAt}</Text> : null}
+          <Text style={styles.label}>תאריך</Text>
+<TextInput
+  value={values.measurementDate}
+  onChangeText={(text) => updateField('measurementDate', text)}
+  style={styles.input}
+  autoCapitalize="none"
+  placeholder="YYYY-MM-DD"
+/>
+{errors.measurementDate ? <Text style={styles.errorText}>{errors.measurementDate}</Text> : null}
+
+<Text style={styles.label}>שעה</Text>
+<TextInput
+  value={values.measurementTime}
+  onChangeText={(text) => updateField('measurementTime', text)}
+  style={styles.input}
+  autoCapitalize="none"
+  placeholder="HH:mm"
+/>
+{errors.measurementTime ? <Text style={styles.errorText}>{errors.measurementTime}</Text> : null}
 
           <Text style={styles.label}>סוג תרגיל / מדידה</Text>
           <TextInput

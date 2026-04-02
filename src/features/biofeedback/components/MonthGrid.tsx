@@ -1,6 +1,8 @@
 //src\features\biofeedback\components\MonthGrid.tsx
 
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+
+import { toDateKey } from './calendar.utils';
 
 type CalendarDay = {
   dateKey: string;
@@ -11,15 +13,8 @@ type CalendarDay = {
 
 type MonthGridProps = {
   entryDateKeys: string[];
+  onDayPress: (dateKey: string) => void;
 };
-
-function toDateKey(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-
-  return `${year}-${month}-${day}`;
-}
 
 function buildMonthDays(referenceDate: Date, entryDateKeys: string[]): CalendarDay[] {
   const year = referenceDate.getFullYear();
@@ -85,7 +80,7 @@ function getMonthTitle(referenceDate = new Date()): string {
 
 const weekDayLabels = ['ב׳', 'ג׳', 'ד׳', 'ה׳', 'ו׳', 'ש׳', 'א׳'];
 
-export default function MonthGrid({ entryDateKeys }: MonthGridProps) {
+export default function MonthGrid({ entryDateKeys, onDayPress }: MonthGridProps) {
   const referenceDate = new Date();
   const monthDays = buildMonthDays(referenceDate, entryDateKeys);
   const todayKey = toDateKey(new Date());
@@ -107,8 +102,9 @@ export default function MonthGrid({ entryDateKeys }: MonthGridProps) {
           const isToday = day.dateKey === todayKey;
 
           return (
-            <View
+            <Pressable
               key={day.dateKey}
+              onPress={() => onDayPress(day.dateKey)}
               style={[
                 styles.dayCell,
                 !day.isCurrentMonth && styles.dayCellOutsideMonth,
@@ -125,7 +121,7 @@ export default function MonthGrid({ entryDateKeys }: MonthGridProps) {
               >
                 {day.dayNumber}
               </Text>
-            </View>
+            </Pressable>
           );
         })}
       </View>

@@ -1,6 +1,6 @@
 // src\features\biofeedback\screens\BiofeedbackDashboardScreen.tsx
 
-import { useFocusEffect } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -24,10 +24,14 @@ export default function BiofeedbackDashboardScreen() {
     setEntryDateKeys(uniqueDateKeys);
   }
 
+  function handleDayPress(dateKey: string) {
+    router.push(`/day/${dateKey}`);
+  }
+
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <View style={styles.container}>
-        <MonthGrid entryDateKeys={entryDateKeys} />
+        <MonthGrid entryDateKeys={entryDateKeys} onDayPress={handleDayPress} />
         <FloatingAddButton />
       </View>
     </SafeAreaView>

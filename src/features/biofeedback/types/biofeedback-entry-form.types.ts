@@ -1,7 +1,8 @@
 // src\features\biofeedback\types\biofeedback-entry-form.types.ts
 
 export type BiofeedbackEntryFormValues = {
-  measuredAt: string;
+  measurementDate: string;
+  measurementTime: string;
   exerciseName: string;
   durationMinutes: number;
   hrvStressPercent: string;
