@@ -1,7 +1,7 @@
 // app\index.tsx
 
-import BiofeedbackEntryCreateScreen from '../src/features/biofeedback/screens/BiofeedbackEntryCreateScreen';
+import BiofeedbackDashboardScreen from '../src/features/biofeedback/screens/BiofeedbackDashboardScreen';
 
 export default function Page() {
-  return <BiofeedbackEntryCreateScreen />;
+  return <BiofeedbackDashboardScreen />;
 }
