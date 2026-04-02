@@ -1,13 +1,13 @@
-// App.tsx
+// app\index.tsx
 
 import { SafeAreaView, StyleSheet, Text, View } from 'react-native';
 
-export default function App() {
+export default function HomeScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
         <Text style={styles.title}>Biofeedback Journal</Text>
-        <Text style={styles.subtitle}>Mobile v1 is starting</Text>
+        <Text style={styles.subtitle}>Home screen</Text>
       </View>
     </SafeAreaView>
   );
