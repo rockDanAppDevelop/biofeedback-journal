@@ -20,8 +20,23 @@ import { validateBiofeedbackEntryForm } from '../forms/biofeedback-entry-form.va
 
 import DateTimeField from '../components/DateTimeField';
 
-export default function BiofeedbackEntryCreateScreen() {
-  const [values, setValues] = useState(createDefaultBiofeedbackEntryFormValues());
+type Props = {
+  initialDateKey?: string;
+};
+
+export default function BiofeedbackEntryCreateScreen({ initialDateKey }: Props) {
+  const [values, setValues] = useState(() => {
+  const defaults = createDefaultBiofeedbackEntryFormValues();
+
+  if (initialDateKey) {
+    return {
+      ...defaults,
+      measurementDate: initialDateKey,
+    };
+  }
+
+  return defaults;
+});
 
   const errors = useMemo(() => validateBiofeedbackEntryForm(values), [values]);
 
@@ -50,7 +65,18 @@ export default function BiofeedbackEntryCreateScreen() {
         {
           text: 'אישור',
           onPress: () => {
-            setValues(createDefaultBiofeedbackEntryFormValues());
+            setValues(() => {
+  const defaults = createDefaultBiofeedbackEntryFormValues();
+
+  if (initialDateKey) {
+    return {
+      ...defaults,
+      measurementDate: initialDateKey,
+    };
+  }
+
+  return defaults;
+});
             router.back();
           },
         },

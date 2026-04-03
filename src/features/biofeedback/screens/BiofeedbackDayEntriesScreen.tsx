@@ -47,8 +47,19 @@ export default function BiofeedbackDayEntriesScreen({ dateKey }: Props) {
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
-        <Text style={styles.title}>{dateKey}</Text>
-        <Text style={styles.subtitle}>מדידות היום</Text>
+        <View style={styles.headerRow}>
+  <Pressable
+    style={styles.addButton}
+    onPress={() => router.push(`/entries/new?dateKey=${dateKey}`)}
+  >
+    <Text style={styles.addButtonText}>＋</Text>
+  </Pressable>
+
+  <View style={styles.headerTextBlock}>
+    <Text style={styles.title}>{dateKey}</Text>
+    <Text style={styles.subtitle}>מדידות היום</Text>
+  </View>
+</View>
 
         {entries.length === 0 ? (
           <View style={styles.emptyState}>
@@ -90,6 +101,30 @@ export default function BiofeedbackDayEntriesScreen({ dateKey }: Props) {
 }
 
 const styles = StyleSheet.create({
+    headerRow: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  headerTextBlock: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  addButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#1e88e5',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  addButtonText: {
+    color: '#ffffff',
+    fontSize: 24,
+    fontWeight: '600',
+    lineHeight: 24,
+  },
   safeArea: {
     flex: 1,
     backgroundColor: '#ffffff',
@@ -107,7 +142,7 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 16,
     color: '#666666',
-    marginBottom: 16,
+    marginBottom: 0,
   },
   emptyState: {
     borderWidth: 1,

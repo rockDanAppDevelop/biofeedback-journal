@@ -38,8 +38,15 @@ export default function BiofeedbackDashboardScreen() {
     setEntryDateKeys(uniqueDateKeys);
   }
 
-  function handleDayPress(dateKey: string) {
-    router.push(`/day/${dateKey}`);
+    function handleDayPress(dateKey: string) {
+    const hasEntryForDay = entryDateKeys.includes(dateKey);
+
+    if (hasEntryForDay) {
+      router.push(`/day/${dateKey}`);
+      return;
+    }
+
+    router.push(`/entries/new?dateKey=${dateKey}`);
   }
 
   function handlePreviousMonth() {
