@@ -11,6 +11,7 @@ export default function RootLayout() {
         <Stack.Screen name="entries/new" options={{ title: 'הוספת מדידה' }} />
         <Stack.Screen name="entries/[entryId]" options={{ title: 'פרטי מדידה' }} />
         <Stack.Screen name="day/[dateKey]" options={{ title: 'רשומות יום' }} />
+        <Stack.Screen name="export" options={{ title: 'ייצוא נתונים' }} />
       </Stack>
     </SafeAreaProvider>
   );

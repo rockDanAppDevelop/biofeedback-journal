@@ -4,8 +4,9 @@ import { File, Paths } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 
 import { listBiofeedbackEntries } from './biofeedback-entry.repository';
+import { BiofeedbackEntry } from '../types/biofeedback-entry.types';
 
-function createExportFileName() {
+function createExportFileName(suffix: string) {
   const now = new Date();
 
   const year = now.getFullYear();
@@ -14,12 +15,10 @@ function createExportFileName() {
   const hours = String(now.getHours()).padStart(2, '0');
   const minutes = String(now.getMinutes()).padStart(2, '0');
 
-  return `biofeedback-entries-${year}-${month}-${day}-${hours}-${minutes}.json`;
+  return `biofeedback-${suffix}-${year}-${month}-${day}-${hours}-${minutes}.json`;
 }
 
-export async function exportBiofeedbackEntriesAsJson(): Promise<void> {
-  const entries = await listBiofeedbackEntries();
-
+async function shareEntriesAsJson(entries: BiofeedbackEntry[], suffix: string): Promise<void> {
   const payload = {
     exportedAt: new Date().toISOString(),
     totalEntries: entries.length,
@@ -28,7 +27,7 @@ export async function exportBiofeedbackEntriesAsJson(): Promise<void> {
 
   const json = JSON.stringify(payload, null, 2);
 
-  const file = new File(Paths.cache, createExportFileName());
+  const file = new File(Paths.cache, createExportFileName(suffix));
   file.write(json);
 
   const canShare = await Sharing.isAvailableAsync();
@@ -40,4 +39,39 @@ export async function exportBiofeedbackEntriesAsJson(): Promise<void> {
     mimeType: 'application/json',
     dialogTitle: 'ייצוא נתוני Biofeedback',
   });
+}
+
+export async function exportAllBiofeedbackEntriesAsJson(): Promise<void> {
+  const entries = await listBiofeedbackEntries();
+  await shareEntriesAsJson(entries, 'all');
+}
+
+export async function exportCurrentMonthBiofeedbackEntriesAsJson(): Promise<void> {
+  const entries = await listBiofeedbackEntries();
+  const now = new Date();
+
+  const year = now.getFullYear();
+  const month = now.getMonth();
+
+  const filtered = entries.filter((entry) => {
+    const date = new Date(entry.measuredAt);
+    return date.getFullYear() === year && date.getMonth() === month;
+  });
+
+  await shareEntriesAsJson(filtered, 'current-month');
+}
+
+export async function exportMonthBiofeedbackEntriesAsJson(
+  year: number,
+  month: number,
+): Promise<void> {
+  const entries = await listBiofeedbackEntries();
+
+  const filtered = entries.filter((entry) => {
+    const date = new Date(entry.measuredAt);
+    return date.getFullYear() === year && date.getMonth() === month;
+  });
+
+  const monthLabel = `${year}-${String(month + 1).padStart(2, '0')}`;
+  await shareEntriesAsJson(filtered, `month-${monthLabel}`);
 }

@@ -2,14 +2,12 @@
 
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import FloatingAddButton from '../components/FloatingAddButton';
 import MonthGrid from '../components/MonthGrid';
 import { listBiofeedbackEntries } from '../data/biofeedback-entry.repository';
-
-import { exportBiofeedbackEntriesAsJson } from '../data/biofeedback-entry.export';
 
 function getMonthTitle(date: Date): string {
   return new Intl.DateTimeFormat('he-IL', {
@@ -61,13 +59,6 @@ export default function BiofeedbackDashboardScreen() {
     setReferenceDate(new Date());
   }
 
-    async function handleExportData() {
-    try {
-      await exportBiofeedbackEntriesAsJson();
-    } catch {
-      Alert.alert('שגיאה', 'ייצוא הנתונים נכשל.');
-    }
-  }
 
   const monthTitle = useMemo(() => getMonthTitle(referenceDate), [referenceDate]);
 
@@ -90,7 +81,10 @@ export default function BiofeedbackDashboardScreen() {
 </Pressable>
         </View>
 
-                <Pressable style={styles.exportButton} onPress={handleExportData}>
+                <Pressable
+          style={styles.exportButton}
+          onPress={() => router.push('/export')}
+        >
           <Text style={styles.exportButtonText}>ייצוא נתונים</Text>
         </Pressable>
 
