@@ -12,7 +12,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
+import { Pressable } from 'react-native';
 import {
   deleteBiofeedbackEntry,
   getBiofeedbackEntryById,
@@ -27,9 +27,10 @@ import DateTimeField from '../components/DateTimeField';
 
 type Props = {
   entryId: string;
+  fromDay?: string;
 };
 
-export default function BiofeedbackEntryDetailScreen({ entryId }: Props) {
+export default function BiofeedbackEntryDetailScreen({ entryId, fromDay }: Props) {
   const [values, setValues] = useState(createDefaultBiofeedbackEntryFormValues());
   const [isLoading, setIsLoading] = useState(true);
 
@@ -63,7 +64,7 @@ export default function BiofeedbackEntryDetailScreen({ entryId }: Props) {
     }));
   }
 
-  async function handleUpdate() {
+    async function handleUpdate() {
     const nextErrors = validateBiofeedbackEntryForm(values);
     const hasErrors = Object.keys(nextErrors).length > 0;
 
@@ -80,14 +81,14 @@ export default function BiofeedbackEntryDetailScreen({ entryId }: Props) {
       Alert.alert('עודכן', 'המדידה עודכנה בהצלחה.', [
         {
           text: 'אישור',
-          onPress: () => router.back(),
+          onPress: () => router.replace('/'),
         },
       ]);
     } catch {
       Alert.alert('שגיאה', 'עדכון המדידה נכשל.');
     }
   }
-
+  
   function handleDelete() {
     Alert.alert('מחיקת מדידה', 'האם למחוק את המדידה?', [
       { text: 'ביטול', style: 'cancel' },
@@ -97,7 +98,7 @@ export default function BiofeedbackEntryDetailScreen({ entryId }: Props) {
         onPress: async () => {
           try {
             await deleteBiofeedbackEntry(entryId);
-            router.back();
+            router.replace('/');
           } catch {
             Alert.alert('שגיאה', 'מחיקת המדידה נכשלה.');
           }
@@ -229,18 +230,81 @@ export default function BiofeedbackEntryDetailScreen({ entryId }: Props) {
         </View>
 
         <View style={styles.actions}>
-          <Button title="שמור שינויים" onPress={handleUpdate} />
-        </View>
+  <Pressable style={styles.saveButton} onPress={handleUpdate}>
+    <Text style={styles.saveButtonText}>שמור שינויים</Text>
+  </Pressable>
+</View>
 
-        <View style={styles.deleteAction}>
-          <Button title="מחק מדידה" color="#c62828" onPress={handleDelete} />
-        </View>
+<View style={styles.cancelAction}>
+  <Pressable
+    style={styles.cancelButton}
+    onPress={() => {
+      if (fromDay) {
+        router.back();
+        return;
+      }
+      router.replace('/');
+    }}
+  >
+    <Text style={styles.cancelButtonText}>ביטול עריכה</Text>
+  </Pressable>
+</View>
+
+<View style={styles.deleteAction}>
+  <Pressable style={styles.deleteButton} onPress={handleDelete}>
+    <Text style={styles.deleteButtonText}>מחק מדידה</Text>
+  </Pressable>
+</View>
       </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  saveButton: {
+  height: 48,
+  borderRadius: 12,
+  backgroundColor: '#43a047',
+  alignItems: 'center',
+  justifyContent: 'center',
+},
+
+saveButtonText: {
+  color: '#ffffff',
+  fontSize: 16,
+  fontWeight: '700',
+},
+
+cancelButton: {
+  height: 48,
+  borderRadius: 12,
+  backgroundColor: '#eeeeee',
+  alignItems: 'center',
+  justifyContent: 'center',
+},
+
+cancelButtonText: {
+  color: '#333333',
+  fontSize: 16,
+  fontWeight: '600',
+},
+
+deleteButton: {
+  height: 48,
+  borderRadius: 12,
+  backgroundColor: '#c62828',
+  alignItems: 'center',
+  justifyContent: 'center',
+},
+
+deleteButtonText: {
+  color: '#ffffff',
+  fontSize: 16,
+  fontWeight: '700',
+},
+    cancelAction: {
+    marginTop: 12,
+  },
   safeArea: {
     flex: 1,
     backgroundColor: '#ffffff',
