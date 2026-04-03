@@ -18,6 +18,8 @@ import { createDefaultBiofeedbackEntryFormValues } from '../forms/biofeedback-en
 import { toCreateBiofeedbackEntryInput } from '../forms/biofeedback-entry-form.mapper';
 import { validateBiofeedbackEntryForm } from '../forms/biofeedback-entry-form.validation';
 
+import DateTimeField from '../components/DateTimeField';
+
 export default function BiofeedbackEntryCreateScreen() {
   const [values, setValues] = useState(createDefaultBiofeedbackEntryFormValues());
 
@@ -66,25 +68,25 @@ export default function BiofeedbackEntryCreateScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>פרטי מדידה</Text>
 
-          <Text style={styles.label}>תאריך</Text>
-<TextInput
+         <DateTimeField
+  label="תאריך"
   value={values.measurementDate}
-  onChangeText={(text) => updateField('measurementDate', text)}
-  style={styles.input}
-  autoCapitalize="none"
-  placeholder="YYYY-MM-DD"
+  mode="date"
+  onChangeValue={(nextValue) => updateField('measurementDate', nextValue)}
 />
-{errors.measurementDate ? <Text style={styles.errorText}>{errors.measurementDate}</Text> : null}
+{errors.measurementDate ? (
+  <Text style={styles.errorText}>{errors.measurementDate}</Text>
+) : null}
 
-<Text style={styles.label}>שעה</Text>
-<TextInput
+<DateTimeField
+  label="שעה"
   value={values.measurementTime}
-  onChangeText={(text) => updateField('measurementTime', text)}
-  style={styles.input}
-  autoCapitalize="none"
-  placeholder="HH:mm"
+  mode="time"
+  onChangeValue={(nextValue) => updateField('measurementTime', nextValue)}
 />
-{errors.measurementTime ? <Text style={styles.errorText}>{errors.measurementTime}</Text> : null}
+{errors.measurementTime ? (
+  <Text style={styles.errorText}>{errors.measurementTime}</Text>
+) : null}
 
           <Text style={styles.label}>סוג תרגיל / מדידה</Text>
           <TextInput

@@ -23,6 +23,8 @@ import { createBiofeedbackEntryFormValuesFromEntry } from '../forms/biofeedback-
 import { toCreateBiofeedbackEntryInput } from '../forms/biofeedback-entry-form.mapper';
 import { validateBiofeedbackEntryForm } from '../forms/biofeedback-entry-form.validation';
 
+import DateTimeField from '../components/DateTimeField';
+
 type Props = {
   entryId: string;
 };
@@ -122,29 +124,25 @@ export default function BiofeedbackEntryDetailScreen({ entryId }: Props) {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>פרטי מדידה</Text>
 
-          <Text style={styles.label}>תאריך</Text>
-          <TextInput
-            value={values.measurementDate}
-            onChangeText={(text) => updateField('measurementDate', text)}
-            style={styles.input}
-            autoCapitalize="none"
-            placeholder="YYYY-MM-DD"
-          />
-          {errors.measurementDate ? (
-            <Text style={styles.errorText}>{errors.measurementDate}</Text>
-          ) : null}
+          <DateTimeField
+  label="תאריך"
+  value={values.measurementDate}
+  mode="date"
+  onChangeValue={(nextValue) => updateField('measurementDate', nextValue)}
+/>
+{errors.measurementDate ? (
+  <Text style={styles.errorText}>{errors.measurementDate}</Text>
+) : null}
 
-          <Text style={styles.label}>שעה</Text>
-          <TextInput
-            value={values.measurementTime}
-            onChangeText={(text) => updateField('measurementTime', text)}
-            style={styles.input}
-            autoCapitalize="none"
-            placeholder="HH:mm"
-          />
-          {errors.measurementTime ? (
-            <Text style={styles.errorText}>{errors.measurementTime}</Text>
-          ) : null}
+<DateTimeField
+  label="שעה"
+  value={values.measurementTime}
+  mode="time"
+  onChangeValue={(nextValue) => updateField('measurementTime', nextValue)}
+/>
+{errors.measurementTime ? (
+  <Text style={styles.errorText}>{errors.measurementTime}</Text>
+) : null}
 
           <Text style={styles.label}>סוג תרגיל / מדידה</Text>
           <TextInput
