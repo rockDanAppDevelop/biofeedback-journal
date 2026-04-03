@@ -1,7 +1,8 @@
 //src\features\biofeedback\screens\BiofeedbackDayEntriesScreen.tsx
 
-import { useEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback, useState } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { listBiofeedbackEntries } from '../data/biofeedback-entry.repository';
@@ -14,13 +15,23 @@ type Props = {
 export default function BiofeedbackDayEntriesScreen({ dateKey }: Props) {
   const [entries, setEntries] = useState<BiofeedbackEntry[]>([]);
 
-  useEffect(() => {
-    loadEntries();
-  }, [dateKey]);
+  useFocusEffect(
+    useCallback(() => {
+      loadEntries();
+    }, [dateKey]),
+  );
 
   async function loadEntries() {
     const allEntries = await listBiofeedbackEntries();
-    setEntries(allEntries.filter((entry) => entry.dateKey === dateKey));
+    const filtered = allEntries
+      .filter((entry) => entry.dateKey === dateKey)
+      .sort((a, b) => a.measuredAt.localeCompare(b.measuredAt));
+
+    setEntries(filtered);
+  }
+
+  function handleEntryPress(entryId: string) {
+    router.push(`/entries/${entryId}`);
   }
 
   return (
@@ -32,7 +43,11 @@ export default function BiofeedbackDayEntriesScreen({ dateKey }: Props) {
           <Text style={styles.emptyText}>אין מדידות ביום הזה</Text>
         ) : (
           entries.map((entry) => (
-            <View key={entry.id} style={styles.card}>
+            <Pressable
+              key={entry.id}
+              style={styles.card}
+              onPress={() => handleEntryPress(entry.id)}
+            >
               <Text style={styles.cardTitle}>{entry.exerciseName}</Text>
               <Text>שעה ביום: {entry.timeOfDay}</Text>
               <Text>משך: {entry.durationMinutes} דקות</Text>
@@ -45,7 +60,7 @@ export default function BiofeedbackDayEntriesScreen({ dateKey }: Props) {
                 RLX: {entry.rlx.startValue ?? '-'} → {entry.rlx.endValue ?? '-'}
               </Text>
               {entry.notes ? <Text>הערות: {entry.notes}</Text> : null}
-            </View>
+            </Pressable>
           ))
         )}
       </View>

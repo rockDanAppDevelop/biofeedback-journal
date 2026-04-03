@@ -24,6 +24,13 @@ export async function listBiofeedbackEntries(): Promise<BiofeedbackEntry[]> {
   return parsed.sort((a, b) => b.measuredAt.localeCompare(a.measuredAt));
 }
 
+export async function getBiofeedbackEntryById(
+  entryId: string,
+): Promise<BiofeedbackEntry | null> {
+  const entries = await listBiofeedbackEntries();
+  return entries.find((entry) => entry.id === entryId) ?? null;
+}
+
 export async function createBiofeedbackEntry(
   input: CreateBiofeedbackEntryInput,
 ): Promise<BiofeedbackEntry> {
@@ -50,4 +57,43 @@ export async function createBiofeedbackEntry(
   await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next));
 
   return entry;
+}
+
+export async function updateBiofeedbackEntry(
+  entryId: string,
+  input: CreateBiofeedbackEntryInput,
+): Promise<BiofeedbackEntry> {
+  const current = await listBiofeedbackEntries();
+  const existing = current.find((entry) => entry.id === entryId);
+
+  if (!existing) {
+    throw new Error('Entry not found');
+  }
+
+  const updatedEntry: BiofeedbackEntry = {
+    ...existing,
+    measuredAt: input.measuredAt,
+    dateKey: deriveDateKey(input.measuredAt),
+    timeOfDay: deriveTimeOfDay(input.measuredAt),
+    exerciseName: input.exerciseName,
+    durationMinutes: input.durationMinutes ?? 8,
+    hrvDistribution: input.hrvDistribution,
+    rlx: input.rlx,
+    notes: input.notes ?? '',
+    rawSourceData: input.rawSourceData,
+    updatedAt: new Date().toISOString(),
+  };
+
+  const next = current.map((entry) => (entry.id === entryId ? updatedEntry : entry));
+
+  await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+
+  return updatedEntry;
+}
+
+export async function deleteBiofeedbackEntry(entryId: string): Promise<void> {
+  const current = await listBiofeedbackEntries();
+  const next = current.filter((entry) => entry.id !== entryId);
+
+  await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next));
 }
