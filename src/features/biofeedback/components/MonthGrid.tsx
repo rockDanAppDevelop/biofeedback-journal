@@ -12,6 +12,7 @@ type CalendarDay = {
 };
 
 type MonthGridProps = {
+  referenceDate: Date;
   entryDateKeys: string[];
   onDayPress: (dateKey: string) => void;
 };
@@ -71,24 +72,18 @@ function buildMonthDays(referenceDate: Date, entryDateKeys: string[]): CalendarD
   return days;
 }
 
-function getMonthTitle(referenceDate = new Date()): string {
-  return new Intl.DateTimeFormat('he-IL', {
-    month: 'long',
-    year: 'numeric',
-  }).format(referenceDate);
-}
-
 const weekDayLabels = ['ב׳', 'ג׳', 'ד׳', 'ה׳', 'ו׳', 'ש׳', 'א׳'];
 
-export default function MonthGrid({ entryDateKeys, onDayPress }: MonthGridProps) {
-  const referenceDate = new Date();
+export default function MonthGrid({
+  referenceDate,
+  entryDateKeys,
+  onDayPress,
+}: MonthGridProps) {
   const monthDays = buildMonthDays(referenceDate, entryDateKeys);
   const todayKey = toDateKey(new Date());
 
   return (
     <View style={styles.wrapper}>
-      <Text style={styles.monthTitle}>{getMonthTitle(referenceDate)}</Text>
-
       <View style={styles.weekHeader}>
         {weekDayLabels.map((label) => (
           <Text key={label} style={styles.weekHeaderText}>
@@ -132,12 +127,6 @@ export default function MonthGrid({ entryDateKeys, onDayPress }: MonthGridProps)
 const styles = StyleSheet.create({
   wrapper: {
     marginBottom: 20,
-  },
-  monthTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    marginBottom: 16,
-    textAlign: 'right',
   },
   weekHeader: {
     flexDirection: 'row-reverse',
