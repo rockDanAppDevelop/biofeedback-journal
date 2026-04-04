@@ -16,6 +16,8 @@ export type RlxMetrics = {
 export type BiofeedbackEntry = {
   id: string;
 
+  userId: string; // 👈 חדש
+
   measuredAt: string;
   dateKey: string;
   timeOfDay: TimeOfDay;

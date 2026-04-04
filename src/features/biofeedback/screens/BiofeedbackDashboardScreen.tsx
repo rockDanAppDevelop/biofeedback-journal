@@ -11,6 +11,8 @@ import MonthGrid from '../components/MonthGrid';
 import { collection, getDocs } from 'firebase/firestore';
 import { testFirebaseConnection } from '../../../lib/testFirebase';
 import { auth, db } from '../../../lib/firebase';
+import { UserMenu } from '../../auth/components/UserMenu';
+import { getCurrentUserProfile } from '../../auth/data/get-current-user-profile';
 
 function getMonthTitle(date: Date): string {
   return new Intl.DateTimeFormat('he-IL', {
@@ -25,7 +27,8 @@ function addMonths(date: Date, amount: number): Date {
 
 export default function BiofeedbackDashboardScreen() {
   const [entryDateKeys, setEntryDateKeys] = useState<string[]>([]);
-  const [referenceDate, setReferenceDate] = useState(() => new Date());
+const [firstSeenDateKey, setFirstSeenDateKey] = useState('');
+const [referenceDate, setReferenceDate] = useState(() => new Date());
 
   useFocusEffect(
     useCallback(() => {
@@ -45,6 +48,8 @@ async function loadEntries() {
       return;
     }
 
+    const profile = await getCurrentUserProfile();
+setFirstSeenDateKey(profile?.firstSeenDateKey ?? '');
     const entriesCollection = collection(db, 'users', user.uid, 'entries');
     const snapshot = await getDocs(entriesCollection);
 
@@ -93,6 +98,8 @@ async function loadEntries() {
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <View style={styles.container}>
+        <UserMenu />
+        
         <Text style={styles.monthTitle}>{monthTitle}</Text>
 
         <View style={styles.navigationRow}>
@@ -117,10 +124,11 @@ async function loadEntries() {
         </Pressable>
 
         <MonthGrid
-          referenceDate={referenceDate}
-          entryDateKeys={entryDateKeys}
-          onDayPress={handleDayPress}
-        />
+  referenceDate={referenceDate}
+  entryDateKeys={entryDateKeys}
+  onDayPress={handleDayPress}
+  firstSeenDateKey={firstSeenDateKey}
+/>
 
         <FloatingAddButton />
       </View>

@@ -15,6 +15,7 @@ type MonthGridProps = {
   referenceDate: Date;
   entryDateKeys: string[];
   onDayPress: (dateKey: string) => void;
+  firstSeenDateKey: string;
 };
 
 function buildMonthDays(referenceDate: Date, entryDateKeys: string[]): CalendarDay[] {
@@ -78,6 +79,7 @@ export default function MonthGrid({
   referenceDate,
   entryDateKeys,
   onDayPress,
+  firstSeenDateKey,
 }: MonthGridProps) {
   const monthDays = buildMonthDays(referenceDate, entryDateKeys);
   const todayKey = toDateKey(new Date());
@@ -95,28 +97,34 @@ export default function MonthGrid({
       <View style={styles.grid}>
         {monthDays.map((day) => {
           const isToday = day.dateKey === todayKey;
-
+const isAfterFirstSeen = firstSeenDateKey !== '' && day.dateKey >= firstSeenDateKey;
+const isPastOrToday = day.dateKey <= todayKey;
+const isEligibleCurrentMonthDay = day.isCurrentMonth && isAfterFirstSeen && isPastOrToday;
+const shouldShowMissed = isEligibleCurrentMonthDay && !day.hasEntry;
           return (
             <Pressable
               key={day.dateKey}
               onPress={() => onDayPress(day.dateKey)}
               style={[
-                styles.dayCell,
-                !day.isCurrentMonth && styles.dayCellOutsideMonth,
-                day.hasEntry && styles.dayCellDone,
-                isToday && styles.dayCellToday,
-              ]}
+  styles.dayCell,
+  !day.isCurrentMonth && styles.dayCellOutsideMonth,
+  day.hasEntry && styles.dayCellDone,
+  shouldShowMissed && styles.dayCellMissed,
+  isToday && styles.dayCellToday,
+]}
             >
               <Text
-                style={[
-                  styles.dayText,
-                  !day.isCurrentMonth && styles.dayTextOutsideMonth,
-                  day.hasEntry && styles.dayTextDone,
-                ]}
-              >
-                {day.dayNumber}
-              </Text>
-            </Pressable>
+  style={[
+    styles.dayText,
+    !day.isCurrentMonth && styles.dayTextOutsideMonth,
+    day.hasEntry && styles.dayTextDone,
+  ]}
+>
+  {day.dayNumber}
+</Text>
+
+{shouldShowMissed ? <View style={styles.missedDot} /> : null}
+</Pressable>
           );
         })}
       </View>
@@ -163,10 +171,21 @@ const styles = StyleSheet.create({
     borderColor: '#43a047',
   },
   dayCellToday: {
-    borderWidth: 2,
-    borderColor: '#1e88e5',
-  },
-  dayText: {
+  borderWidth: 2,
+  borderColor: '#1e88e5',
+},
+dayCellMissed: {
+  position: 'relative',
+},
+missedDot: {
+  position: 'absolute',
+  bottom: 6,
+  width: 6,
+  height: 6,
+  borderRadius: 3,
+  backgroundColor: '#e53935',
+},
+dayText: {
     fontSize: 16,
     fontWeight: '700',
     color: '#222222',

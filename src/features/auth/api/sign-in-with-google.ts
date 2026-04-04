@@ -3,6 +3,7 @@
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { GoogleAuthProvider, signInWithCredential } from 'firebase/auth';
 import { auth } from '../../../lib/firebase';
+import { ensureUserProfile } from '../data/ensure-user-profile';
 
 export async function signInWithGoogle() {
   await GoogleSignin.hasPlayServices();
@@ -15,6 +16,9 @@ export async function signInWithGoogle() {
   }
 
   const credential = GoogleAuthProvider.credential(idToken);
+  const userCredential = await signInWithCredential(auth, credential);
 
-  return signInWithCredential(auth, credential);
+  await ensureUserProfile();
+
+  return userCredential;
 }
