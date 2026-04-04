@@ -19,11 +19,20 @@ import { createDefaultBiofeedbackEntryFormValues } from '../forms/biofeedback-en
 import { toCreateBiofeedbackEntryInput } from '../forms/biofeedback-entry-form.mapper';
 import { validateBiofeedbackEntryForm } from '../forms/biofeedback-entry-form.validation';
 
+import { useEffect } from 'react';
+import { testFirebaseConnection } from '../lib/testFirebase';
+
+
 type Props = {
   initialDateKey?: string;
 };
 
 export default function BiofeedbackEntryCreateScreen({ initialDateKey }: Props) {
+
+  useEffect(() => {
+  testFirebaseConnection();
+}, []);
+
   const [values, setValues] = useState(() => {
     const defaults = createDefaultBiofeedbackEntryFormValues();
 
