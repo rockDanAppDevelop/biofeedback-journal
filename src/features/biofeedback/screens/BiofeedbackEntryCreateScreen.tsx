@@ -47,6 +47,7 @@ useEffect(() => {
     return defaults;
   });
 
+  const [isSaving, setIsSaving] = useState(false);
   const errors = useMemo(() => validateBiofeedbackEntryForm(values), [values]);
 
   function updateField<K extends keyof typeof values>(key: K, value: (typeof values)[K]) {
@@ -56,62 +57,67 @@ useEffect(() => {
     }));
   }
 
-  async function handleSave() {
-    console.log('HANDLE SAVE START');
-    const nextErrors = validateBiofeedbackEntryForm(values);
-    const hasErrors = Object.keys(nextErrors).length > 0;
+ async function handleSave() {
+  if (isSaving) {
+    return;
+  }
 
-    if (hasErrors) {
-      Alert.alert('הטופס לא תקין', 'יש לבדוק את השדות ולתקן את הערכים.');
-      return;
-    }
+  console.log('HANDLE SAVE START');
 
-    try {
-      const input = toCreateBiofeedbackEntryInput(values);
+  const nextErrors = validateBiofeedbackEntryForm(values);
+  const hasErrors = Object.keys(nextErrors).length > 0;
 
-console.log('LOCAL SAVE DONE');
+  if (hasErrors) {
+    Alert.alert('הטופס לא תקין', 'יש לבדוק את השדות ולתקן את הערכים.');
+    return;
+  }
 
-try {
-  console.log('BEFORE FIREBASE SAVE');
+  setIsSaving(true);
 
-  const firebaseId = await addBiofeedbackEntryToFirestore({
-    measurementDate: values.measurementDate,
-    measurementTime: values.measurementTime,
-    dateKey: values.measurementDate,
-    measuredAt: input.measuredAt,
-    exerciseName: values.exerciseName.trim(),
-    durationMinutes: Number(values.durationMinutes),
-    hrvStressPercent: values.hrvStressPercent.trim(),
-    hrvMidRangePercent: values.hrvMidRangePercent.trim(),
-    hrvRelaxationPercent: values.hrvRelaxationPercent.trim(),
-    rlxStartValue: values.rlxStartValue.trim(),
-    rlxEndValue: values.rlxEndValue.trim(),
-    notes: values.notes.trim(),
-  });
-  console.log('AFTER FIREBASE SAVE');
-  console.log('FIREBASE SAVE SUCCESS:', firebaseId);
-} catch (e) {
-  console.error('FIREBASE SAVE FAILED:', e);
+  try {
+    const input = toCreateBiofeedbackEntryInput(values);
+
+    console.log('BEFORE FIREBASE SAVE');
+
+    const firebaseId = await addBiofeedbackEntryToFirestore({
+      measurementDate: values.measurementDate,
+      measurementTime: values.measurementTime,
+      dateKey: values.measurementDate,
+      measuredAt: input.measuredAt,
+      exerciseName: values.exerciseName.trim(),
+      durationMinutes: Number(values.durationMinutes),
+      hrvStressPercent: values.hrvStressPercent.trim(),
+      hrvMidRangePercent: values.hrvMidRangePercent.trim(),
+      hrvRelaxationPercent: values.hrvRelaxationPercent.trim(),
+      rlxStartValue: values.rlxStartValue.trim(),
+      rlxEndValue: values.rlxEndValue.trim(),
+      notes: values.notes.trim(),
+    });
+
+    console.log('AFTER FIREBASE SAVE');
+    console.log('FIREBASE SAVE SUCCESS:', firebaseId);
+
+    setValues(() => {
+      const defaults = createDefaultBiofeedbackEntryFormValues();
+
+      if (initialDateKey) {
+        return {
+          ...defaults,
+          measurementDate: initialDateKey,
+        };
+      }
+
+      return defaults;
+    });
+
+    router.replace('/');
+  } catch (e) {
+    console.error('FIREBASE SAVE FAILED:', e);
+    Alert.alert('שגיאה', 'שמירת המדידה נכשלה.');
+  } finally {
+    setIsSaving(false);
+  }
 }
-
-      setValues(() => {
-  const defaults = createDefaultBiofeedbackEntryFormValues();
-
-  if (initialDateKey) {
-    return {
-      ...defaults,
-      measurementDate: initialDateKey,
-    };
-  }
-
-  return defaults;
-});
-
-router.back();
-    } catch {
-      Alert.alert('שגיאה', 'שמירת המדידה נכשלה.');
-    }
-  }
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -240,9 +246,15 @@ router.back();
         </ScrollView>
 
         <View style={styles.floatingActionBar}>
-          <Pressable style={styles.saveButton} onPress={handleSave}>
-            <Text style={styles.saveButtonText}>שמור</Text>
-          </Pressable>
+          <Pressable
+  style={[styles.saveButton, isSaving && { opacity: 0.6 }]}
+  onPress={handleSave}
+  disabled={isSaving}
+>
+  <Text style={styles.saveButtonText}>
+    {isSaving ? 'שומר...' : 'שמור'}
+  </Text>
+</Pressable>
         </View>
       </View>
     </SafeAreaView>

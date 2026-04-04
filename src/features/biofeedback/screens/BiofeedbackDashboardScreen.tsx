@@ -33,29 +33,34 @@ export default function BiofeedbackDashboardScreen() {
     }, []),
   );
 
-  async function loadEntries() {
-  await testFirebaseConnection();
+async function loadEntries() {
+  try {
+    await testFirebaseConnection();
 
-  const user = auth.currentUser;
+    const user = auth.currentUser;
 
-  if (!user) {
-    console.log('DASHBOARD LOAD FAILED: No authenticated user');
-    setEntryDateKeys([]);
-    return;
+    if (!user) {
+      console.log('DASHBOARD LOAD FAILED: No authenticated user');
+      setEntryDateKeys([]);
+      return;
+    }
+
+    const entriesCollection = collection(db, 'users', user.uid, 'entries');
+    const snapshot = await getDocs(entriesCollection);
+
+    const uniqueDateKeys = Array.from(
+      new Set(
+        snapshot.docs
+          .map((docSnapshot) => docSnapshot.data().dateKey)
+          .filter((value): value is string => typeof value === 'string' && value.length > 0)
+      )
+    );
+
+    setEntryDateKeys(uniqueDateKeys);
+
+  } catch (error) {
+    console.log('🔥 FIRESTORE ERROR:', error);
   }
-
-  const entriesCollection = collection(db, 'users', user.uid, 'entries');
-  const snapshot = await getDocs(entriesCollection);
-
-  const uniqueDateKeys = Array.from(
-    new Set(
-      snapshot.docs
-        .map((docSnapshot) => docSnapshot.data().dateKey)
-        .filter((value): value is string => typeof value === 'string' && value.length > 0)
-    )
-  );
-
-  setEntryDateKeys(uniqueDateKeys);
 }
 
 
