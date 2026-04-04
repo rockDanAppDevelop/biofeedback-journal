@@ -1,12 +1,16 @@
 //src\features\biofeedback\screens\BiofeedbackDayEntriesScreen.tsx
 
 import { router, useFocusEffect } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useEffect, useCallback, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { listBiofeedbackEntries } from '../data/biofeedback-entry.repository';
 import { BiofeedbackEntry } from '../types/biofeedback-entry.types';
+import { listBiofeedbackEntriesByDateKeyFromFirestore } from '../data/firebase-biofeedback-read-repository';
+import { testFirebaseConnection } from '../../../lib/testFirebase';
+import type { TimeOfDay } from '../types/biofeedback-entry.types';
+
 
 type Props = {
   dateKey: string;
@@ -22,14 +26,89 @@ function formatEntryTime(measuredAt: string): string {
   }).format(date);
 }
 
+function toOptionalNumber(value: string): number | null {
+  if (!value.trim()) {
+    return null;
+  }
+
+  return Number(value);
+}
+
+function mapTimeToTimeOfDay(time: string): TimeOfDay {
+  const hour = Number(time.split(':')[0]);
+
+  if (hour < 12) return 'morning';
+  if (hour < 17) return 'noon';
+  if (hour < 21) return 'evening';
+  return 'night';
+}
+
+function mapFirebaseEntryToBiofeedbackEntry(entry: {
+  id: string;
+  measurementDate: string;
+  measurementTime: string;
+  dateKey: string;
+  measuredAt: string;
+  exerciseName: string;
+  durationMinutes: number;
+  hrvStressPercent: string;
+  hrvMidRangePercent: string;
+  hrvRelaxationPercent: string;
+  rlxStartValue: string;
+  rlxEndValue: string;
+  notes: string;
+  createdAt: string;
+}): BiofeedbackEntry {
+  return {
+    id: entry.id,
+    dateKey: entry.dateKey,
+    measuredAt: entry.measuredAt,
+    timeOfDay: mapTimeToTimeOfDay(entry.measurementTime),
+    createdAt: entry.createdAt,
+    updatedAt: entry.createdAt,
+    exerciseName: entry.exerciseName,
+    durationMinutes: entry.durationMinutes,
+    notes: entry.notes,
+    hrvDistribution: {
+  stressPercent: toOptionalNumber(entry.hrvStressPercent),
+  midRangePercent: toOptionalNumber(entry.hrvMidRangePercent),
+  relaxationPercent: toOptionalNumber(entry.hrvRelaxationPercent),
+},
+rlx: {
+  startValue: toOptionalNumber(entry.rlxStartValue),
+  endValue: toOptionalNumber(entry.rlxEndValue),
+},
+  };
+}
+
 export default function BiofeedbackDayEntriesScreen({ dateKey }: Props) {
   const [entries, setEntries] = useState<BiofeedbackEntry[]>([]);
 
   useFocusEffect(
+  useCallback(() => {
+    async function loadFromFirebase() {
+      try {
+        await testFirebaseConnection();
+
+        const result = await listBiofeedbackEntriesByDateKeyFromFirestore(dateKey);
+        console.log('FIREBASE DAY DATA:', result);
+
+        const mapped = result.map(mapFirebaseEntryToBiofeedbackEntry);
+        setEntries(mapped);
+      } catch (e) {
+        console.log('FIREBASE LOAD FAILED:', e);
+      }
+    }
+
+    void loadFromFirebase();
+  }, [dateKey])
+);
+
+/*   useFocusEffect(
     useCallback(() => {
       loadEntries();
     }, [dateKey]),
-  );
+  ); */
 
   async function loadEntries() {
     const allEntries = await listBiofeedbackEntries();

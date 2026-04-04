@@ -7,7 +7,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import FloatingAddButton from '../components/FloatingAddButton';
 import MonthGrid from '../components/MonthGrid';
-import { listBiofeedbackEntries } from '../data/biofeedback-entry.repository';
+
+import { collection, getDocs } from 'firebase/firestore';
+import { testFirebaseConnection } from '../../../lib/testFirebase';
+import { auth, db } from '../../../lib/firebase';
 
 function getMonthTitle(date: Date): string {
   return new Intl.DateTimeFormat('he-IL', {
@@ -31,10 +34,30 @@ export default function BiofeedbackDashboardScreen() {
   );
 
   async function loadEntries() {
-    const entries = await listBiofeedbackEntries();
-    const uniqueDateKeys = Array.from(new Set(entries.map((entry) => entry.dateKey)));
-    setEntryDateKeys(uniqueDateKeys);
+  await testFirebaseConnection();
+
+  const user = auth.currentUser;
+
+  if (!user) {
+    console.log('DASHBOARD LOAD FAILED: No authenticated user');
+    setEntryDateKeys([]);
+    return;
   }
+
+  const entriesCollection = collection(db, 'users', user.uid, 'entries');
+  const snapshot = await getDocs(entriesCollection);
+
+  const uniqueDateKeys = Array.from(
+    new Set(
+      snapshot.docs
+        .map((docSnapshot) => docSnapshot.data().dateKey)
+        .filter((value): value is string => typeof value === 'string' && value.length > 0)
+    )
+  );
+
+  setEntryDateKeys(uniqueDateKeys);
+}
+
 
     function handleDayPress(dateKey: string) {
     const hasEntryForDay = entryDateKeys.includes(dateKey);

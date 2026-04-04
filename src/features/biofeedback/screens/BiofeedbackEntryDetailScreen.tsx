@@ -13,22 +13,81 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Pressable } from 'react-native';
+
 import {
-  deleteBiofeedbackEntry,
-  getBiofeedbackEntryById,
-  updateBiofeedbackEntry,
-} from '../data/biofeedback-entry.repository';
+  getBiofeedbackEntryByIdFromFirestore,
+  updateBiofeedbackEntryInFirestore,
+  deleteBiofeedbackEntryFromFirestore,
+} from '../data/firebase-biofeedback-entry-by-id-repository';
+
 import { createDefaultBiofeedbackEntryFormValues } from '../forms/biofeedback-entry-form.defaults';
 import { createBiofeedbackEntryFormValuesFromEntry } from '../forms/biofeedback-entry-form.from-entry';
 import { toCreateBiofeedbackEntryInput } from '../forms/biofeedback-entry-form.mapper';
 import { validateBiofeedbackEntryForm } from '../forms/biofeedback-entry-form.validation';
 
 import DateTimeField from '../components/DateTimeField';
+import type { BiofeedbackEntry, TimeOfDay } from '../types/biofeedback-entry.types';
 
 type Props = {
   entryId: string;
   fromDay?: string;
 };
+
+function toOptionalNumber(value: string): number | null {
+  if (!value.trim()) {
+    return null;
+  }
+
+  return Number(value);
+}
+
+function mapTimeToTimeOfDay(time: string): TimeOfDay {
+  const hour = Number(time.split(':')[0]);
+
+  if (hour < 12) return 'morning';
+  if (hour < 17) return 'noon';
+  if (hour < 21) return 'evening';
+  return 'night';
+}
+
+function mapFirebaseEntryToBiofeedbackEntry(entry: {
+  id: string;
+  measurementDate: string;
+  measurementTime: string;
+  dateKey: string;
+  measuredAt: string;
+  exerciseName: string;
+  durationMinutes: number;
+  hrvStressPercent: string;
+  hrvMidRangePercent: string;
+  hrvRelaxationPercent: string;
+  rlxStartValue: string;
+  rlxEndValue: string;
+  notes: string;
+  createdAt: string;
+  updatedAt?: string;
+}): BiofeedbackEntry {
+  return {
+    id: entry.id,
+    measuredAt: entry.measuredAt,
+    dateKey: entry.dateKey,
+    timeOfDay: mapTimeToTimeOfDay(entry.measurementTime),
+    exerciseName: entry.exerciseName,
+    durationMinutes: entry.durationMinutes,
+    hrvDistribution: {
+      stressPercent: toOptionalNumber(entry.hrvStressPercent),
+      midRangePercent: toOptionalNumber(entry.hrvMidRangePercent),
+      relaxationPercent: toOptionalNumber(entry.hrvRelaxationPercent),
+    },
+    rlx: {
+      startValue: toOptionalNumber(entry.rlxStartValue),
+      endValue: toOptionalNumber(entry.rlxEndValue),
+    },
+    notes: entry.notes,
+    createdAt: entry.createdAt,
+    updatedAt: entry.updatedAt ?? entry.createdAt,
+  };
+}
 
 export default function BiofeedbackEntryDetailScreen({ entryId, fromDay }: Props) {
   const [values, setValues] = useState(createDefaultBiofeedbackEntryFormValues());
@@ -41,7 +100,9 @@ export default function BiofeedbackEntryDetailScreen({ entryId, fromDay }: Props
   }, [entryId]);
 
   async function loadEntry() {
-    const entry = await getBiofeedbackEntryById(entryId);
+    const entry = await getBiofeedbackEntryByIdFromFirestore(entryId);
+
+console.log('ENTRY FROM FIREBASE:', entry);
 
     if (!entry) {
       Alert.alert('שגיאה', 'הרשומה לא נמצאה', [
@@ -53,7 +114,8 @@ export default function BiofeedbackEntryDetailScreen({ entryId, fromDay }: Props
       return;
     }
 
-    setValues(createBiofeedbackEntryFormValuesFromEntry(entry));
+    const mappedEntry = mapFirebaseEntryToBiofeedbackEntry(entry);
+setValues(createBiofeedbackEntryFormValuesFromEntry(mappedEntry));
     setIsLoading(false);
   }
 
@@ -76,14 +138,27 @@ export default function BiofeedbackEntryDetailScreen({ entryId, fromDay }: Props
     try {
       const input = toCreateBiofeedbackEntryInput(values);
 
-      await updateBiofeedbackEntry(entryId, input);
+      await updateBiofeedbackEntryInFirestore(entryId, {
+  measurementDate: values.measurementDate,
+  measurementTime: values.measurementTime,
+  dateKey: values.measurementDate,
+  measuredAt: input.measuredAt,
+  exerciseName: values.exerciseName.trim(),
+  durationMinutes: Number(values.durationMinutes),
+  hrvStressPercent: values.hrvStressPercent.trim(),
+  hrvMidRangePercent: values.hrvMidRangePercent.trim(),
+  hrvRelaxationPercent: values.hrvRelaxationPercent.trim(),
+  rlxStartValue: values.rlxStartValue.trim(),
+  rlxEndValue: values.rlxEndValue.trim(),
+  notes: values.notes.trim(),
+});
 
-      Alert.alert('עודכן', 'המדידה עודכנה בהצלחה.', [
-        {
-          text: 'אישור',
-          onPress: () => router.replace('/'),
-        },
-      ]);
+      if (fromDay) {
+  router.back();
+  return;
+}
+
+router.replace('/');
     } catch {
       Alert.alert('שגיאה', 'עדכון המדידה נכשל.');
     }
@@ -97,7 +172,7 @@ export default function BiofeedbackEntryDetailScreen({ entryId, fromDay }: Props
         style: 'destructive',
         onPress: async () => {
           try {
-            await deleteBiofeedbackEntry(entryId);
+            await deleteBiofeedbackEntryFromFirestore(entryId);
             router.replace('/');
           } catch {
             Alert.alert('שגיאה', 'מחיקת המדידה נכשלה.');

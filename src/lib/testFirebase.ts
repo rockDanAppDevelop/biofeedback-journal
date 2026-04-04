@@ -1,7 +1,7 @@
-import { auth } from './firebase';
-import { signInAnonymously } from 'firebase/auth';
+import { getOrCreateUser } from './user';
 
 export async function testFirebaseConnection() {
-  const result = await signInAnonymously(auth);
-  console.log('USER ID:', result.user.uid);
+  const user = await getOrCreateUser();
+  console.log('USER ID:', user.uid);
+  return user;
 }

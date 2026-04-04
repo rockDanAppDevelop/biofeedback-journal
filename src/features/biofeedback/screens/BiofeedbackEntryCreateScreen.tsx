@@ -14,14 +14,14 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import DateTimeField from '../components/DateTimeField';
-import { createBiofeedbackEntry } from '../data/biofeedback-entry.repository';
+
 import { createDefaultBiofeedbackEntryFormValues } from '../forms/biofeedback-entry-form.defaults';
 import { toCreateBiofeedbackEntryInput } from '../forms/biofeedback-entry-form.mapper';
 import { validateBiofeedbackEntryForm } from '../forms/biofeedback-entry-form.validation';
 
 import { useEffect } from 'react';
 import { testFirebaseConnection } from '../../../lib/testFirebase';
-
+import { addBiofeedbackEntryToFirestore } from '../data/firebase-biofeedback-repository';
 
 type Props = {
   initialDateKey?: string;
@@ -29,8 +29,9 @@ type Props = {
 
 export default function BiofeedbackEntryCreateScreen({ initialDateKey }: Props) {
 
-  useEffect(() => {
-  testFirebaseConnection();
+
+useEffect(() => {
+  void testFirebaseConnection();
 }, []);
 
   const [values, setValues] = useState(() => {
@@ -56,6 +57,7 @@ export default function BiofeedbackEntryCreateScreen({ initialDateKey }: Props) 
   }
 
   async function handleSave() {
+    console.log('HANDLE SAVE START');
     const nextErrors = validateBiofeedbackEntryForm(values);
     const hasErrors = Object.keys(nextErrors).length > 0;
 
@@ -67,29 +69,45 @@ export default function BiofeedbackEntryCreateScreen({ initialDateKey }: Props) 
     try {
       const input = toCreateBiofeedbackEntryInput(values);
 
-      await createBiofeedbackEntry(input);
+console.log('LOCAL SAVE DONE');
 
-      Alert.alert('נשמר', 'המדידה נשמרה בהצלחה.', [
-        {
-          text: 'אישור',
-          onPress: () => {
-            setValues(() => {
-              const defaults = createDefaultBiofeedbackEntryFormValues();
+try {
+  console.log('BEFORE FIREBASE SAVE');
 
-              if (initialDateKey) {
-                return {
-                  ...defaults,
-                  measurementDate: initialDateKey,
-                };
-              }
+  const firebaseId = await addBiofeedbackEntryToFirestore({
+    measurementDate: values.measurementDate,
+    measurementTime: values.measurementTime,
+    dateKey: values.measurementDate,
+    measuredAt: input.measuredAt,
+    exerciseName: values.exerciseName.trim(),
+    durationMinutes: Number(values.durationMinutes),
+    hrvStressPercent: values.hrvStressPercent.trim(),
+    hrvMidRangePercent: values.hrvMidRangePercent.trim(),
+    hrvRelaxationPercent: values.hrvRelaxationPercent.trim(),
+    rlxStartValue: values.rlxStartValue.trim(),
+    rlxEndValue: values.rlxEndValue.trim(),
+    notes: values.notes.trim(),
+  });
+  console.log('AFTER FIREBASE SAVE');
+  console.log('FIREBASE SAVE SUCCESS:', firebaseId);
+} catch (e) {
+  console.error('FIREBASE SAVE FAILED:', e);
+}
 
-              return defaults;
-            });
+      setValues(() => {
+  const defaults = createDefaultBiofeedbackEntryFormValues();
 
-            router.back();
-          },
-        },
-      ]);
+  if (initialDateKey) {
+    return {
+      ...defaults,
+      measurementDate: initialDateKey,
+    };
+  }
+
+  return defaults;
+});
+
+router.back();
     } catch {
       Alert.alert('שגיאה', 'שמירת המדידה נכשלה.');
     }
