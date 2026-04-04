@@ -20,7 +20,7 @@ import { toCreateBiofeedbackEntryInput } from '../forms/biofeedback-entry-form.m
 import { validateBiofeedbackEntryForm } from '../forms/biofeedback-entry-form.validation';
 
 import { useEffect } from 'react';
-import { testFirebaseConnection } from '../lib/testFirebase';
+import { testFirebaseConnection } from '../../../lib/testFirebase';
 
 
 type Props = {
