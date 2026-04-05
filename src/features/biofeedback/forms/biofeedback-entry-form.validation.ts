@@ -12,6 +12,22 @@ function isValidTimeInput(value: string): boolean {
   return /^\d{2}:\d{2}$/.test(value);
 }
 
+function toOptionalPercent(value: string): number | null {
+  const trimmed = value.trim();
+
+  if (!trimmed) {
+    return null;
+  }
+
+  const parsed = Number(trimmed);
+
+  if (Number.isNaN(parsed)) {
+    return null;
+  }
+
+  return parsed;
+}
+
 export function validateBiofeedbackEntryForm(
   values: BiofeedbackEntryFormValues,
 ): ValidationErrorMap {
@@ -41,24 +57,6 @@ export function validateBiofeedbackEntryForm(
   const mid = values.hrvMidRangePercent === '' ? null : Number(values.hrvMidRangePercent);
   const relax = values.hrvRelaxationPercent === '' ? null : Number(values.hrvRelaxationPercent);
 
-  const hrvValues = [stress, mid, relax];
-
-  for (const value of hrvValues) {
-    if (value !== null && (!Number.isFinite(value) || value < 0 || value > 100)) {
-      errors.hrvStressPercent ||= 'ערכי HRV חייבים להיות בין 0 ל-100';
-      errors.hrvMidRangePercent ||= 'ערכי HRV חייבים להיות בין 0 ל-100';
-      errors.hrvRelaxationPercent ||= 'ערכי HRV חייבים להיות בין 0 ל-100';
-      break;
-    }
-  }
-
-  if (stress !== null && mid !== null && relax !== null) {
-    const total = stress + mid + relax;
-    if (total < 99 || total > 101) {
-      errors.hrvRelaxationPercent = 'סכום שלושת אחוזי HRV צריך להיות 100';
-    }
-  }
-
   const rlxStart = values.rlxStartValue === '' ? null : Number(values.rlxStartValue);
   const rlxEnd = values.rlxEndValue === '' ? null : Number(values.rlxEndValue);
 
@@ -70,5 +68,47 @@ export function validateBiofeedbackEntryForm(
     errors.rlxEndValue = 'ערך RLX סיום חייב להיות מספר';
   }
 
-  return errors;
+const hasStress = stress !== null;
+const hasMid = mid !== null;
+const hasRelax = relax !== null;
+
+if (hasStress && (stress < 0 || stress > 100)) {
+  errors.hrvStressPercent = 'יש להזין ערך בין 0 ל-100';
+}
+
+if (hasMid && (mid < 0 || mid > 100)) {
+  errors.hrvMidRangePercent = 'יש להזין ערך בין 0 ל-100';
+}
+
+if (hasRelax && (relax < 0 || relax > 100)) {
+  errors.hrvRelaxationPercent = 'יש להזין ערך בין 0 ל-100';
+}
+
+const hasExtraValues = hasStress || hasMid;
+
+if (!hasRelax && hasExtraValues) {
+  errors.hrvRelaxationPercent = 'אם מזינים ביניים או לחץ, צריך גם ערך רגיעה';
+}
+
+if (hasRelax && hasExtraValues) {
+  const total = (stress ?? 0) + (mid ?? 0) + (relax ?? 0);
+
+  if (Math.abs(total - 100) > 2) {
+    const message = 'כשממלאים יותר מרגיעה בלבד, הסכום צריך להיות 100 עם סטייה של עד 2';
+
+    if (!errors.hrvRelaxationPercent) {
+      errors.hrvRelaxationPercent = message;
+    }
+
+    if (!errors.hrvMidRangePercent) {
+      errors.hrvMidRangePercent = message;
+    }
+
+    if (!errors.hrvStressPercent) {
+      errors.hrvStressPercent = message;
+    }
+  }
+}
+
+return errors;
 }

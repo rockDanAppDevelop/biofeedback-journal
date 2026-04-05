@@ -269,43 +269,51 @@ const errors = useMemo(() => validateBiofeedbackEntryForm(values), [values]);
           </View>
 
           {shouldShowHrvFields ? (
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>HRV</Text>
+  <View style={[styles.section, styles.hrvSection]}>
+    <Text style={[styles.sectionTitle, styles.hrvSectionTitle]}>HRV</Text>
 
-              <Text style={styles.label}>אחוז זמן בטווח לחץ</Text>
-              <TextInput
-                value={values.hrvStressPercent}
-                onChangeText={(text) => updateField('hrvStressPercent', text)}
-                style={styles.input}
-                keyboardType="numeric"
-              />
-              {errors.hrvStressPercent ? (
-                <Text style={styles.errorText}>{errors.hrvStressPercent}</Text>
-              ) : null}
+    <View style={styles.hrvFieldBlockRelax}>
+      <Text style={[styles.label, styles.hrvRelaxLabel]}>אחוז זמן בטווח רגיעה</Text>
+      <TextInput
+        value={values.hrvRelaxationPercent}
+        onChangeText={(text) => updateField('hrvRelaxationPercent', text)}
+        style={[styles.input, styles.hrvRelaxInput]}
+        keyboardType="numeric"
+        placeholder="הערך החשוב ביותר"
+        placeholderTextColor="#7aa7d9"
+      />
+      {errors.hrvRelaxationPercent ? (
+        <Text style={styles.errorText}>{errors.hrvRelaxationPercent}</Text>
+      ) : null}
+    </View>
 
-              <Text style={styles.label}>אחוז זמן בטווח ביניים</Text>
-              <TextInput
-                value={values.hrvMidRangePercent}
-                onChangeText={(text) => updateField('hrvMidRangePercent', text)}
-                style={styles.input}
-                keyboardType="numeric"
-              />
-              {errors.hrvMidRangePercent ? (
-                <Text style={styles.errorText}>{errors.hrvMidRangePercent}</Text>
-              ) : null}
+    <View style={styles.hrvFieldBlockMid}>
+      <Text style={[styles.label, styles.hrvMidLabel]}>אחוז זמן בטווח ביניים</Text>
+      <TextInput
+        value={values.hrvMidRangePercent}
+        onChangeText={(text) => updateField('hrvMidRangePercent', text)}
+        style={[styles.input, styles.hrvMidInput]}
+        keyboardType="numeric"
+      />
+      {errors.hrvMidRangePercent ? (
+        <Text style={styles.errorText}>{errors.hrvMidRangePercent}</Text>
+      ) : null}
+    </View>
 
-              <Text style={styles.label}>אחוז זמן בטווח רגיעה</Text>
-              <TextInput
-                value={values.hrvRelaxationPercent}
-                onChangeText={(text) => updateField('hrvRelaxationPercent', text)}
-                style={styles.input}
-                keyboardType="numeric"
-              />
-              {errors.hrvRelaxationPercent ? (
-                <Text style={styles.errorText}>{errors.hrvRelaxationPercent}</Text>
-              ) : null}
-            </View>
-          ) : null}
+    <View style={styles.hrvFieldBlockStress}>
+      <Text style={[styles.label, styles.hrvStressLabel]}>אחוז זמן בטווח לחץ</Text>
+      <TextInput
+        value={values.hrvStressPercent}
+        onChangeText={(text) => updateField('hrvStressPercent', text)}
+        style={[styles.input, styles.hrvStressInput]}
+        keyboardType="numeric"
+      />
+      {errors.hrvStressPercent ? (
+        <Text style={styles.errorText}>{errors.hrvStressPercent}</Text>
+      ) : null}
+    </View>
+  </View>
+) : null}
 
           {shouldShowRlxFields ? (
             <View style={styles.section}>
@@ -364,6 +372,60 @@ const errors = useMemo(() => validateBiofeedbackEntryForm(values), [values]);
 }
 
 const styles = StyleSheet.create({
+    hrvSection: {
+    borderColor: '#cfe3ff',
+    backgroundColor: '#f4f9ff',
+  },
+  hrvSectionTitle: {
+    color: '#0d47a1',
+  },
+  hrvFieldBlockRelax: {
+    marginBottom: 12,
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: '#e3f2fd',
+    borderWidth: 1,
+    borderColor: '#90caf9',
+  },
+  hrvFieldBlockMid: {
+    marginBottom: 12,
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: '#f5f7fa',
+    borderWidth: 1,
+    borderColor: '#d6dde6',
+  },
+  hrvFieldBlockStress: {
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: '#fff3e0',
+    borderWidth: 1,
+    borderColor: '#ffcc80',
+  },
+  hrvRelaxLabel: {
+    color: '#1565c0',
+    fontWeight: '700',
+  },
+  hrvMidLabel: {
+    color: '#546e7a',
+    fontWeight: '600',
+  },
+  hrvStressLabel: {
+    color: '#ef6c00',
+    fontWeight: '700',
+  },
+  hrvRelaxInput: {
+    borderColor: '#90caf9',
+    backgroundColor: '#ffffff',
+  },
+  hrvMidInput: {
+    borderColor: '#cfd8dc',
+    backgroundColor: '#ffffff',
+  },
+  hrvStressInput: {
+    borderColor: '#ffcc80',
+    backgroundColor: '#ffffff',
+  },
   safeArea: {
     flex: 1,
     backgroundColor: '#ffffff',
