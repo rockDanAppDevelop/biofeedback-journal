@@ -21,6 +21,7 @@ type MonthGridProps = {
 function buildMonthDays(referenceDate: Date, entryDateKeys: string[]): CalendarDay[] {
   const year = referenceDate.getFullYear();
   const month = referenceDate.getMonth();
+  const todayKey = toDateKey(new Date());
 
   const firstDayOfMonth = new Date(year, month, 1);
   const lastDayOfMonth = new Date(year, month + 1, 0);
@@ -96,10 +97,10 @@ export default function MonthGrid({
 
       <View style={styles.grid}>
         {monthDays.map((day) => {
-          const isToday = day.dateKey === todayKey;
+         const isToday = day.dateKey === todayKey;
 const isAfterFirstSeen = firstSeenDateKey !== '' && day.dateKey >= firstSeenDateKey;
-const isPastOrToday = day.dateKey <= todayKey;
-const isEligibleCurrentMonthDay = day.isCurrentMonth && isAfterFirstSeen && isPastOrToday;
+const isPastDay = day.dateKey < todayKey;
+const isEligibleCurrentMonthDay = day.isCurrentMonth && isAfterFirstSeen && isPastDay;
 const shouldShowMissed = isEligibleCurrentMonthDay && !day.hasEntry;
           return (
             <Pressable
@@ -153,46 +154,49 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   dayCell: {
-    width: '12.9%',
-    aspectRatio: 1,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#d9d9d9',
-    backgroundColor: '#ffffff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  width: '12.9%',
+  aspectRatio: 1,
+  borderRadius: 12,
+  borderWidth: 1,
+  borderColor: '#e2e2e2',
+  backgroundColor: '#ffffff',
+  alignItems: 'center',
+  justifyContent: 'center',
+  position: 'relative',
+  paddingTop: 2,
+},
   dayCellOutsideMonth: {
-    backgroundColor: '#f3f3f3',
-    borderColor: '#ececec',
-  },
+  backgroundColor: '#f7f7f7',
+  borderColor: '#efefef',
+},
   dayCellDone: {
-    backgroundColor: '#43a047',
-    borderColor: '#43a047',
-  },
+  backgroundColor: '#2e7d32',
+  borderColor: '#2e7d32',
+},
   dayCellToday: {
   borderWidth: 2,
-  borderColor: '#1e88e5',
+  borderColor: '#1976d2',
 },
 dayCellMissed: {
   position: 'relative',
 },
 missedDot: {
   position: 'absolute',
-  bottom: 6,
-  width: 6,
-  height: 6,
-  borderRadius: 3,
-  backgroundColor: '#e53935',
+  bottom: 7,
+  width: 5,
+  height: 5,
+  borderRadius: 2.5,
+  backgroundColor: '#d96b6b',
 },
 dayText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#222222',
-  },
+  fontSize: 16,
+  fontWeight: '700',
+  color: '#222222',
+  lineHeight: 18,
+},
   dayTextOutsideMonth: {
-    color: '#aaaaaa',
-  },
+  color: '#b8b8b8',
+},
   dayTextDone: {
     color: '#ffffff',
   },
