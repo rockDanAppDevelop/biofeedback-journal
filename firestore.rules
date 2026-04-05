@@ -13,15 +13,10 @@ service cloud.firestore {
     match /users/{userId} {
       allow read, create, update: if isOwner(userId);
       allow delete: if false;
-    }
 
-    match /biofeedbackEntries/{entryId} {
-      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
-      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
-      allow update: if isSignedIn()
-        && resource.data.userId == request.auth.uid
-        && request.resource.data.userId == resource.data.userId;
-      allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+      match /entries/{entryId} {
+        allow read, create, update, delete: if isOwner(userId);
+      }
     }
   }
 }
