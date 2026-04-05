@@ -10,6 +10,7 @@ export type FirebaseBiofeedbackEntry = {
   dateKey: string;
   measuredAt: string;
   exerciseName: string;
+  measurementType: 'hrv' | 'rlx' | null;
   durationMinutes: number;
   hrvStressPercent: string;
   hrvMidRangePercent: string;
@@ -49,6 +50,7 @@ export async function listBiofeedbackEntriesByDateKeyFromFirestore(
       dateKey: data.dateKey,
       measuredAt: data.measuredAt,
       exerciseName: data.exerciseName,
+      measurementType: data.measurementType ?? null,
       durationMinutes: data.durationMinutes,
       hrvStressPercent: data.hrvStressPercent,
       hrvMidRangePercent: data.hrvMidRangePercent,

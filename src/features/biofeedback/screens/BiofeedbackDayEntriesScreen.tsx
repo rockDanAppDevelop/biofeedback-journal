@@ -10,7 +10,7 @@ import { BiofeedbackEntry } from '../types/biofeedback-entry.types';
 import { listBiofeedbackEntriesByDateKeyFromFirestore } from '../data/firebase-biofeedback-read-repository';
 import { testFirebaseConnection } from '../../../lib/testFirebase';
 import type { TimeOfDay } from '../types/biofeedback-entry.types';
-
+import { auth } from '../../../lib/firebase';
 
 type Props = {
   dateKey: string;
@@ -47,9 +47,11 @@ function mapFirebaseEntryToBiofeedbackEntry(entry: {
   id: string;
   measurementDate: string;
   measurementTime: string;
+  
   dateKey: string;
   measuredAt: string;
   exerciseName: string;
+  measurementType?: 'hrv' | 'rlx' | null;
   durationMinutes: number;
   hrvStressPercent: string;
   hrvMidRangePercent: string;
@@ -61,8 +63,10 @@ function mapFirebaseEntryToBiofeedbackEntry(entry: {
 }): BiofeedbackEntry {
   return {
     id: entry.id,
+    userId: auth.currentUser?.uid ?? '',
     dateKey: entry.dateKey,
     measuredAt: entry.measuredAt,
+    measurementType: (entry as any).measurementType ?? null,
     timeOfDay: mapTimeToTimeOfDay(entry.measurementTime),
     createdAt: entry.createdAt,
     updatedAt: entry.createdAt,
@@ -152,7 +156,24 @@ export default function BiofeedbackDayEntriesScreen({ dateKey }: Props) {
               onPress={() => handleEntryPress(entry.id)}
             >
               <View style={styles.cardHeader}>
-                <Text style={styles.cardTitle}>{entry.exerciseName}</Text>
+                <View style={styles.titleRow}>
+  <Text style={styles.cardTitle}>{entry.exerciseName}</Text>
+
+  {entry.measurementType ? (
+    <View
+      style={[
+        styles.measurementBadge,
+        entry.measurementType === 'hrv'
+          ? styles.measurementBadgeHrv
+          : styles.measurementBadgeRlx,
+      ]}
+    >
+      <Text style={styles.measurementBadgeText}>
+        {entry.measurementType === 'hrv' ? 'HRV' : 'RLX'}
+      </Text>
+    </View>
+  ) : null}
+</View>
                 <Text style={styles.cardTime}>{formatEntryTime(entry.measuredAt)}</Text>
               </View>
 
@@ -254,6 +275,30 @@ const styles = StyleSheet.create({
     flexShrink: 1,
     marginLeft: 12,
   },
+  titleRow: {
+  flexDirection: 'row-reverse',
+  alignItems: 'center',
+  gap: 8,
+},
+
+measurementBadge: {
+  paddingHorizontal: 8,
+  paddingVertical: 4,
+  borderRadius: 6,
+},
+
+measurementBadgeHrv: {
+  backgroundColor: '#e3f2fd',
+},
+
+measurementBadgeRlx: {
+  backgroundColor: '#e8f5e9',
+},
+
+measurementBadgeText: {
+  fontSize: 12,
+  fontWeight: '700',
+},
   cardTime: {
     fontSize: 16,
     fontWeight: '600',

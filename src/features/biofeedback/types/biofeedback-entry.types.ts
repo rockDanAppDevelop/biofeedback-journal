@@ -23,6 +23,7 @@ export type BiofeedbackEntry = {
   timeOfDay: TimeOfDay;
 
   exerciseName: string;
+  measurementType: 'hrv' | 'rlx' | null;
   durationMinutes: number;
 
   hrvDistribution: HrvDistribution;

@@ -4,7 +4,6 @@ import { router } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
-  Button,
   ScrollView,
   StyleSheet,
   Text,
@@ -27,6 +26,10 @@ import { validateBiofeedbackEntryForm } from '../forms/biofeedback-entry-form.va
 
 import DateTimeField from '../components/DateTimeField';
 import type { BiofeedbackEntry, TimeOfDay } from '../types/biofeedback-entry.types';
+
+import {
+  EXERCISE_OPTIONS,
+} from '../constants/exercise-options';
 
 type Props = {
   entryId: string;
@@ -57,6 +60,7 @@ function mapFirebaseEntryToBiofeedbackEntry(entry: {
   dateKey: string;
   measuredAt: string;
   exerciseName: string;
+  measurementType?: 'hrv' | 'rlx' | null;
   durationMinutes: number;
   hrvStressPercent: string;
   hrvMidRangePercent: string;
@@ -69,10 +73,12 @@ function mapFirebaseEntryToBiofeedbackEntry(entry: {
 }): BiofeedbackEntry {
   return {
     id: entry.id,
+    userId: '',
     measuredAt: entry.measuredAt,
     dateKey: entry.dateKey,
     timeOfDay: mapTimeToTimeOfDay(entry.measurementTime),
     exerciseName: entry.exerciseName,
+    measurementType: entry.measurementType ?? null,
     durationMinutes: entry.durationMinutes,
     hrvDistribution: {
       stressPercent: toOptionalNumber(entry.hrvStressPercent),
@@ -92,10 +98,26 @@ function mapFirebaseEntryToBiofeedbackEntry(entry: {
 export default function BiofeedbackEntryDetailScreen({ entryId, fromDay }: Props) {
   const [values, setValues] = useState(createDefaultBiofeedbackEntryFormValues());
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedExerciseId, setSelectedExerciseId] = useState<string | null>(null);
+
+  const selectedExerciseOption = useMemo(
+    () => EXERCISE_OPTIONS.find((option) => option.id === selectedExerciseId) ?? null,
+    [selectedExerciseId]
+  );
+
+  const inferredMeasurementType = selectedExerciseOption?.measurementType ?? null;
 
   const errors = useMemo(() => validateBiofeedbackEntryForm(values), [values]);
 
   useEffect(() => {
+    const matched = EXERCISE_OPTIONS.find(
+      (option) => option.label === values.exerciseName
+    );
+
+    setSelectedExerciseId(matched?.id ?? null);
+  }, [values.exerciseName]);
+
+      useEffect(() => {
     loadEntry();
   }, [entryId]);
 
@@ -144,6 +166,7 @@ setValues(createBiofeedbackEntryFormValuesFromEntry(mappedEntry));
   dateKey: values.measurementDate,
   measuredAt: input.measuredAt,
   exerciseName: values.exerciseName.trim(),
+  measurementType: inferredMeasurementType,
   durationMinutes: Number(values.durationMinutes),
   hrvStressPercent: values.hrvStressPercent.trim(),
   hrvMidRangePercent: values.hrvMidRangePercent.trim(),
@@ -220,13 +243,58 @@ router.replace('/');
   <Text style={styles.errorText}>{errors.measurementTime}</Text>
 ) : null}
 
-          <Text style={styles.label}>סוג תרגיל / מדידה</Text>
+          <Text style={styles.label}>תרגיל</Text>
+
+          <View style={styles.exerciseOptionsContainer}>
+            {EXERCISE_OPTIONS.map((option) => {
+              const isSelected = selectedExerciseId === option.id;
+
+              return (
+                <Pressable
+                  key={option.id}
+                  onPress={() => {
+                    setSelectedExerciseId(option.id);
+                    updateField('exerciseName', option.label);
+                  }}
+                  style={[
+                    styles.exerciseOptionButton,
+                    isSelected && styles.exerciseOptionButtonSelected,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.exerciseOptionButtonText,
+                      isSelected && styles.exerciseOptionButtonTextSelected,
+                    ]}
+                  >
+                    {option.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+
           <TextInput
             value={values.exerciseName}
-            onChangeText={(text) => updateField('exerciseName', text)}
+            onChangeText={(text) => {
+              setSelectedExerciseId(null);
+              updateField('exerciseName', text);
+            }}
             style={styles.input}
+            placeholder="או כתבו תרגיל אחר"
           />
-          {errors.exerciseName ? <Text style={styles.errorText}>{errors.exerciseName}</Text> : null}
+          {errors.exerciseName ? (
+            <Text style={styles.errorText}>{errors.exerciseName}</Text>
+          ) : null}
+
+          {inferredMeasurementType ? (
+            <View style={styles.measurementTypeInfoBox}>
+              <Text style={styles.measurementTypeInfoLabel}>סוג מדידה שזוהה</Text>
+              <Text style={styles.measurementTypeInfoValue}>
+                {inferredMeasurementType === 'hrv' ? 'HRV' : 'RLX'}
+              </Text>
+            </View>
+          ) : null}
 
           <Text style={styles.label}>משך בדקות</Text>
           <TextInput
@@ -424,6 +492,50 @@ deleteButtonText: {
     paddingVertical: 10,
     backgroundColor: '#ffffff',
     marginBottom: 8,
+  },
+    exerciseOptionsContainer: {
+    gap: 8,
+    marginBottom: 12,
+  },
+  exerciseOptionButton: {
+    borderWidth: 1,
+    borderColor: '#cfcfcf',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    backgroundColor: '#ffffff',
+  },
+  exerciseOptionButtonSelected: {
+    borderColor: '#1e88e5',
+    backgroundColor: '#e3f2fd',
+  },
+  exerciseOptionButtonText: {
+    fontSize: 15,
+    color: '#222222',
+    fontWeight: '500',
+  },
+  exerciseOptionButtonTextSelected: {
+    color: '#0d47a1',
+    fontWeight: '700',
+  },
+  measurementTypeInfoBox: {
+    marginBottom: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 10,
+    backgroundColor: '#eef6ff',
+    borderWidth: 1,
+    borderColor: '#cfe3ff',
+  },
+  measurementTypeInfoLabel: {
+    fontSize: 12,
+    color: '#46607a',
+    marginBottom: 2,
+  },
+  measurementTypeInfoValue: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#0d47a1',
   },
   notesInput: {
     minHeight: 110,

@@ -23,6 +23,11 @@ import { useEffect } from 'react';
 import { testFirebaseConnection } from '../../../lib/testFirebase';
 import { addBiofeedbackEntryToFirestore } from '../data/firebase-biofeedback-repository';
 
+import {
+  EXERCISE_OPTIONS,
+  type MeasurementType,
+} from '../constants/exercise-options';
+
 type Props = {
   initialDateKey?: string;
 };
@@ -47,8 +52,29 @@ useEffect(() => {
     return defaults;
   });
 
-  const [isSaving, setIsSaving] = useState(false);
-  const errors = useMemo(() => validateBiofeedbackEntryForm(values), [values]);
+const [isSaving, setIsSaving] = useState(false);
+const [selectedExerciseId, setSelectedExerciseId] = useState<string | null>(null);
+const [showExtraHrvFields, setShowExtraHrvFields] = useState(false);
+const [showExtraRlxFields, setShowExtraRlxFields] = useState(false);
+
+const selectedExerciseOption = useMemo(
+  () => EXERCISE_OPTIONS.find((option) => option.id === selectedExerciseId) ?? null,
+  [selectedExerciseId]
+);
+
+const inferredMeasurementType = selectedExerciseOption?.measurementType ?? null;
+
+const shouldShowHrvFields =
+  inferredMeasurementType === null ||
+  inferredMeasurementType === 'hrv' ||
+  showExtraHrvFields;
+
+const shouldShowRlxFields =
+  inferredMeasurementType === null ||
+  inferredMeasurementType === 'rlx' ||
+  showExtraRlxFields;
+
+const errors = useMemo(() => validateBiofeedbackEntryForm(values), [values]);
 
   function updateField<K extends keyof typeof values>(key: K, value: (typeof values)[K]) {
     setValues((current) => ({
@@ -85,6 +111,7 @@ useEffect(() => {
       dateKey: values.measurementDate,
       measuredAt: input.measuredAt,
       exerciseName: values.exerciseName.trim(),
+      measurementType: inferredMeasurementType,
       durationMinutes: Number(values.durationMinutes),
       hrvStressPercent: values.hrvStressPercent.trim(),
       hrvMidRangePercent: values.hrvMidRangePercent.trim(),
@@ -96,6 +123,10 @@ useEffect(() => {
 
     console.log('AFTER FIREBASE SAVE');
     console.log('FIREBASE SAVE SUCCESS:', firebaseId);
+
+    setSelectedExerciseId(null);
+    setShowExtraHrvFields(false);
+    setShowExtraRlxFields(false);
 
     setValues(() => {
       const defaults = createDefaultBiofeedbackEntryFormValues();
@@ -148,15 +179,82 @@ useEffect(() => {
               <Text style={styles.errorText}>{errors.measurementTime}</Text>
             ) : null}
 
-            <Text style={styles.label}>סוג תרגיל / מדידה</Text>
-            <TextInput
-              value={values.exerciseName}
-              onChangeText={(text) => updateField('exerciseName', text)}
-              style={styles.input}
-            />
-            {errors.exerciseName ? (
-              <Text style={styles.errorText}>{errors.exerciseName}</Text>
-            ) : null}
+            <Text style={styles.label}>תרגיל</Text>
+
+<View style={styles.exerciseOptionsContainer}>
+  {EXERCISE_OPTIONS.map((option) => {
+    const isSelected = selectedExerciseId === option.id;
+
+    return (
+      <Pressable
+        key={option.id}
+        onPress={() => {
+          setSelectedExerciseId(option.id);
+          updateField('exerciseName', option.label);
+        }}
+        style={[
+          styles.exerciseOptionButton,
+          isSelected && styles.exerciseOptionButtonSelected,
+        ]}
+      >
+        <Text
+          style={[
+            styles.exerciseOptionButtonText,
+            isSelected && styles.exerciseOptionButtonTextSelected,
+          ]}
+        >
+          {option.label}
+        </Text>
+      </Pressable>
+    );
+  })}
+</View>
+
+<TextInput
+  value={values.exerciseName}
+  onChangeText={(text) => {
+    setSelectedExerciseId(null);
+    updateField('exerciseName', text);
+  }}
+  style={styles.input}
+  placeholder="או כתבו תרגיל אחר"
+/>
+
+{errors.exerciseName ? (
+  <Text style={styles.errorText}>{errors.exerciseName}</Text>
+) : null}
+
+{inferredMeasurementType ? (
+  <View style={styles.measurementTypeInfoBox}>
+    <Text style={styles.measurementTypeInfoLabel}>סוג מדידה שזוהה</Text>
+    <Text style={styles.measurementTypeInfoValue}>
+      {inferredMeasurementType === 'hrv' ? 'HRV' : 'RLX'}
+    </Text>
+  </View>
+) : null}
+
+{inferredMeasurementType === 'hrv' ? (
+  <Pressable
+    style={styles.secondarySectionToggle}
+    onPress={() => setShowExtraRlxFields((current) => !current)}
+  >
+    <Text style={styles.secondarySectionToggleText}>
+      {showExtraRlxFields ? 'הסתר שדות RLX' : 'הצג גם שדות RLX'}
+    </Text>
+  </Pressable>
+) : null}
+
+{inferredMeasurementType === 'rlx' ? (
+  <Pressable
+    style={styles.secondarySectionToggle}
+    onPress={() => setShowExtraHrvFields((current) => !current)}
+  >
+    <Text style={styles.secondarySectionToggleText}>
+      {showExtraHrvFields ? 'הסתר שדות HRV' : 'הצג גם שדות HRV'}
+    </Text>
+  </Pressable>
+) : null}
+
 
             <Text style={styles.label}>משך בדקות</Text>
             <TextInput
@@ -170,68 +268,72 @@ useEffect(() => {
             ) : null}
           </View>
 
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>HRV</Text>
+          {shouldShowHrvFields ? (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>HRV</Text>
 
-            <Text style={styles.label}>אחוז זמן בטווח לחץ</Text>
-            <TextInput
-              value={values.hrvStressPercent}
-              onChangeText={(text) => updateField('hrvStressPercent', text)}
-              style={styles.input}
-              keyboardType="numeric"
-            />
-            {errors.hrvStressPercent ? (
-              <Text style={styles.errorText}>{errors.hrvStressPercent}</Text>
-            ) : null}
+              <Text style={styles.label}>אחוז זמן בטווח לחץ</Text>
+              <TextInput
+                value={values.hrvStressPercent}
+                onChangeText={(text) => updateField('hrvStressPercent', text)}
+                style={styles.input}
+                keyboardType="numeric"
+              />
+              {errors.hrvStressPercent ? (
+                <Text style={styles.errorText}>{errors.hrvStressPercent}</Text>
+              ) : null}
 
-            <Text style={styles.label}>אחוז זמן בטווח ביניים</Text>
-            <TextInput
-              value={values.hrvMidRangePercent}
-              onChangeText={(text) => updateField('hrvMidRangePercent', text)}
-              style={styles.input}
-              keyboardType="numeric"
-            />
-            {errors.hrvMidRangePercent ? (
-              <Text style={styles.errorText}>{errors.hrvMidRangePercent}</Text>
-            ) : null}
+              <Text style={styles.label}>אחוז זמן בטווח ביניים</Text>
+              <TextInput
+                value={values.hrvMidRangePercent}
+                onChangeText={(text) => updateField('hrvMidRangePercent', text)}
+                style={styles.input}
+                keyboardType="numeric"
+              />
+              {errors.hrvMidRangePercent ? (
+                <Text style={styles.errorText}>{errors.hrvMidRangePercent}</Text>
+              ) : null}
 
-            <Text style={styles.label}>אחוז זמן בטווח רגיעה</Text>
-            <TextInput
-              value={values.hrvRelaxationPercent}
-              onChangeText={(text) => updateField('hrvRelaxationPercent', text)}
-              style={styles.input}
-              keyboardType="numeric"
-            />
-            {errors.hrvRelaxationPercent ? (
-              <Text style={styles.errorText}>{errors.hrvRelaxationPercent}</Text>
-            ) : null}
-          </View>
+              <Text style={styles.label}>אחוז זמן בטווח רגיעה</Text>
+              <TextInput
+                value={values.hrvRelaxationPercent}
+                onChangeText={(text) => updateField('hrvRelaxationPercent', text)}
+                style={styles.input}
+                keyboardType="numeric"
+              />
+              {errors.hrvRelaxationPercent ? (
+                <Text style={styles.errorText}>{errors.hrvRelaxationPercent}</Text>
+              ) : null}
+            </View>
+          ) : null}
 
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>RLX</Text>
+          {shouldShowRlxFields ? (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>RLX</Text>
 
-            <Text style={styles.label}>ערך התחלתי</Text>
-            <TextInput
-              value={values.rlxStartValue}
-              onChangeText={(text) => updateField('rlxStartValue', text)}
-              style={styles.input}
-              keyboardType="numeric"
-            />
-            {errors.rlxStartValue ? (
-              <Text style={styles.errorText}>{errors.rlxStartValue}</Text>
-            ) : null}
+              <Text style={styles.label}>ערך התחלתי</Text>
+              <TextInput
+                value={values.rlxStartValue}
+                onChangeText={(text) => updateField('rlxStartValue', text)}
+                style={styles.input}
+                keyboardType="numeric"
+              />
+              {errors.rlxStartValue ? (
+                <Text style={styles.errorText}>{errors.rlxStartValue}</Text>
+              ) : null}
 
-            <Text style={styles.label}>ערך סיום</Text>
-            <TextInput
-              value={values.rlxEndValue}
-              onChangeText={(text) => updateField('rlxEndValue', text)}
-              style={styles.input}
-              keyboardType="numeric"
-            />
-            {errors.rlxEndValue ? (
-              <Text style={styles.errorText}>{errors.rlxEndValue}</Text>
-            ) : null}
-          </View>
+              <Text style={styles.label}>ערך סיום</Text>
+              <TextInput
+                value={values.rlxEndValue}
+                onChangeText={(text) => updateField('rlxEndValue', text)}
+                style={styles.input}
+                keyboardType="numeric"
+              />
+              {errors.rlxEndValue ? (
+                <Text style={styles.errorText}>{errors.rlxEndValue}</Text>
+              ) : null}
+            </View>
+          ) : null}
 
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>הערות</Text>
@@ -305,6 +407,66 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     marginBottom: 8,
   },
+  exerciseOptionsContainer: {
+  gap: 8,
+  marginBottom: 12,
+},
+exerciseOptionButton: {
+  borderWidth: 1,
+  borderColor: '#cfcfcf',
+  borderRadius: 10,
+  paddingHorizontal: 12,
+  paddingVertical: 12,
+  backgroundColor: '#ffffff',
+},
+exerciseOptionButtonSelected: {
+  borderColor: '#1e88e5',
+  backgroundColor: '#e3f2fd',
+},
+exerciseOptionButtonText: {
+  fontSize: 15,
+  color: '#222222',
+  fontWeight: '500',
+},
+exerciseOptionButtonTextSelected: {
+  color: '#0d47a1',
+  fontWeight: '700',
+},
+measurementTypeInfoBox: {
+  marginBottom: 12,
+  paddingHorizontal: 12,
+  paddingVertical: 10,
+  borderRadius: 10,
+  backgroundColor: '#eef6ff',
+  borderWidth: 1,
+  borderColor: '#cfe3ff',
+},
+measurementTypeInfoLabel: {
+  fontSize: 12,
+  color: '#46607a',
+  marginBottom: 2,
+},
+measurementTypeInfoValue: {
+  fontSize: 16,
+  fontWeight: '700',
+  color: '#0d47a1',
+},
+secondarySectionToggle: {
+  marginBottom: 12,
+  paddingHorizontal: 12,
+  paddingVertical: 10,
+  borderRadius: 10,
+  borderWidth: 1,
+  borderColor: '#d6e4f5',
+  backgroundColor: '#f8fbff',
+},
+
+secondarySectionToggleText: {
+  fontSize: 14,
+  fontWeight: '600',
+  color: '#1e4f8a',
+  textAlign: 'center',
+},
   notesInput: {
     minHeight: 110,
   },
