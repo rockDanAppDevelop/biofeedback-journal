@@ -22,3 +22,7 @@ export async function signInWithGoogle() {
 
   return userCredential;
 }
+
+ /*  export async function signInWithGoogle() {
+  throw new Error('Google Sign-In disabled in Expo Go');
+} */

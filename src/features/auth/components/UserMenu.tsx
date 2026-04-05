@@ -25,7 +25,7 @@ export function UserMenu() {
   const handleLogout = async () => {
     try {
       await signOut(auth);
-      await GoogleSignin.signOut();
+      //await GoogleSignin.signOut();
       setOpen(false);
     } catch (error) {
       console.error('SIGN OUT FAILED:', error);
