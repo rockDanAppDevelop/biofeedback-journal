@@ -1,18 +1,11 @@
 
-
 import ReactNativeAsyncStorage from '@react-native-async-storage/async-storage';
 import { getApp, getApps, initializeApp } from 'firebase/app';
 import * as FirebaseAuth from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
+import { getFirebaseConfig } from './firebase-config';
 
-const firebaseConfig = {
-  apiKey: 'AIzaSyA8bIxwoslSysNho2GvqhUroRbEPgiS_C4',
-  authDomain: 'biofeedback-journal.firebaseapp.com',
-  projectId: 'biofeedback-journal',
-  storageBucket: 'biofeedback-journal.firebasestorage.app',
-  messagingSenderId: '400338054941',
-  appId: '1:400338054941:web:4a572a9cb5e356843f7bf4',
-};
+const firebaseConfig = getFirebaseConfig();
 
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
