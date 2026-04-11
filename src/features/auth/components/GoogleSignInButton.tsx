@@ -1,4 +1,5 @@
 import { Alert, Button, View } from 'react-native';
+import { isDev } from '../../../lib/app-env';
 import { signInWithGoogle } from '../api/sign-in-with-google';
 import { signInWithDevUser } from '../api/sign-in-with-dev-user';
 
@@ -23,8 +24,11 @@ export function GoogleSignInButton() {
 
   return (
     <View style={{ gap: 12 }}>
-      <Button title="התחברות עם Google" onPress={handlePress} />
-      <Button title="כניסת פיתוח" onPress={handleDevLogin} />
+      {isDev() ? (
+        <Button title="כניסת פיתוח" onPress={handleDevLogin} />
+      ) : (
+        <Button title="התחברות עם Google" onPress={handlePress} />
+      )}
     </View>
   );
 }
