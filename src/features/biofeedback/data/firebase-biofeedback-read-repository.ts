@@ -1,6 +1,6 @@
 //src\features\biofeedback\data\firebase-biofeedback-read-repository.ts
 
-import { collection, getDocs, orderBy, query, where } from 'firebase/firestore';
+import { collection, getDocs, limit, orderBy, query, where } from 'firebase/firestore';
 import { auth, db } from '../../../lib/firebase';
 
 export type FirebaseBiofeedbackEntry = {
@@ -61,4 +61,26 @@ export async function listBiofeedbackEntriesByDateKeyFromFirestore(
       createdAt: data.createdAt,
     };
   });
+}
+
+export async function hasBiofeedbackEntryForDateKeyFromFirestore(
+  dateKey: string,
+): Promise<boolean> {
+  const user = auth.currentUser;
+
+  if (!user) {
+    throw new Error('No authenticated user');
+  }
+
+  const entriesCollection = collection(db, 'users', user.uid, 'entries');
+
+  const entriesQuery = query(
+    entriesCollection,
+    where('dateKey', '==', dateKey),
+    limit(1)
+  );
+
+  const snapshot = await getDocs(entriesQuery);
+
+  return !snapshot.empty;
 }
