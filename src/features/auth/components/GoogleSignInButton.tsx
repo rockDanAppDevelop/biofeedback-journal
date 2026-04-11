@@ -1,15 +1,11 @@
-//src\features\auth\components\GoogleSignInButton.tsx
-
 import { Alert, Button, View } from 'react-native';
 import { signInWithGoogle } from '../api/sign-in-with-google';
-import { signInAnonymously } from 'firebase/auth';
-import { auth } from '../../../lib/firebase';
+import { signInWithDevUser } from '../api/sign-in-with-dev-user';
 
 export function GoogleSignInButton() {
   const handlePress = async () => {
     try {
       await signInWithGoogle();
-      Alert.alert('התחברת', 'Google login הצליח');
     } catch (error) {
       console.error(error);
       Alert.alert('שגיאה', 'Google login נכשל');
@@ -18,8 +14,7 @@ export function GoogleSignInButton() {
 
   const handleDevLogin = async () => {
     try {
-      await signInAnonymously(auth);
-      Alert.alert('התחברת', 'כניסת פיתוח הצליחה');
+      await signInWithDevUser();
     } catch (error) {
       console.error(error);
       Alert.alert('שגיאה', 'כניסת פיתוח נכשלה');
