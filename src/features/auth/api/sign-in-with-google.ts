@@ -1,14 +1,20 @@
 //src\features\auth\api\sign-in-with-google.ts
 
-import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { GoogleAuthProvider, signInWithCredential } from 'firebase/auth';
 import { auth } from '../../../lib/firebase';
 import { ensureUserProfile } from '../data/ensure-user-profile';
+import { getGoogleSigninOrNull } from './google-sign-in-adapter';
 
 export async function signInWithGoogle() {
-  await GoogleSignin.hasPlayServices();
+  const googleSignin = await getGoogleSigninOrNull();
 
-  const result = await GoogleSignin.signIn();
+  if (!googleSignin) {
+    throw new Error('Google Sign-In is not supported in Expo Go');
+  }
+
+  await googleSignin.hasPlayServices();
+
+  const result = await googleSignin.signIn();
 
   const idToken = result.data?.idToken;
   if (!idToken) {
@@ -22,7 +28,3 @@ export async function signInWithGoogle() {
 
   return userCredential;
 }
-
- /*  export async function signInWithGoogle() {
-  throw new Error('Google Sign-In disabled in Expo Go');
-} */

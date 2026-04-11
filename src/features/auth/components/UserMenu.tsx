@@ -3,8 +3,8 @@
 import { useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { signOut } from 'firebase/auth';
-import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { auth } from '../../../lib/firebase';
+import { getGoogleSigninOrNull } from '../api/google-sign-in-adapter';
 
 export function UserMenu() {
   const [open, setOpen] = useState(false);
@@ -25,7 +25,12 @@ export function UserMenu() {
   const handleLogout = async () => {
     try {
       await signOut(auth);
-      //await GoogleSignin.signOut();
+
+      const googleSignin = await getGoogleSigninOrNull();
+      if (googleSignin) {
+        await googleSignin.signOut();
+      }
+
       setOpen(false);
     } catch (error) {
       console.error('SIGN OUT FAILED:', error);
