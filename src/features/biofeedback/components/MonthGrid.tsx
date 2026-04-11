@@ -21,17 +21,15 @@ type MonthGridProps = {
 function buildMonthDays(referenceDate: Date, entryDateKeys: string[]): CalendarDay[] {
   const year = referenceDate.getFullYear();
   const month = referenceDate.getMonth();
-  const todayKey = toDateKey(new Date());
 
   const firstDayOfMonth = new Date(year, month, 1);
   const lastDayOfMonth = new Date(year, month + 1, 0);
 
   const startDay = firstDayOfMonth.getDay();
-  const mondayBasedStartDay = startDay === 0 ? 6 : startDay - 1;
 
   const days: CalendarDay[] = [];
 
-  for (let i = mondayBasedStartDay; i > 0; i--) {
+  for (let i = startDay; i > 0; i--) {
     const date = new Date(year, month, 1 - i);
     const dateKey = toDateKey(date);
 
@@ -74,7 +72,7 @@ function buildMonthDays(referenceDate: Date, entryDateKeys: string[]): CalendarD
   return days;
 }
 
-const weekDayLabels = ['ב׳', 'ג׳', 'ד׳', 'ה׳', 'ו׳', 'ש׳', 'א׳'];
+const weekDayLabels = ['א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ש'];
 
 export default function MonthGrid({
   referenceDate,
@@ -97,35 +95,38 @@ export default function MonthGrid({
 
       <View style={styles.grid}>
         {monthDays.map((day) => {
-         const isToday = day.dateKey === todayKey;
-const isAfterFirstSeen = firstSeenDateKey !== '' && day.dateKey >= firstSeenDateKey;
-const isPastDay = day.dateKey < todayKey;
-const isEligibleCurrentMonthDay = day.isCurrentMonth && isAfterFirstSeen && isPastDay;
-const shouldShowMissed = isEligibleCurrentMonthDay && !day.hasEntry;
+          const isToday = day.dateKey === todayKey;
+          const isAfterFirstSeen =
+            firstSeenDateKey !== '' && day.dateKey >= firstSeenDateKey;
+          const isPastDay = day.dateKey < todayKey;
+          const isEligibleCurrentMonthDay =
+            day.isCurrentMonth && isAfterFirstSeen && isPastDay;
+          const shouldShowMissed = isEligibleCurrentMonthDay && !day.hasEntry;
+
           return (
             <Pressable
               key={day.dateKey}
               onPress={() => onDayPress(day.dateKey)}
               style={[
-  styles.dayCell,
-  !day.isCurrentMonth && styles.dayCellOutsideMonth,
-  day.hasEntry && styles.dayCellDone,
-  shouldShowMissed && styles.dayCellMissed,
-  isToday && styles.dayCellToday,
-]}
+                styles.dayCell,
+                !day.isCurrentMonth && styles.dayCellOutsideMonth,
+                day.hasEntry && styles.dayCellDone,
+                shouldShowMissed && styles.dayCellMissed,
+                isToday && styles.dayCellToday,
+              ]}
             >
               <Text
-  style={[
-    styles.dayText,
-    !day.isCurrentMonth && styles.dayTextOutsideMonth,
-    day.hasEntry && styles.dayTextDone,
-  ]}
->
-  {day.dayNumber}
-</Text>
+                style={[
+                  styles.dayText,
+                  !day.isCurrentMonth && styles.dayTextOutsideMonth,
+                  day.hasEntry && styles.dayTextDone,
+                ]}
+              >
+                {day.dayNumber}
+              </Text>
 
-{shouldShowMissed ? <View style={styles.missedDot} /> : null}
-</Pressable>
+              {shouldShowMissed ? <View style={styles.missedDot} /> : null}
+            </Pressable>
           );
         })}
       </View>
@@ -151,52 +152,51 @@ const styles = StyleSheet.create({
   grid: {
     flexDirection: 'row-reverse',
     flexWrap: 'wrap',
-    gap: 8,
   },
   dayCell: {
-  width: '12.9%',
-  aspectRatio: 1,
-  borderRadius: 12,
-  borderWidth: 1,
-  borderColor: '#e2e2e2',
-  backgroundColor: '#ffffff',
-  alignItems: 'center',
-  justifyContent: 'center',
-  position: 'relative',
-  paddingTop: 2,
-},
+    width: '14.2857%',
+    aspectRatio: 1,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e2e2e2',
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+    paddingTop: 2,
+  },
   dayCellOutsideMonth: {
-  backgroundColor: '#f7f7f7',
-  borderColor: '#efefef',
-},
+    backgroundColor: '#f7f7f7',
+    borderColor: '#efefef',
+  },
   dayCellDone: {
-  backgroundColor: '#2e7d32',
-  borderColor: '#2e7d32',
-},
+    backgroundColor: '#2e7d32',
+    borderColor: '#2e7d32',
+  },
   dayCellToday: {
-  borderWidth: 2,
-  borderColor: '#1976d2',
-},
-dayCellMissed: {
-  position: 'relative',
-},
-missedDot: {
-  position: 'absolute',
-  bottom: 7,
-  width: 5,
-  height: 5,
-  borderRadius: 2.5,
-  backgroundColor: '#d96b6b',
-},
-dayText: {
-  fontSize: 16,
-  fontWeight: '700',
-  color: '#222222',
-  lineHeight: 18,
-},
+    borderWidth: 2,
+    borderColor: '#1976d2',
+  },
+  dayCellMissed: {
+    position: 'relative',
+  },
+  missedDot: {
+    position: 'absolute',
+    bottom: 7,
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+    backgroundColor: '#d96b6b',
+  },
+  dayText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#222222',
+    lineHeight: 18,
+  },
   dayTextOutsideMonth: {
-  color: '#b8b8b8',
-},
+    color: '#b8b8b8',
+  },
   dayTextDone: {
     color: '#ffffff',
   },
