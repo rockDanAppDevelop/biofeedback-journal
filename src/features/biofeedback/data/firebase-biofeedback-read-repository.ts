@@ -36,33 +36,34 @@ export async function listBiofeedbackEntriesByDateKeyFromFirestore(
 
   const entriesQuery = query(
     entriesCollection,
-    where('dateKey', '==', dateKey),
-    orderBy('measuredAt', 'asc')
+    where('dateKey', '==', dateKey)
   );
 
   const snapshot = await getDocs(entriesQuery);
 
-  return snapshot.docs.map((docSnapshot) => {
-    const data = docSnapshot.data();
+  return snapshot.docs
+    .map((docSnapshot) => {
+      const data = docSnapshot.data();
 
-    return {
-      id: docSnapshot.id,
-      measurementDate: data.measurementDate,
-      measurementTime: data.measurementTime,
-      dateKey: data.dateKey,
-      measuredAt: data.measuredAt,
-      exerciseName: data.exerciseName,
-      measurementType: data.measurementType ?? null,
-      durationMinutes: data.durationMinutes,
-      hrvStressPercent: data.hrvStressPercent,
-      hrvMidRangePercent: data.hrvMidRangePercent,
-      hrvRelaxationPercent: data.hrvRelaxationPercent,
-      rlxStartValue: data.rlxStartValue,
-      rlxEndValue: data.rlxEndValue,
-      notes: data.notes,
-      createdAt: data.createdAt,
-    };
-  });
+      return {
+        id: docSnapshot.id,
+        measurementDate: data.measurementDate,
+        measurementTime: data.measurementTime,
+        dateKey: data.dateKey,
+        measuredAt: data.measuredAt,
+        exerciseName: data.exerciseName,
+        measurementType: data.measurementType ?? null,
+        durationMinutes: data.durationMinutes,
+        hrvStressPercent: data.hrvStressPercent,
+        hrvMidRangePercent: data.hrvMidRangePercent,
+        hrvRelaxationPercent: data.hrvRelaxationPercent,
+        rlxStartValue: data.rlxStartValue,
+        rlxEndValue: data.rlxEndValue,
+        notes: data.notes,
+        createdAt: data.createdAt,
+      };
+    })
+    .sort((a, b) => a.measuredAt.localeCompare(b.measuredAt));
 }
 
 export async function listAllBiofeedbackEntriesFromFirestore(): Promise<BiofeedbackEntry[]> {
