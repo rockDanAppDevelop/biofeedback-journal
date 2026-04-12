@@ -2,6 +2,8 @@
 
 import { collection, getDocs, limit, orderBy, query, where } from 'firebase/firestore';
 import { auth, db } from '../../../lib/firebase';
+import type { BiofeedbackEntry } from '../types/biofeedback-entry.types';
+import { mapFirebaseBiofeedbackEntryToDomain } from './biofeedback-entry.mapper';
 
 export type FirebaseBiofeedbackEntry = {
   id: string;
@@ -60,6 +62,51 @@ export async function listBiofeedbackEntriesByDateKeyFromFirestore(
       notes: data.notes,
       createdAt: data.createdAt,
     };
+  });
+}
+
+export async function listAllBiofeedbackEntriesFromFirestore(): Promise<BiofeedbackEntry[]> {
+  const user = auth.currentUser;
+
+  if (!user) {
+    throw new Error('No authenticated user');
+  }
+
+  const entriesCollection = collection(db, 'users', user.uid, 'entries');
+
+  const entriesQuery = query(
+    entriesCollection,
+    orderBy('measuredAt', 'desc')
+  );
+
+  const snapshot = await getDocs(entriesQuery);
+
+  return snapshot.docs.map((docSnapshot) => {
+    const data = docSnapshot.data();
+
+    return mapFirebaseBiofeedbackEntryToDomain(
+      {
+        id: docSnapshot.id,
+        measurementDate: data.measurementDate,
+        measurementTime: data.measurementTime,
+        dateKey: data.dateKey,
+        measuredAt: data.measuredAt,
+        exerciseName: data.exerciseName,
+        measurementType: data.measurementType ?? null,
+        durationMinutes: data.durationMinutes,
+        hrvStressPercent: data.hrvStressPercent ?? '',
+        hrvMidRangePercent: data.hrvMidRangePercent ?? '',
+        hrvRelaxationPercent: data.hrvRelaxationPercent ?? '',
+        rlxStartValue: data.rlxStartValue ?? '',
+        rlxEndValue: data.rlxEndValue ?? '',
+        notes: data.notes ?? '',
+        createdAt: data.createdAt,
+        updatedAt: data.updatedAt ?? data.createdAt,
+      },
+      {
+        userId: user.uid,
+      },
+    );
   });
 }
 

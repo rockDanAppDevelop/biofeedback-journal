@@ -3,7 +3,7 @@
 import { File, Paths } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 
-import { listBiofeedbackEntries } from './biofeedback-entry.repository';
+import { listAllBiofeedbackEntriesFromFirestore } from './firebase-biofeedback-read-repository';
 import { BiofeedbackEntry } from '../types/biofeedback-entry.types';
 
 function createExportFileName(suffix: string) {
@@ -42,12 +42,12 @@ async function shareEntriesAsJson(entries: BiofeedbackEntry[], suffix: string): 
 }
 
 export async function exportAllBiofeedbackEntriesAsJson(): Promise<void> {
-  const entries = await listBiofeedbackEntries();
+  const entries = await listAllBiofeedbackEntriesFromFirestore();
   await shareEntriesAsJson(entries, 'all');
 }
 
 export async function exportCurrentMonthBiofeedbackEntriesAsJson(): Promise<void> {
-  const entries = await listBiofeedbackEntries();
+  const entries = await listAllBiofeedbackEntriesFromFirestore();
   const now = new Date();
 
   const year = now.getFullYear();
@@ -65,7 +65,7 @@ export async function exportMonthBiofeedbackEntriesAsJson(
   year: number,
   month: number,
 ): Promise<void> {
-  const entries = await listBiofeedbackEntries();
+  const entries = await listAllBiofeedbackEntriesFromFirestore();
 
   const filtered = entries.filter((entry) => {
     const date = new Date(entry.measuredAt);

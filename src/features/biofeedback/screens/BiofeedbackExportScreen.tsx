@@ -10,7 +10,7 @@ import {
   exportCurrentMonthBiofeedbackEntriesAsJson,
   exportMonthBiofeedbackEntriesAsJson,
 } from '../data/biofeedback-entry.export';
-import { listBiofeedbackEntries } from '../data/biofeedback-entry.repository';
+import { listAllBiofeedbackEntriesFromFirestore } from '../data/firebase-biofeedback-read-repository';
 
 type MonthOption = {
   label: string;
@@ -59,7 +59,7 @@ export default function BiofeedbackExportScreen() {
   }, []);
 
   async function loadMonthOptions() {
-    const entries = await listBiofeedbackEntries();
+    const entries = await listAllBiofeedbackEntriesFromFirestore();
     const options = buildMonthOptionsFromEntries(entries);
     setMonthOptions(options);
     setSelectedMonthIndex(0);
