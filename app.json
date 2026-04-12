@@ -35,7 +35,6 @@
     ],
     "extra": {
       "router": {},
-      "appEnv": "dev",
       "eas": {
         "projectId": "34e79a33-b289-4043-a75e-73103f602a41"
       }
