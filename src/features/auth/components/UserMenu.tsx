@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import Constants from 'expo-constants';
 import { signOut } from 'firebase/auth';
 import { auth } from '../../../lib/firebase';
 import { getGoogleSigninOrNull } from '../api/google-sign-in-adapter';
@@ -9,6 +10,7 @@ import { getGoogleSigninOrNull } from '../api/google-sign-in-adapter';
 export function UserMenu() {
   const [open, setOpen] = useState(false);
   const user = auth.currentUser;
+  const appVersion = Constants.expoConfig?.version ?? '';
 
   if (!user) {
     return null;
@@ -51,6 +53,7 @@ export function UserMenu() {
           <View style={styles.menu}>
             <Text style={styles.menuTitle}>מחובר כעת</Text>
             <Text style={styles.emailText}>{user.email ?? 'ללא אימייל'}</Text>
+            {appVersion ? <Text style={styles.versionText}>v{appVersion}</Text> : null}
 
             <Pressable onPress={handleLogout} style={styles.logoutButton}>
               <Text style={styles.logoutText}>התנתקות</Text>
@@ -106,6 +109,11 @@ const styles = StyleSheet.create({
   emailText: {
     fontSize: 14,
     color: '#111827',
+    marginBottom: 12,
+  },
+  versionText: {
+    fontSize: 11,
+    color: '#6b7280',
     marginBottom: 12,
   },
   logoutButton: {
