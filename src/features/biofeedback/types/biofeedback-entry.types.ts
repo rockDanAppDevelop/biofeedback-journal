@@ -13,15 +13,31 @@ export type RlxMetrics = {
   endValue: number | null;
 };
 
+export type EntryActivity = {
+  activityType: 'training' | 'monitoring';
+  catalogItemId: string | null;
+  userCustomActivityId: string | null;
+  measurementType: 'hrv' | 'rlx' | 'none';
+  customExerciseName: string | null;
+  exerciseParameters: {
+    inhale?: number | null;
+    holdAfterInhale?: number | null;
+    exhale?: number | null;
+    holdAfterExhale?: number | null;
+  } | null;
+  monitoringType: 'morning' | 'short' | null;
+};
+
 export type BiofeedbackEntry = {
   id: string;
 
-  userId: string; // 👈 חדש
+  userId: string; // נ‘ˆ ׳—׳“׳©
 
   measuredAt: string;
   dateKey: string;
   timeOfDay: TimeOfDay;
 
+  activity?: EntryActivity;
   exerciseName: string;
   measurementType: 'hrv' | 'rlx' | null;
   durationMinutes: number;

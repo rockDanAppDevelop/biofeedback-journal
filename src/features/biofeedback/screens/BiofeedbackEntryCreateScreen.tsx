@@ -24,20 +24,32 @@ import { testFirebaseConnection } from '../../../lib/testFirebase';
 import { addBiofeedbackEntryToFirestore } from '../data/firebase-biofeedback-repository';
 
 import {
-  EXERCISE_OPTIONS,
-  type MeasurementType,
-} from '../constants/exercise-options';
+  ACTIVITY_CATALOG,
+  type ActivityCatalogItem,
+  type ActivityCategoryId,
+  type ActivityParameterFieldId,
+} from '../constants/activity-catalog';
 
 type Props = {
   initialDateKey?: string;
 };
 
+type MapperSaveInput = ReturnType<typeof toCreateBiofeedbackEntryInput> & {
+  measurementType?: 'hrv' | 'rlx' | null;
+};
+
+const CATEGORY_OPTIONS: { id: ActivityCategoryId; label: string }[] = [
+  { id: 'trainers', label: 'מאמנים' },
+  { id: 'relaxation', label: 'הרפיה' },
+  { id: 'guided', label: 'מונחה' },
+  { id: 'monitoring', label: 'ניטור' },
+  { id: 'custom', label: 'מותאם אישית' },
+];
+
 export default function BiofeedbackEntryCreateScreen({ initialDateKey }: Props) {
-
-
-useEffect(() => {
-  void testFirebaseConnection();
-}, []);
+  useEffect(() => {
+    void testFirebaseConnection();
+  }, []);
 
   const [values, setValues] = useState(() => {
     const defaults = createDefaultBiofeedbackEntryFormValues();
@@ -52,29 +64,64 @@ useEffect(() => {
     return defaults;
   });
 
-const [isSaving, setIsSaving] = useState(false);
-const [selectedExerciseId, setSelectedExerciseId] = useState<string | null>(null);
-const [showExtraHrvFields, setShowExtraHrvFields] = useState(false);
-const [showExtraRlxFields, setShowExtraRlxFields] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [showExtraHrvFields, setShowExtraHrvFields] = useState(false);
+  const [showExtraRlxFields, setShowExtraRlxFields] = useState(false);
 
-const selectedExerciseOption = useMemo(
-  () => EXERCISE_OPTIONS.find((option) => option.id === selectedExerciseId) ?? null,
-  [selectedExerciseId]
-);
+  const selectedCatalogItem = useMemo(
+    () =>
+      ACTIVITY_CATALOG.find((item) => item.id === values.selectedCatalogItemId) ?? null,
+    [values.selectedCatalogItemId],
+  );
 
-const inferredMeasurementType = selectedExerciseOption?.measurementType ?? null;
+  const visibleCatalogItems = useMemo(() => {
+    if (
+      values.selectedCategoryId === '' ||
+      values.selectedCategoryId === 'custom'
+    ) {
+      return [];
+    }
 
-const shouldShowHrvFields =
-  inferredMeasurementType === null ||
-  inferredMeasurementType === 'hrv' ||
-  showExtraHrvFields;
+    return ACTIVITY_CATALOG.filter(
+      (item) =>
+        item.categoryId === values.selectedCategoryId &&
+        item.isActive,
+    );
+  }, [values.selectedCategoryId]);
 
-const shouldShowRlxFields =
-  inferredMeasurementType === null ||
-  inferredMeasurementType === 'rlx' ||
-  showExtraRlxFields;
+  const isMonitoring =
+    values.selectedCategoryId === 'monitoring' ||
+    selectedCatalogItem?.activityType === 'monitoring';
 
-const errors = useMemo(() => validateBiofeedbackEntryForm(values), [values]);
+  const isCustomTraining = values.selectedCategoryId === 'custom';
+  const isParameterizedTraining = selectedCatalogItem?.exerciseType === 'parameterized';
+
+  const finalMeasurementTypeForUI =
+    isMonitoring
+      ? 'none'
+      : isCustomTraining
+        ? values.customMeasurementType || null
+        : selectedCatalogItem?.measurementType ?? null;
+
+  const shouldShowHrvFields =
+    !isMonitoring &&
+    (
+      finalMeasurementTypeForUI === null ||
+      finalMeasurementTypeForUI === 'hrv' ||
+      finalMeasurementTypeForUI === 'none' ||
+      showExtraHrvFields
+    );
+
+  const shouldShowRlxFields =
+    !isMonitoring &&
+    (
+      finalMeasurementTypeForUI === null ||
+      finalMeasurementTypeForUI === 'rlx' ||
+      finalMeasurementTypeForUI === 'none' ||
+      showExtraRlxFields
+    );
+
+  const errors = useMemo(() => validateBiofeedbackEntryForm(values), [values]);
 
   function updateField<K extends keyof typeof values>(key: K, value: (typeof values)[K]) {
     setValues((current) => ({
@@ -83,72 +130,142 @@ const errors = useMemo(() => validateBiofeedbackEntryForm(values), [values]);
     }));
   }
 
- async function handleSave() {
-  if (isSaving) {
-    return;
-  }
-
-  console.log('HANDLE SAVE START');
-
-  const nextErrors = validateBiofeedbackEntryForm(values);
-  const hasErrors = Object.keys(nextErrors).length > 0;
-
-  if (hasErrors) {
-    Alert.alert('הטופס לא תקין', 'יש לבדוק את השדות ולתקן את הערכים.');
-    return;
-  }
-
-  setIsSaving(true);
-
-  try {
-    const input = toCreateBiofeedbackEntryInput(values);
-
-    console.log('BEFORE FIREBASE SAVE');
-
-    const firebaseId = await addBiofeedbackEntryToFirestore({
-      measurementDate: values.measurementDate,
-      measurementTime: values.measurementTime,
-      dateKey: values.measurementDate,
-      measuredAt: input.measuredAt,
-      exerciseName: values.exerciseName.trim(),
-      measurementType: inferredMeasurementType,
-      durationMinutes: Number(values.durationMinutes),
-      hrvStressPercent: values.hrvStressPercent.trim(),
-      hrvMidRangePercent: values.hrvMidRangePercent.trim(),
-      hrvRelaxationPercent: values.hrvRelaxationPercent.trim(),
-      rlxStartValue: values.rlxStartValue.trim(),
-      rlxEndValue: values.rlxEndValue.trim(),
-      notes: values.notes.trim(),
-    });
-
-    console.log('AFTER FIREBASE SAVE');
-    console.log('FIREBASE SAVE SUCCESS:', firebaseId);
-
-    setSelectedExerciseId(null);
+  function resetActivitySpecificFields(nextCategoryId: typeof values.selectedCategoryId) {
+    setValues((current) => ({
+      ...current,
+      selectedCategoryId: nextCategoryId,
+      selectedCatalogItemId: '',
+      userCustomActivityId: '',
+      exerciseName: nextCategoryId === 'custom' ? current.exerciseName : '',
+      customExerciseName: '',
+      customMeasurementType: '',
+      breathingInhale: '',
+      breathingHoldAfterInhale: '',
+      breathingExhale: '',
+      breathingHoldAfterExhale: '',
+      monitoringType: '',
+    }));
     setShowExtraHrvFields(false);
     setShowExtraRlxFields(false);
-
-    setValues(() => {
-      const defaults = createDefaultBiofeedbackEntryFormValues();
-
-      if (initialDateKey) {
-        return {
-          ...defaults,
-          measurementDate: initialDateKey,
-        };
-      }
-
-      return defaults;
-    });
-
-    router.replace('/');
-  } catch (e) {
-    console.error('FIREBASE SAVE FAILED:', e);
-    Alert.alert('שגיאה', 'שמירת המדידה נכשלה.');
-  } finally {
-    setIsSaving(false);
   }
-}
+
+  function handleCategorySelect(categoryId: ActivityCategoryId) {
+    resetActivitySpecificFields(categoryId);
+  }
+
+  function handleCatalogItemSelect(item: ActivityCatalogItem) {
+    setValues((current) => ({
+      ...current,
+      selectedCatalogItemId: item.id,
+      exerciseName: item.label,
+      customExerciseName: '',
+      customMeasurementType: '',
+      monitoringType:
+        item.activityType === 'monitoring' ? item.monitoringType : '',
+    }));
+
+    if (item.activityType === 'monitoring') {
+      setShowExtraHrvFields(false);
+      setShowExtraRlxFields(false);
+    }
+  }
+
+  function getParameterFieldValue(fieldId: ActivityParameterFieldId): string {
+    switch (fieldId) {
+      case 'inhale':
+        return values.breathingInhale;
+      case 'holdAfterInhale':
+        return values.breathingHoldAfterInhale;
+      case 'exhale':
+        return values.breathingExhale;
+      case 'holdAfterExhale':
+        return values.breathingHoldAfterExhale;
+    }
+  }
+
+  function updateParameterField(fieldId: ActivityParameterFieldId, text: string) {
+    switch (fieldId) {
+      case 'inhale':
+        updateField('breathingInhale', text);
+        return;
+      case 'holdAfterInhale':
+        updateField('breathingHoldAfterInhale', text);
+        return;
+      case 'exhale':
+        updateField('breathingExhale', text);
+        return;
+      case 'holdAfterExhale':
+        updateField('breathingHoldAfterExhale', text);
+        return;
+    }
+  }
+
+  async function handleSave() {
+    if (isSaving) {
+      return;
+    }
+
+    console.log('HANDLE SAVE START');
+
+    const nextErrors = validateBiofeedbackEntryForm(values);
+    const hasErrors = Object.keys(nextErrors).length > 0;
+
+    if (hasErrors) {
+      Alert.alert('הטופס לא תקין', 'יש לבדוק את השדות ולתקן את הערכים.');
+      return;
+    }
+
+    setIsSaving(true);
+
+    try {
+      const input = toCreateBiofeedbackEntryInput(values) as MapperSaveInput;
+
+      console.log('BEFORE FIREBASE SAVE');
+
+      const firebaseId = await addBiofeedbackEntryToFirestore({
+        measurementDate: values.measurementDate,
+        measurementTime: values.measurementTime,
+        dateKey: values.measurementDate,
+        measuredAt: input.measuredAt,
+        exerciseName: input.exerciseName,
+        measurementType: input.measurementType ?? null,
+        activity: input.activity,
+        durationMinutes: Number(values.durationMinutes),
+        hrvStressPercent: values.hrvStressPercent.trim(),
+        hrvMidRangePercent: values.hrvMidRangePercent.trim(),
+        hrvRelaxationPercent: values.hrvRelaxationPercent.trim(),
+        rlxStartValue: values.rlxStartValue.trim(),
+        rlxEndValue: values.rlxEndValue.trim(),
+        notes: values.notes.trim(),
+      });
+
+      console.log('AFTER FIREBASE SAVE');
+      console.log('FIREBASE SAVE SUCCESS:', firebaseId);
+
+      setShowExtraHrvFields(false);
+      setShowExtraRlxFields(false);
+
+      setValues(() => {
+        const defaults = createDefaultBiofeedbackEntryFormValues();
+
+        if (initialDateKey) {
+          return {
+            ...defaults,
+            measurementDate: initialDateKey,
+          };
+        }
+
+        return defaults;
+      });
+
+      router.replace('/');
+    } catch (e) {
+      console.error('FIREBASE SAVE FAILED:', e);
+      Alert.alert('שגיאה', 'שמירת המדידה נכשלה.');
+    } finally {
+      setIsSaving(false);
+    }
+  }
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -179,82 +296,194 @@ const errors = useMemo(() => validateBiofeedbackEntryForm(values), [values]);
               <Text style={styles.errorText}>{errors.measurementTime}</Text>
             ) : null}
 
-            <Text style={styles.label}>תרגיל</Text>
+            <Text style={styles.label}>קטגוריה</Text>
 
-<View style={styles.exerciseOptionsContainer}>
-  {EXERCISE_OPTIONS.map((option) => {
-    const isSelected = selectedExerciseId === option.id;
+            <View style={styles.exerciseOptionsContainer}>
+              {CATEGORY_OPTIONS.map((option) => {
+                const isSelected = values.selectedCategoryId === option.id;
 
-    return (
-      <Pressable
-        key={option.id}
-        onPress={() => {
-          setSelectedExerciseId(option.id);
-          updateField('exerciseName', option.label);
-        }}
-        style={[
-          styles.exerciseOptionButton,
-          isSelected && styles.exerciseOptionButtonSelected,
-        ]}
-      >
-        <Text
-          style={[
-            styles.exerciseOptionButtonText,
-            isSelected && styles.exerciseOptionButtonTextSelected,
-          ]}
-        >
-          {option.label}
-        </Text>
-      </Pressable>
-    );
-  })}
-</View>
+                return (
+                  <Pressable
+                    key={option.id}
+                    onPress={() => handleCategorySelect(option.id)}
+                    style={[
+                      styles.exerciseOptionButton,
+                      isSelected && styles.exerciseOptionButtonSelected,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.exerciseOptionButtonText,
+                        isSelected && styles.exerciseOptionButtonTextSelected,
+                      ]}
+                    >
+                      {option.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
 
-<TextInput
-  value={values.exerciseName}
-  onChangeText={(text) => {
-    setSelectedExerciseId(null);
-    updateField('exerciseName', text);
-  }}
-  style={styles.input}
-  placeholder="או כתבו תרגיל אחר"
-/>
+            {values.selectedCategoryId !== '' && !isCustomTraining ? (
+              <>
+                <Text style={styles.label}>פעילות</Text>
 
-{errors.exerciseName ? (
-  <Text style={styles.errorText}>{errors.exerciseName}</Text>
-) : null}
+                <View style={styles.exerciseOptionsContainer}>
+                  {visibleCatalogItems.map((item) => {
+                    const isSelected = values.selectedCatalogItemId === item.id;
 
-{inferredMeasurementType ? (
-  <View style={styles.measurementTypeInfoBox}>
-    <Text style={styles.measurementTypeInfoLabel}>סוג מדידה שזוהה</Text>
-    <Text style={styles.measurementTypeInfoValue}>
-      {inferredMeasurementType === 'hrv' ? 'HRV' : 'RLX'}
-    </Text>
-  </View>
-) : null}
+                    return (
+                      <Pressable
+                        key={item.id}
+                        onPress={() => handleCatalogItemSelect(item)}
+                        style={[
+                          styles.exerciseOptionButton,
+                          isSelected && styles.exerciseOptionButtonSelected,
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.exerciseOptionButtonText,
+                            isSelected && styles.exerciseOptionButtonTextSelected,
+                          ]}
+                        >
+                          {item.label}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              </>
+            ) : null}
 
-{inferredMeasurementType === 'hrv' ? (
-  <Pressable
-    style={styles.secondarySectionToggle}
-    onPress={() => setShowExtraRlxFields((current) => !current)}
-  >
-    <Text style={styles.secondarySectionToggleText}>
-      {showExtraRlxFields ? 'הסתר שדות RLX' : 'הצג גם שדות RLX'}
-    </Text>
-  </Pressable>
-) : null}
+            {isCustomTraining ? (
+              <>
+                <Text style={styles.label}>שם התרגיל</Text>
+                <TextInput
+                  value={values.customExerciseName}
+                  onChangeText={(text) => {
+                    updateField('customExerciseName', text);
+                    updateField('exerciseName', text);
+                  }}
+                  style={styles.input}
+                  placeholder="כתבו שם לתרגיל האישי"
+                />
+                {errors.customExerciseName ? (
+                  <Text style={styles.errorText}>{errors.customExerciseName}</Text>
+                ) : null}
 
-{inferredMeasurementType === 'rlx' ? (
-  <Pressable
-    style={styles.secondarySectionToggle}
-    onPress={() => setShowExtraHrvFields((current) => !current)}
-  >
-    <Text style={styles.secondarySectionToggleText}>
-      {showExtraHrvFields ? 'הסתר שדות HRV' : 'הצג גם שדות HRV'}
-    </Text>
-  </Pressable>
-) : null}
+                <Text style={styles.label}>סוג מדידה</Text>
+                <View style={styles.exerciseOptionsContainer}>
+                  {[
+                    { id: 'hrv', label: 'HRV' },
+                    { id: 'rlx', label: 'RLX' },
+                    { id: 'none', label: 'ללא' },
+                  ].map((option) => {
+                    const isSelected = values.customMeasurementType === option.id;
 
+                    return (
+                      <Pressable
+                        key={option.id}
+                        onPress={() =>
+                          updateField(
+                            'customMeasurementType',
+                            option.id as typeof values.customMeasurementType,
+                          )
+                        }
+                        style={[
+                          styles.exerciseOptionButton,
+                          isSelected && styles.exerciseOptionButtonSelected,
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.exerciseOptionButtonText,
+                            isSelected && styles.exerciseOptionButtonTextSelected,
+                          ]}
+                        >
+                          {option.label}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+                {errors.customMeasurementType ? (
+                  <Text style={styles.errorText}>{errors.customMeasurementType}</Text>
+                ) : null}
+              </>
+            ) : null}
+
+            {selectedCatalogItem && !isMonitoring ? (
+              <View style={styles.measurementTypeInfoBox}>
+                <Text style={styles.measurementTypeInfoLabel}>סוג מדידה שזוהה</Text>
+                <Text style={styles.measurementTypeInfoValue}>
+                  {finalMeasurementTypeForUI === 'hrv'
+                    ? 'HRV'
+                    : finalMeasurementTypeForUI === 'rlx'
+                      ? 'RLX'
+                      : finalMeasurementTypeForUI === 'none'
+                        ? 'HRV / RLX'
+                        : ''}
+                </Text>
+              </View>
+            ) : null}
+
+            {!isMonitoring && finalMeasurementTypeForUI === 'hrv' ? (
+              <Pressable
+                style={styles.secondarySectionToggle}
+                onPress={() => setShowExtraRlxFields((current) => !current)}
+              >
+                <Text style={styles.secondarySectionToggleText}>
+                  {showExtraRlxFields ? 'הסתר שדות RLX' : 'הצג גם שדות RLX'}
+                </Text>
+              </Pressable>
+            ) : null}
+
+            {!isMonitoring && finalMeasurementTypeForUI === 'rlx' ? (
+              <Pressable
+                style={styles.secondarySectionToggle}
+                onPress={() => setShowExtraHrvFields((current) => !current)}
+              >
+                <Text style={styles.secondarySectionToggleText}>
+                  {showExtraHrvFields ? 'הסתר שדות HRV' : 'הצג גם שדות HRV'}
+                </Text>
+              </Pressable>
+            ) : null}
+
+            {isParameterizedTraining && selectedCatalogItem?.parameterSchema ? (
+              <View style={styles.parameterSection}>
+                <Text style={styles.sectionTitle}>פרמטרים</Text>
+
+                {selectedCatalogItem.parameterSchema.map((field) => {
+                  const fieldError =
+                    field.id === 'inhale'
+                      ? errors.breathingInhale
+                      : field.id === 'holdAfterInhale'
+                        ? errors.breathingHoldAfterInhale
+                        : field.id === 'exhale'
+                          ? errors.breathingExhale
+                          : errors.breathingHoldAfterExhale;
+
+                  return (
+                    <View key={field.id}>
+                      <Text style={styles.label}>{field.label}</Text>
+                      <TextInput
+                        value={getParameterFieldValue(field.id)}
+                        onChangeText={(text) => updateParameterField(field.id, text)}
+                        style={styles.input}
+                        keyboardType="numeric"
+                        placeholder={String(field.defaultValue)}
+                      />
+                      {fieldError ? <Text style={styles.errorText}>{fieldError}</Text> : null}
+                    </View>
+                  );
+                })}
+              </View>
+            ) : null}
+
+            {isMonitoring && errors.monitoringType ? (
+              <Text style={styles.errorText}>{errors.monitoringType}</Text>
+            ) : null}
 
             <Text style={styles.label}>משך בדקות</Text>
             <TextInput
@@ -269,51 +498,51 @@ const errors = useMemo(() => validateBiofeedbackEntryForm(values), [values]);
           </View>
 
           {shouldShowHrvFields ? (
-  <View style={[styles.section, styles.hrvSection]}>
-    <Text style={[styles.sectionTitle, styles.hrvSectionTitle]}>HRV</Text>
+            <View style={[styles.section, styles.hrvSection]}>
+              <Text style={[styles.sectionTitle, styles.hrvSectionTitle]}>HRV</Text>
 
-    <View style={styles.hrvFieldBlockRelax}>
-      <Text style={[styles.label, styles.hrvRelaxLabel]}>אחוז זמן בטווח רגיעה</Text>
-      <TextInput
-        value={values.hrvRelaxationPercent}
-        onChangeText={(text) => updateField('hrvRelaxationPercent', text)}
-        style={[styles.input, styles.hrvRelaxInput]}
-        keyboardType="numeric"
-        placeholder="הערך החשוב ביותר"
-        placeholderTextColor="#7aa7d9"
-      />
-      {errors.hrvRelaxationPercent ? (
-        <Text style={styles.errorText}>{errors.hrvRelaxationPercent}</Text>
-      ) : null}
-    </View>
+              <View style={styles.hrvFieldBlockRelax}>
+                <Text style={[styles.label, styles.hrvRelaxLabel]}>אחוז זמן בטווח רגיעה</Text>
+                <TextInput
+                  value={values.hrvRelaxationPercent}
+                  onChangeText={(text) => updateField('hrvRelaxationPercent', text)}
+                  style={[styles.input, styles.hrvRelaxInput]}
+                  keyboardType="numeric"
+                  placeholder="הערך החשוב ביותר"
+                  placeholderTextColor="#7aa7d9"
+                />
+                {errors.hrvRelaxationPercent ? (
+                  <Text style={styles.errorText}>{errors.hrvRelaxationPercent}</Text>
+                ) : null}
+              </View>
 
-    <View style={styles.hrvFieldBlockMid}>
-      <Text style={[styles.label, styles.hrvMidLabel]}>אחוז זמן בטווח ביניים</Text>
-      <TextInput
-        value={values.hrvMidRangePercent}
-        onChangeText={(text) => updateField('hrvMidRangePercent', text)}
-        style={[styles.input, styles.hrvMidInput]}
-        keyboardType="numeric"
-      />
-      {errors.hrvMidRangePercent ? (
-        <Text style={styles.errorText}>{errors.hrvMidRangePercent}</Text>
-      ) : null}
-    </View>
+              <View style={styles.hrvFieldBlockMid}>
+                <Text style={[styles.label, styles.hrvMidLabel]}>אחוז זמן בטווח ביניים</Text>
+                <TextInput
+                  value={values.hrvMidRangePercent}
+                  onChangeText={(text) => updateField('hrvMidRangePercent', text)}
+                  style={[styles.input, styles.hrvMidInput]}
+                  keyboardType="numeric"
+                />
+                {errors.hrvMidRangePercent ? (
+                  <Text style={styles.errorText}>{errors.hrvMidRangePercent}</Text>
+                ) : null}
+              </View>
 
-    <View style={styles.hrvFieldBlockStress}>
-      <Text style={[styles.label, styles.hrvStressLabel]}>אחוז זמן בטווח לחץ</Text>
-      <TextInput
-        value={values.hrvStressPercent}
-        onChangeText={(text) => updateField('hrvStressPercent', text)}
-        style={[styles.input, styles.hrvStressInput]}
-        keyboardType="numeric"
-      />
-      {errors.hrvStressPercent ? (
-        <Text style={styles.errorText}>{errors.hrvStressPercent}</Text>
-      ) : null}
-    </View>
-  </View>
-) : null}
+              <View style={styles.hrvFieldBlockStress}>
+                <Text style={[styles.label, styles.hrvStressLabel]}>אחוז זמן בטווח לחץ</Text>
+                <TextInput
+                  value={values.hrvStressPercent}
+                  onChangeText={(text) => updateField('hrvStressPercent', text)}
+                  style={[styles.input, styles.hrvStressInput]}
+                  keyboardType="numeric"
+                />
+                {errors.hrvStressPercent ? (
+                  <Text style={styles.errorText}>{errors.hrvStressPercent}</Text>
+                ) : null}
+              </View>
+            </View>
+          ) : null}
 
           {shouldShowRlxFields ? (
             <View style={styles.section}>
@@ -357,14 +586,14 @@ const errors = useMemo(() => validateBiofeedbackEntryForm(values), [values]);
 
         <View style={styles.floatingActionBar}>
           <Pressable
-  style={[styles.saveButton, isSaving && { opacity: 0.6 }]}
-  onPress={handleSave}
-  disabled={isSaving}
->
-  <Text style={styles.saveButtonText}>
-    {isSaving ? 'שומר...' : 'שמור'}
-  </Text>
-</Pressable>
+            style={[styles.saveButton, isSaving && { opacity: 0.6 }]}
+            onPress={handleSave}
+            disabled={isSaving}
+          >
+            <Text style={styles.saveButtonText}>
+              {isSaving ? 'שומר...' : 'שמור'}
+            </Text>
+          </Pressable>
         </View>
       </View>
     </SafeAreaView>
@@ -372,7 +601,7 @@ const errors = useMemo(() => validateBiofeedbackEntryForm(values), [values]);
 }
 
 const styles = StyleSheet.create({
-    hrvSection: {
+  hrvSection: {
     borderColor: '#cfe3ff',
     backgroundColor: '#f4f9ff',
   },
@@ -470,65 +699,72 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   exerciseOptionsContainer: {
-  gap: 8,
-  marginBottom: 12,
-},
-exerciseOptionButton: {
-  borderWidth: 1,
-  borderColor: '#cfcfcf',
-  borderRadius: 10,
-  paddingHorizontal: 12,
-  paddingVertical: 12,
-  backgroundColor: '#ffffff',
-},
-exerciseOptionButtonSelected: {
-  borderColor: '#1e88e5',
-  backgroundColor: '#e3f2fd',
-},
-exerciseOptionButtonText: {
-  fontSize: 15,
-  color: '#222222',
-  fontWeight: '500',
-},
-exerciseOptionButtonTextSelected: {
-  color: '#0d47a1',
-  fontWeight: '700',
-},
-measurementTypeInfoBox: {
-  marginBottom: 12,
-  paddingHorizontal: 12,
-  paddingVertical: 10,
-  borderRadius: 10,
-  backgroundColor: '#eef6ff',
-  borderWidth: 1,
-  borderColor: '#cfe3ff',
-},
-measurementTypeInfoLabel: {
-  fontSize: 12,
-  color: '#46607a',
-  marginBottom: 2,
-},
-measurementTypeInfoValue: {
-  fontSize: 16,
-  fontWeight: '700',
-  color: '#0d47a1',
-},
-secondarySectionToggle: {
-  marginBottom: 12,
-  paddingHorizontal: 12,
-  paddingVertical: 10,
-  borderRadius: 10,
-  borderWidth: 1,
-  borderColor: '#d6e4f5',
-  backgroundColor: '#f8fbff',
-},
-
-secondarySectionToggleText: {
-  fontSize: 14,
-  fontWeight: '600',
-  color: '#1e4f8a',
-  textAlign: 'center',
-},
+    gap: 8,
+    marginBottom: 12,
+  },
+  exerciseOptionButton: {
+    borderWidth: 1,
+    borderColor: '#cfcfcf',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    backgroundColor: '#ffffff',
+  },
+  exerciseOptionButtonSelected: {
+    borderColor: '#1e88e5',
+    backgroundColor: '#e3f2fd',
+  },
+  exerciseOptionButtonText: {
+    fontSize: 15,
+    color: '#222222',
+    fontWeight: '500',
+  },
+  exerciseOptionButtonTextSelected: {
+    color: '#0d47a1',
+    fontWeight: '700',
+  },
+  measurementTypeInfoBox: {
+    marginBottom: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 10,
+    backgroundColor: '#eef6ff',
+    borderWidth: 1,
+    borderColor: '#cfe3ff',
+  },
+  measurementTypeInfoLabel: {
+    fontSize: 12,
+    color: '#46607a',
+    marginBottom: 2,
+  },
+  measurementTypeInfoValue: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#0d47a1',
+  },
+  secondarySectionToggle: {
+    marginBottom: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#d6e4f5',
+    backgroundColor: '#f8fbff',
+  },
+  secondarySectionToggleText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1e4f8a',
+    textAlign: 'center',
+  },
+  parameterSection: {
+    marginBottom: 12,
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#d6e4f5',
+    backgroundColor: '#f8fbff',
+  },
   notesInput: {
     minHeight: 110,
   },
