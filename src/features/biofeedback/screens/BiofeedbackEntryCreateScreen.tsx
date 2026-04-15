@@ -1,6 +1,7 @@
 // src\features\biofeedback\screens\BiofeedbackEntryCreateScreen.tsx
 
 import { router } from 'expo-router';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useMemo, useState } from 'react';
 import {
   Alert,
@@ -57,6 +58,13 @@ const CATEGORY_DISPLAY_ORDER: Exclude<ActivityCategoryId, 'custom'>[] = [
   'guided',
   'monitoring',
 ];
+
+const CATEGORY_ICONS = {
+  trainers: 'whistle',
+  relaxation: 'meditation',
+  guided: 'flower-tulip-outline',
+  monitoring: 'chart-line',
+};
 
 
 export default function BiofeedbackEntryCreateScreen({ initialDateKey }: Props) {
@@ -379,6 +387,21 @@ export default function BiofeedbackEntryCreateScreen({ initialDateKey }: Props) 
     }
   }
 
+  const builtInCategoryOptions = [
+    { id: 'trainers', iconName: CATEGORY_ICONS.trainers },
+    { id: 'relaxation', iconName: CATEGORY_ICONS.relaxation },
+    { id: 'guided', iconName: CATEGORY_ICONS.guided },
+    { id: 'monitoring', iconName: CATEGORY_ICONS.monitoring },
+  ]
+    .map((category) => {
+      const option = categoryOptions.find((item) => item.id === category.id);
+
+      return option ? { ...option, iconName: category.iconName } : null;
+    })
+    .filter((option) => option !== null);
+
+  const customCategoryOption = categoryOptions.find((option) => option.id === 'custom') ?? null;
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.screen}>
@@ -410,23 +433,32 @@ export default function BiofeedbackEntryCreateScreen({ initialDateKey }: Props) 
 
             <Text style={styles.label}>קטגוריה</Text>
 
-            <View style={styles.exerciseOptionsContainer}>
-              {categoryOptions.map((option) => {
+            <View style={styles.categoryTopRow}>
+              {builtInCategoryOptions.map((option) => {
                 const isSelected = values.selectedCategoryId === option.id;
 
                 return (
                   <Pressable
                     key={option.id}
                     onPress={() => handleCategorySelect(option.id)}
-                    style={[
-                      styles.exerciseOptionButton,
-                      isSelected && styles.exerciseOptionButtonSelected,
-                    ]}
+                    style={styles.categoryCircleItem}
                   >
+                    <View
+                      style={[
+                        styles.categoryCircleButton,
+                        isSelected && styles.categoryCircleButtonSelected,
+                      ]}
+                    >
+                      <MaterialCommunityIcons
+                        name={option.iconName}
+                        size={24}
+                        color={isSelected ? '#0d47a1' : '#46607a'}
+                      />
+                    </View>
                     <Text
                       style={[
-                        styles.exerciseOptionButtonText,
-                        isSelected && styles.exerciseOptionButtonTextSelected,
+                        styles.categoryCircleLabel,
+                        isSelected && styles.categoryCircleLabelSelected,
                       ]}
                     >
                       {option.label}
@@ -435,6 +467,26 @@ export default function BiofeedbackEntryCreateScreen({ initialDateKey }: Props) 
                 );
               })}
             </View>
+
+            {customCategoryOption ? (
+              <Pressable
+                onPress={() => handleCategorySelect(customCategoryOption.id)}
+                style={[
+                  styles.customCategoryButton,
+                  values.selectedCategoryId === 'custom' && styles.customCategoryButtonSelected,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.customCategoryButtonText,
+                    values.selectedCategoryId === 'custom' &&
+                      styles.customCategoryButtonTextSelected,
+                  ]}
+                >
+                  {customCategoryOption.label}
+                </Text>
+              </Pressable>
+            ) : null}
 
             {values.selectedCategoryId !== '' && !isCustomTraining ? (
               <>
@@ -848,6 +900,64 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     backgroundColor: '#ffffff',
     marginBottom: 8,
+  },
+  categoryTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  categoryCircleItem: {
+    flex: 1,
+    alignItems: 'center',
+    marginHorizontal: 4,
+  },
+  categoryCircleButton: {
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    borderWidth: 1,
+    borderColor: '#cfcfcf',
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 6,
+  },
+  categoryCircleButtonSelected: {
+    borderColor: '#1e88e5',
+    backgroundColor: '#e3f2fd',
+  },
+  categoryCircleLabel: {
+    fontSize: 12,
+    color: '#222222',
+    fontWeight: '500',
+    textAlign: 'center',
+  },
+  categoryCircleLabelSelected: {
+    color: '#0d47a1',
+    fontWeight: '700',
+  },
+  customCategoryButton: {
+    borderWidth: 1,
+    borderColor: '#cfcfcf',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 14,
+    backgroundColor: '#ffffff',
+    marginBottom: 12,
+  },
+  customCategoryButtonSelected: {
+    borderColor: '#1e88e5',
+    backgroundColor: '#e3f2fd',
+  },
+  customCategoryButtonText: {
+    fontSize: 15,
+    color: '#222222',
+    fontWeight: '500',
+    textAlign: 'center',
+  },
+  customCategoryButtonTextSelected: {
+    color: '#0d47a1',
+    fontWeight: '700',
   },
   exerciseOptionsContainer: {
     gap: 8,
