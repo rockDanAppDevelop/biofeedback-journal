@@ -94,6 +94,7 @@ export default function BiofeedbackEntryCreateScreen({ initialDateKey }: Props) 
   const [isLoadingCustomActivities, setIsLoadingCustomActivities] = useState(false);
   const [hasLoadedCustomActivities, setHasLoadedCustomActivities] = useState(false);
   const [showAllCustomActivities, setShowAllCustomActivities] = useState(false);
+  const [isCreatingNewCustomActivity, setIsCreatingNewCustomActivity] = useState(false);
 
   const categoryOptions = useMemo(
     () => [
@@ -145,6 +146,7 @@ export default function BiofeedbackEntryCreateScreen({ initialDateKey }: Props) 
         return;
       }
 
+      setIsCreatingNewCustomActivity(false);
       void loadCustomActivities();
     }, [values.selectedCategoryId, hasLoadedCustomActivities, loadCustomActivities]),
   );
@@ -187,6 +189,12 @@ export default function BiofeedbackEntryCreateScreen({ initialDateKey }: Props) 
     [sortedCustomActivities],
   );
 
+  const selectedSavedCustomActivity = useMemo(
+    () =>
+      customActivities.find((activity) => activity.id === values.userCustomActivityId) ?? null,
+    [customActivities, values.userCustomActivityId],
+  );
+
   const displayedCustomActivities =
     favoriteCustomActivities.length > 0 && !showAllCustomActivities
       ? favoriteCustomActivities
@@ -209,6 +217,27 @@ export default function BiofeedbackEntryCreateScreen({ initialDateKey }: Props) 
       : isCustomTraining
         ? values.customMeasurementType || null
         : selectedCatalogItem?.measurementType ?? null;
+
+  const selectedActivitySummary = useMemo(() => {
+    if (selectedCatalogItem) {
+      return {
+        label: selectedCatalogItem.label,
+        sourceLabel: 'פעילות מהקטלוג',
+      };
+    }
+
+    if (selectedSavedCustomActivity) {
+      return {
+        label: selectedSavedCustomActivity.label,
+        sourceLabel: 'פעילות שמורה',
+      };
+    }
+
+    return null;
+  }, [selectedCatalogItem, selectedSavedCustomActivity]);
+
+  const shouldShowCustomNameInput =
+    isCustomTraining && isCreatingNewCustomActivity;
 
   const shouldShowHrvFields =
     !isMonitoring &&
@@ -252,6 +281,7 @@ export default function BiofeedbackEntryCreateScreen({ initialDateKey }: Props) 
       breathingHoldAfterExhale: '',
       monitoringType: '',
     }));
+    setIsCreatingNewCustomActivity(false);
     setShowAllCustomActivities(false);
     setShowExtraHrvFields(false);
     setShowExtraRlxFields(false);
@@ -271,6 +301,7 @@ export default function BiofeedbackEntryCreateScreen({ initialDateKey }: Props) 
       monitoringType:
         item.activityType === 'monitoring' ? item.monitoringType : '',
     }));
+    setIsCreatingNewCustomActivity(false);
 
     if (item.activityType === 'monitoring') {
       setShowExtraHrvFields(false);
@@ -286,6 +317,7 @@ export default function BiofeedbackEntryCreateScreen({ initialDateKey }: Props) 
       exerciseName: activity.label,
       customMeasurementType: activity.measurementType,
     }));
+    setIsCreatingNewCustomActivity(false);
   }
 
   function handleStartNewCustomActivity() {
@@ -296,6 +328,7 @@ export default function BiofeedbackEntryCreateScreen({ initialDateKey }: Props) 
       exerciseName: '',
       customMeasurementType: '',
     }));
+    setIsCreatingNewCustomActivity(true);
   }
 
   async function handleToggleCustomActivityFavorite(activity: UserCustomActivity) {
@@ -351,6 +384,7 @@ export default function BiofeedbackEntryCreateScreen({ initialDateKey }: Props) 
                       customMeasurementType: '',
                     },
               );
+              setIsCreatingNewCustomActivity(false);
             } catch (error) {
               console.error('FAILED TO HIDE CUSTOM ACTIVITY:', error);
               Alert.alert('שגיאה', 'הסתרת הפעילות נכשלה.');
@@ -700,6 +734,8 @@ export default function BiofeedbackEntryCreateScreen({ initialDateKey }: Props) 
                 >
                   <Text style={styles.secondarySectionToggleText}>ניהול התרגולים שלי</Text>
                 </Pressable>
+                {shouldShowCustomNameInput ? (
+                  <>
                 <Text style={styles.label}>שם התרגיל</Text>
                 <TextInput
                   value={values.customExerciseName}
@@ -752,19 +788,25 @@ export default function BiofeedbackEntryCreateScreen({ initialDateKey }: Props) 
                 {errors.customMeasurementType ? (
                   <Text style={styles.errorText}>{errors.customMeasurementType}</Text>
                 ) : null}
+                  </>
+                ) : null}
               </>
             ) : null}
 
-            {selectedCatalogItem && !isMonitoring ? (
+            {selectedActivitySummary ? (
               <View style={styles.measurementTypeInfoBox}>
                 <Text style={styles.measurementTypeInfoLabel}>סוג מדידה שזוהה</Text>
                 <Text style={styles.measurementTypeInfoValue}>
+                  {selectedActivitySummary.label}
+                </Text>
+                <Text style={styles.measurementTypeInfoLabel}>
+                  {selectedActivitySummary.sourceLabel}
                   {finalMeasurementTypeForUI === 'hrv'
-                    ? 'HRV'
+                    ? ' • HRV'
                     : finalMeasurementTypeForUI === 'rlx'
-                      ? 'RLX'
+                      ? ' • RLX'
                       : finalMeasurementTypeForUI === 'none'
-                        ? 'HRV / RLX'
+                        ? ' • ללא'
                         : ''}
                 </Text>
               </View>
