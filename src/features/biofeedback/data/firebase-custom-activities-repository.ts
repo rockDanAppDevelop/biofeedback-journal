@@ -1,4 +1,4 @@
-import { addDoc, collection, getDocs, query, where } from 'firebase/firestore';
+import { addDoc, collection, doc, getDocs, query, updateDoc, where } from 'firebase/firestore';
 import { auth, db } from '../../../lib/firebase';
 import type {
   CreateUserCustomActivityInput,
@@ -69,4 +69,18 @@ export async function addCustomActivityToFirestore(
     id: docRef.id,
     ...docData,
   };
+}
+
+export async function hideCustomActivityInFirestore(activityId: string): Promise<void> {
+  const user = auth.currentUser;
+
+  if (!user) {
+    throw new Error('No authenticated user');
+  }
+
+  const activityRef = doc(db, 'users', user.uid, 'customActivities', activityId);
+
+  await updateDoc(activityRef, {
+    isActive: false,
+  });
 }

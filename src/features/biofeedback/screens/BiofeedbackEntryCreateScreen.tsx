@@ -26,6 +26,7 @@ import { testFirebaseConnection } from '../../../lib/testFirebase';
 import { addBiofeedbackEntryToFirestore } from '../data/firebase-biofeedback-repository';
 import {
   addCustomActivityToFirestore,
+  hideCustomActivityInFirestore,
   listActiveCustomActivitiesFromFirestore,
 } from '../data/firebase-custom-activities-repository';
 
@@ -266,6 +267,47 @@ export default function BiofeedbackEntryCreateScreen({ initialDateKey }: Props) 
       exerciseName: '',
       customMeasurementType: '',
     }));
+  }
+
+  function handleHideCustomActivity(activity: UserCustomActivity) {
+    Alert.alert(
+      'להסתיר פעילות שמורה?',
+      'הפעילות תוסר מהרשימה הפעילה. כרגע אין אפשרות לשחזר מתוך האפליקציה.',
+      [
+        {
+          text: 'ביטול',
+          style: 'cancel',
+        },
+        {
+          text: 'הסתר',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await hideCustomActivityInFirestore(activity.id);
+
+              setCustomActivities((current) =>
+                current.filter((item) => item.id !== activity.id),
+              );
+
+              setValues((current) =>
+                current.userCustomActivityId !== activity.id
+                  ? current
+                  : {
+                      ...current,
+                      userCustomActivityId: '',
+                      customExerciseName: '',
+                      exerciseName: '',
+                      customMeasurementType: '',
+                    },
+              );
+            } catch (error) {
+              console.error('FAILED TO HIDE CUSTOM ACTIVITY:', error);
+              Alert.alert('שגיאה', 'הסתרת הפעילות נכשלה.');
+            }
+          },
+        },
+      ],
+    );
   }
 
   function getParameterFieldValue(fieldId: ActivityParameterFieldId): string {
@@ -532,23 +574,43 @@ export default function BiofeedbackEntryCreateScreen({ initialDateKey }: Props) 
                         const isSelected = values.userCustomActivityId === activity.id;
 
                         return (
-                          <Pressable
+                          <View
                             key={activity.id}
-                            onPress={() => handleExistingCustomActivitySelect(activity)}
                             style={[
                               styles.exerciseOptionButton,
                               isSelected && styles.exerciseOptionButtonSelected,
+                              styles.savedCustomActivityRow,
                             ]}
                           >
-                            <Text
-                              style={[
-                                styles.exerciseOptionButtonText,
-                                isSelected && styles.exerciseOptionButtonTextSelected,
-                              ]}
+                            <Pressable
+                              onPress={() => handleExistingCustomActivitySelect(activity)}
+                              style={styles.savedCustomActivitySelectArea}
                             >
-                              {activity.label}
-                            </Text>
-                          </Pressable>
+                              <Text
+                                style={[
+                                  styles.exerciseOptionButtonText,
+                                  isSelected && styles.exerciseOptionButtonTextSelected,
+                                ]}
+                              >
+                                {activity.label}
+                              </Text>
+                            </Pressable>
+
+                            <Pressable
+                              onPress={() => handleHideCustomActivity(activity)}
+                              hitSlop={8}
+                              style={styles.hideCustomActivityButton}
+                            >
+                              <Text
+                              style={[
+                                  styles.hideCustomActivityButtonText,
+                                  isSelected && styles.hideCustomActivityButtonTextSelected,
+                              ]}
+                              >
+                                הסתר
+                              </Text>
+                            </Pressable>
+                          </View>
                         );
                       })}
                     </View>
@@ -975,6 +1037,15 @@ const styles = StyleSheet.create({
     borderColor: '#1e88e5',
     backgroundColor: '#e3f2fd',
   },
+  savedCustomActivityRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  savedCustomActivitySelectArea: {
+    flex: 1,
+  },
   exerciseOptionButtonText: {
     fontSize: 15,
     color: '#222222',
@@ -983,6 +1054,17 @@ const styles = StyleSheet.create({
   exerciseOptionButtonTextSelected: {
     color: '#0d47a1',
     fontWeight: '700',
+  },
+  hideCustomActivityButton: {
+    paddingVertical: 4,
+  },
+  hideCustomActivityButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#b71c1c',
+  },
+  hideCustomActivityButtonTextSelected: {
+    color: '#8e0000',
   },
   measurementTypeInfoBox: {
     marginBottom: 12,
