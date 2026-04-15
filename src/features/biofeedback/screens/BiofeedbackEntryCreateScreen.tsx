@@ -26,6 +26,10 @@ import { useEffect } from 'react';
 import { testFirebaseConnection } from '../../../lib/testFirebase';
 import { addBiofeedbackEntryToFirestore } from '../data/firebase-biofeedback-repository';
 import {
+  listFavoriteCatalogActivityIdsFromFirestore,
+  setCatalogActivityFavoriteInFirestore,
+} from '../data/firebase-catalog-favorites-repository';
+import {
   addCustomActivityToFirestore,
   hideCustomActivityInFirestore,
   listActiveCustomActivitiesFromFirestore,
@@ -92,6 +96,7 @@ export default function BiofeedbackEntryCreateScreen({ initialDateKey }: Props) 
   const [showExtraHrvFields, setShowExtraHrvFields] = useState(false);
   const [showExtraRlxFields, setShowExtraRlxFields] = useState(false);
   const [customActivities, setCustomActivities] = useState<UserCustomActivity[]>([]);
+  const [favoriteCatalogActivityIds, setFavoriteCatalogActivityIds] = useState<string[]>([]);
   const [isLoadingCustomActivities, setIsLoadingCustomActivities] = useState(false);
   const [hasLoadedCustomActivities, setHasLoadedCustomActivities] = useState(false);
   const [showAllCustomActivities, setShowAllCustomActivities] = useState(false);
@@ -130,6 +135,19 @@ export default function BiofeedbackEntryCreateScreen({ initialDateKey }: Props) 
       setIsLoadingCustomActivities(false);
     }
   }, []);
+
+  const loadFavoriteCatalogActivityIds = useCallback(async () => {
+    try {
+      const favoriteIds = await listFavoriteCatalogActivityIdsFromFirestore();
+      setFavoriteCatalogActivityIds(favoriteIds);
+    } catch (error) {
+      console.error('FAILED TO LOAD CATALOG FAVORITES:', error);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadFavoriteCatalogActivityIds();
+  }, [loadFavoriteCatalogActivityIds]);
 
   useEffect(() => {
     if (
@@ -174,6 +192,29 @@ export default function BiofeedbackEntryCreateScreen({ initialDateKey }: Props) 
         item.isActive,
     );
   }, [values.selectedCategoryId]);
+
+  const favoriteCatalogActivityIdsSet = useMemo(
+    () => new Set(favoriteCatalogActivityIds),
+    [favoriteCatalogActivityIds],
+  );
+
+  const displayedCatalogItems = useMemo(
+    () =>
+      visibleCatalogItems
+        .map((item, index) => ({
+          item,
+          isFavorite: favoriteCatalogActivityIdsSet.has(item.id),
+          originalIndex: index,
+        }))
+        .sort((a, b) => {
+          if (a.isFavorite !== b.isFavorite) {
+            return a.isFavorite ? -1 : 1;
+          }
+
+          return a.originalIndex - b.originalIndex;
+        }),
+    [favoriteCatalogActivityIdsSet, visibleCatalogItems],
+  );
 
   const sortedCustomActivities = useMemo(
     () =>
@@ -353,6 +394,25 @@ export default function BiofeedbackEntryCreateScreen({ initialDateKey }: Props) 
     } catch (error) {
       console.error('FAILED TO TOGGLE CUSTOM ACTIVITY FAVORITE:', error);
       Alert.alert('׳©׳’׳™׳׳”', '׳¢׳“׳›׳•׳ ׳”׳׳•׳¢׳“׳₪׳•׳× ׳ ׳›׳©׳׳”.');
+    }
+  }
+
+  async function handleToggleCatalogActivityFavorite(item: ActivityCatalogItem) {
+    const nextIsFavorite = !favoriteCatalogActivityIdsSet.has(item.id);
+
+    try {
+      await setCatalogActivityFavoriteInFirestore(item.id, nextIsFavorite);
+
+      setFavoriteCatalogActivityIds((current) => {
+        if (nextIsFavorite) {
+          return current.includes(item.id) ? current : [...current, item.id];
+        }
+
+        return current.filter((catalogItemId) => catalogItemId !== item.id);
+      });
+    } catch (error) {
+      console.error('FAILED TO TOGGLE CATALOG ACTIVITY FAVORITE:', error);
+      Alert.alert('שגיאה', 'עדכון המועדפים נכשל.');
     }
   }
 
@@ -667,27 +727,42 @@ export default function BiofeedbackEntryCreateScreen({ initialDateKey }: Props) 
                 <Text style={styles.label}>פעילות</Text>
 
                 <View style={styles.exerciseOptionsContainer}>
-                  {visibleCatalogItems.map((item) => {
+                  {displayedCatalogItems.map(({ item, isFavorite }) => {
                     const isSelected = values.selectedCatalogItemId === item.id;
 
                     return (
-                      <Pressable
+                      <View
                         key={item.id}
-                        onPress={() => handleCatalogItemSelect(item)}
                         style={[
                           styles.exerciseOptionButton,
                           isSelected && styles.exerciseOptionButtonSelected,
+                          styles.savedCustomActivityRow,
                         ]}
                       >
-                        <Text
-                          style={[
-                            styles.exerciseOptionButtonText,
-                            isSelected && styles.exerciseOptionButtonTextSelected,
-                          ]}
+                        <Pressable
+                          onPress={() => handleCatalogItemSelect(item)}
+                          style={styles.savedCustomActivitySelectArea}
                         >
-                          {item.label}
-                        </Text>
-                      </Pressable>
+                          <Text
+                            style={[
+                              styles.exerciseOptionButtonText,
+                              isSelected && styles.exerciseOptionButtonTextSelected,
+                            ]}
+                          >
+                            {item.label}
+                          </Text>
+                        </Pressable>
+
+                        <Pressable
+                          onPress={() => void handleToggleCatalogActivityFavorite(item)}
+                          hitSlop={8}
+                          style={styles.favoriteCustomActivityButton}
+                        >
+                          <Text style={styles.favoriteCustomActivityButtonText}>
+                            {isFavorite ? '⭐' : '☆'}
+                          </Text>
+                        </Pressable>
+                      </View>
                     );
                   })}
                 </View>
