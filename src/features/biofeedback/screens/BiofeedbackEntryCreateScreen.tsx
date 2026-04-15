@@ -18,10 +18,15 @@ import DateTimeField from '../components/DateTimeField';
 import { createDefaultBiofeedbackEntryFormValues } from '../forms/biofeedback-entry-form.defaults';
 import { toCreateBiofeedbackEntryInput } from '../forms/biofeedback-entry-form.mapper';
 import { validateBiofeedbackEntryForm } from '../forms/biofeedback-entry-form.validation';
+import type { UserCustomActivity } from '../types/user-custom-activity.types';
 
 import { useEffect } from 'react';
 import { testFirebaseConnection } from '../../../lib/testFirebase';
 import { addBiofeedbackEntryToFirestore } from '../data/firebase-biofeedback-repository';
+import {
+  addCustomActivityToFirestore,
+  listActiveCustomActivitiesFromFirestore,
+} from '../data/firebase-custom-activities-repository';
 
 import {
   ACTIVITY_CATALOG,
@@ -38,13 +43,21 @@ type MapperSaveInput = ReturnType<typeof toCreateBiofeedbackEntryInput> & {
   measurementType?: 'hrv' | 'rlx' | null;
 };
 
-const CATEGORY_OPTIONS: { id: ActivityCategoryId; label: string }[] = [
-  { id: 'trainers', label: 'מאמנים' },
-  { id: 'relaxation', label: 'הרפיה' },
-  { id: 'guided', label: 'מונחה' },
-  { id: 'monitoring', label: 'ניטור' },
-  { id: 'custom', label: 'מותאם אישית' },
+const CATEGORY_LABELS: Record<ActivityCategoryId, string> = {
+  trainers: 'מאמנים',
+  relaxation: 'הרפיה',
+  guided: 'מונחה',
+  monitoring: 'ניטור',
+  custom: 'מותאם אישית',
+};
+
+const CATEGORY_DISPLAY_ORDER: Exclude<ActivityCategoryId, 'custom'>[] = [
+  'trainers',
+  'relaxation',
+  'guided',
+  'monitoring',
 ];
+
 
 export default function BiofeedbackEntryCreateScreen({ initialDateKey }: Props) {
   useEffect(() => {
@@ -67,6 +80,63 @@ export default function BiofeedbackEntryCreateScreen({ initialDateKey }: Props) 
   const [isSaving, setIsSaving] = useState(false);
   const [showExtraHrvFields, setShowExtraHrvFields] = useState(false);
   const [showExtraRlxFields, setShowExtraRlxFields] = useState(false);
+  const [customActivities, setCustomActivities] = useState<UserCustomActivity[]>([]);
+  const [isLoadingCustomActivities, setIsLoadingCustomActivities] = useState(false);
+  const [hasLoadedCustomActivities, setHasLoadedCustomActivities] = useState(false);
+
+  const categoryOptions = useMemo(
+    () => [
+      ...CATEGORY_DISPLAY_ORDER.filter((categoryId) =>
+        ACTIVITY_CATALOG.some((item) => item.categoryId === categoryId && item.isActive),
+      ).map((categoryId) => ({
+        id: categoryId,
+        label: CATEGORY_LABELS[categoryId],
+      })),
+      {
+        id: 'custom' as const,
+        label: CATEGORY_LABELS.custom,
+      },
+    ],
+    [],
+  );
+
+  useEffect(() => {
+    if (
+      values.selectedCategoryId !== 'custom' ||
+      hasLoadedCustomActivities ||
+      isLoadingCustomActivities
+    ) {
+      return;
+    }
+
+    let isCancelled = false;
+
+    async function loadCustomActivities() {
+      setIsLoadingCustomActivities(true);
+
+      try {
+        const items = await listActiveCustomActivitiesFromFirestore();
+
+        if (!isCancelled) {
+          console.log('CUSTOM ACTIVITIES LOADED:', items);
+          setCustomActivities(items);
+          setHasLoadedCustomActivities(true);
+        }
+      } catch (error) {
+        console.error('FAILED TO LOAD CUSTOM ACTIVITIES:', error);
+      } finally {
+        if (!isCancelled) {
+          setIsLoadingCustomActivities(false);
+        }
+      }
+    }
+
+    void loadCustomActivities();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [values.selectedCategoryId, hasLoadedCustomActivities]);
 
   const selectedCatalogItem = useMemo(
     () =>
@@ -170,6 +240,26 @@ export default function BiofeedbackEntryCreateScreen({ initialDateKey }: Props) 
     }
   }
 
+  function handleExistingCustomActivitySelect(activity: UserCustomActivity) {
+    setValues((current) => ({
+      ...current,
+      userCustomActivityId: activity.id,
+      customExerciseName: activity.label,
+      exerciseName: activity.label,
+      customMeasurementType: activity.measurementType,
+    }));
+  }
+
+  function handleStartNewCustomActivity() {
+    setValues((current) => ({
+      ...current,
+      userCustomActivityId: '',
+      customExerciseName: '',
+      exerciseName: '',
+      customMeasurementType: '',
+    }));
+  }
+
   function getParameterFieldValue(fieldId: ActivityParameterFieldId): string {
     switch (fieldId) {
       case 'inhale':
@@ -242,6 +332,28 @@ export default function BiofeedbackEntryCreateScreen({ initialDateKey }: Props) 
       console.log('AFTER FIREBASE SAVE');
       console.log('FIREBASE SAVE SUCCESS:', firebaseId);
 
+      if (
+        values.selectedCategoryId === 'custom' &&
+        values.userCustomActivityId === '' &&
+        values.customExerciseName.trim() !== '' &&
+        values.customMeasurementType !== ''
+      ) {
+        const alreadyExists = customActivities.some(
+          (activity) =>
+            activity.label.trim() === values.customExerciseName.trim() &&
+            activity.measurementType === values.customMeasurementType,
+        );
+
+        if (!alreadyExists) {
+          const savedCustomActivity = await addCustomActivityToFirestore({
+            label: values.customExerciseName.trim(),
+            measurementType: values.customMeasurementType,
+          });
+
+          setCustomActivities((current) => [savedCustomActivity, ...current]);
+        }
+      }
+
       setShowExtraHrvFields(false);
       setShowExtraRlxFields(false);
 
@@ -299,7 +411,7 @@ export default function BiofeedbackEntryCreateScreen({ initialDateKey }: Props) 
             <Text style={styles.label}>קטגוריה</Text>
 
             <View style={styles.exerciseOptionsContainer}>
-              {CATEGORY_OPTIONS.map((option) => {
+              {categoryOptions.map((option) => {
                 const isSelected = values.selectedCategoryId === option.id;
 
                 return (
@@ -358,6 +470,45 @@ export default function BiofeedbackEntryCreateScreen({ initialDateKey }: Props) 
 
             {isCustomTraining ? (
               <>
+                {isLoadingCustomActivities ? (
+                  <Text style={styles.label}>טוען פעילויות שמורות...</Text>
+                ) : customActivities.length > 0 ? (
+                  <>
+                    <Text style={styles.label}>פעילויות שמורות</Text>
+                    <View style={styles.exerciseOptionsContainer}>
+                      {customActivities.map((activity) => {
+                        const isSelected = values.userCustomActivityId === activity.id;
+
+                        return (
+                          <Pressable
+                            key={activity.id}
+                            onPress={() => handleExistingCustomActivitySelect(activity)}
+                            style={[
+                              styles.exerciseOptionButton,
+                              isSelected && styles.exerciseOptionButtonSelected,
+                            ]}
+                          >
+                            <Text
+                              style={[
+                                styles.exerciseOptionButtonText,
+                                isSelected && styles.exerciseOptionButtonTextSelected,
+                              ]}
+                            >
+                              {activity.label}
+                            </Text>
+                          </Pressable>
+                        );
+                      })}
+                    </View>
+
+                    <Pressable
+                      onPress={handleStartNewCustomActivity}
+                      style={styles.secondarySectionToggle}
+                    >
+                      <Text style={styles.secondarySectionToggleText}>יצירת פעילות חדשה</Text>
+                    </Pressable>
+                  </>
+                ) : null}
                 <Text style={styles.label}>שם התרגיל</Text>
                 <TextInput
                   value={values.customExerciseName}
