@@ -1,8 +1,8 @@
 // src\features\biofeedback\screens\BiofeedbackEntryCreateScreen.tsx
 
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
   Alert,
   Pressable,
@@ -111,6 +111,22 @@ export default function BiofeedbackEntryCreateScreen({ initialDateKey }: Props) 
     [],
   );
 
+  const loadCustomActivities = useCallback(async () => {
+    setIsLoadingCustomActivities(true);
+
+    try {
+      const items = await listActiveCustomActivitiesFromFirestore();
+
+      console.log('CUSTOM ACTIVITIES LOADED:', items);
+      setCustomActivities(items);
+      setHasLoadedCustomActivities(true);
+    } catch (error) {
+      console.error('FAILED TO LOAD CUSTOM ACTIVITIES:', error);
+    } finally {
+      setIsLoadingCustomActivities(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (
       values.selectedCategoryId !== 'custom' ||
@@ -120,34 +136,18 @@ export default function BiofeedbackEntryCreateScreen({ initialDateKey }: Props) 
       return;
     }
 
-    let isCancelled = false;
-
-    async function loadCustomActivities() {
-      setIsLoadingCustomActivities(true);
-
-      try {
-        const items = await listActiveCustomActivitiesFromFirestore();
-
-        if (!isCancelled) {
-          console.log('CUSTOM ACTIVITIES LOADED:', items);
-          setCustomActivities(items);
-          setHasLoadedCustomActivities(true);
-        }
-      } catch (error) {
-        console.error('FAILED TO LOAD CUSTOM ACTIVITIES:', error);
-      } finally {
-        if (!isCancelled) {
-          setIsLoadingCustomActivities(false);
-        }
-      }
-    }
-
     void loadCustomActivities();
+  }, [values.selectedCategoryId, hasLoadedCustomActivities, isLoadingCustomActivities, loadCustomActivities]);
 
-    return () => {
-      isCancelled = true;
-    };
-  }, [values.selectedCategoryId, hasLoadedCustomActivities]);
+  useFocusEffect(
+    useCallback(() => {
+      if (values.selectedCategoryId !== 'custom' || !hasLoadedCustomActivities) {
+        return;
+      }
+
+      void loadCustomActivities();
+    }, [values.selectedCategoryId, hasLoadedCustomActivities, loadCustomActivities]),
+  );
 
   const selectedCatalogItem = useMemo(
     () =>
@@ -694,6 +694,12 @@ export default function BiofeedbackEntryCreateScreen({ initialDateKey }: Props) 
                     </Pressable>
                   </>
                 ) : null}
+                <Pressable
+                  onPress={() => router.push('/custom-activities/manage')}
+                  style={styles.secondarySectionToggle}
+                >
+                  <Text style={styles.secondarySectionToggleText}>ניהול התרגולים שלי</Text>
+                </Pressable>
                 <Text style={styles.label}>שם התרגיל</Text>
                 <TextInput
                   value={values.customExerciseName}

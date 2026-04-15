@@ -13,6 +13,26 @@ type FirebaseCustomActivityDocument = {
   isFavorite?: boolean;
 };
 
+type UpdateUserCustomActivityInput = {
+  label: string;
+  measurementType: UserCustomActivity['measurementType'];
+};
+
+function mapCustomActivityDocument(
+  docSnapshot: { id: string; data(): unknown },
+): UserCustomActivity {
+  const data = docSnapshot.data() as FirebaseCustomActivityDocument;
+
+  return {
+    id: docSnapshot.id,
+    label: data.label,
+    measurementType: data.measurementType,
+    createdAt: data.createdAt,
+    isActive: data.isActive,
+    isFavorite: data.isFavorite ?? false,
+  };
+}
+
 export async function listActiveCustomActivitiesFromFirestore(): Promise<UserCustomActivity[]> {
   const user = auth.currentUser;
 
@@ -30,18 +50,22 @@ export async function listActiveCustomActivitiesFromFirestore(): Promise<UserCus
   const snapshot = await getDocs(customActivitiesQuery);
 
   return snapshot.docs
-    .map((docSnapshot) => {
-      const data = docSnapshot.data() as FirebaseCustomActivityDocument;
+    .map((docSnapshot) => mapCustomActivityDocument(docSnapshot))
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
 
-      return {
-        id: docSnapshot.id,
-        label: data.label,
-        measurementType: data.measurementType,
-        createdAt: data.createdAt,
-        isActive: data.isActive,
-        isFavorite: data.isFavorite ?? false,
-      };
-    })
+export async function listAllCustomActivitiesFromFirestore(): Promise<UserCustomActivity[]> {
+  const user = auth.currentUser;
+
+  if (!user) {
+    throw new Error('No authenticated user');
+  }
+
+  const customActivitiesCollection = collection(db, 'users', user.uid, 'customActivities');
+  const snapshot = await getDocs(customActivitiesCollection);
+
+  return snapshot.docs
+    .map((docSnapshot) => mapCustomActivityDocument(docSnapshot))
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
 
@@ -106,5 +130,37 @@ export async function toggleCustomActivityFavoriteInFirestore(
 
   await updateDoc(activityRef, {
     isFavorite,
+  });
+}
+
+export async function updateCustomActivityInFirestore(
+  activityId: string,
+  input: UpdateUserCustomActivityInput,
+): Promise<void> {
+  const user = auth.currentUser;
+
+  if (!user) {
+    throw new Error('No authenticated user');
+  }
+
+  const activityRef = doc(db, 'users', user.uid, 'customActivities', activityId);
+
+  await updateDoc(activityRef, {
+    label: input.label.trim(),
+    measurementType: input.measurementType,
+  });
+}
+
+export async function restoreCustomActivityInFirestore(activityId: string): Promise<void> {
+  const user = auth.currentUser;
+
+  if (!user) {
+    throw new Error('No authenticated user');
+  }
+
+  const activityRef = doc(db, 'users', user.uid, 'customActivities', activityId);
+
+  await updateDoc(activityRef, {
+    isActive: true,
   });
 }
