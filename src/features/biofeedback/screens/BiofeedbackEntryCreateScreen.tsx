@@ -1,6 +1,6 @@
 // src\features\biofeedback\screens\BiofeedbackEntryCreateScreen.tsx
 
-import { router, useFocusEffect } from 'expo-router';
+import { Stack, router, useFocusEffect } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useCallback, useMemo, useState } from 'react';
 import {
@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { toDateKey } from '../components/calendar.utils';
 import DateTimeField from '../components/DateTimeField';
 
 import { createDefaultBiofeedbackEntryFormValues } from '../forms/biofeedback-entry-form.defaults';
@@ -95,6 +96,8 @@ export default function BiofeedbackEntryCreateScreen({ initialDateKey }: Props) 
   const [hasLoadedCustomActivities, setHasLoadedCustomActivities] = useState(false);
   const [showAllCustomActivities, setShowAllCustomActivities] = useState(false);
   const [isCreatingNewCustomActivity, setIsCreatingNewCustomActivity] = useState(false);
+  const todayDateKey = useMemo(() => toDateKey(new Date()), []);
+  const shouldWarnBeforeLeaving = initialDateKey === todayDateKey;
 
   const categoryOptions = useMemo(
     () => [
@@ -514,6 +517,32 @@ export default function BiofeedbackEntryCreateScreen({ initialDateKey }: Props) 
     }
   }
 
+  function navigateToDashboard() {
+    router.replace('/dashboard');
+  }
+
+  function handleBackToDashboard() {
+    if (!shouldWarnBeforeLeaving) {
+      navigateToDashboard();
+      return;
+    }
+
+    Alert.alert(
+      'חזרה למסך הראשי',
+      'כדאי להשלים מדידה היום',
+      [
+        {
+          text: 'הישארו כאן',
+          style: 'cancel',
+        },
+        {
+          text: 'חזרה למסך הראשי',
+          onPress: navigateToDashboard,
+        },
+      ],
+    );
+  }
+
   const builtInCategoryOptions = [
     { id: 'trainers', iconName: CATEGORY_ICONS.trainers },
     { id: 'relaxation', iconName: CATEGORY_ICONS.relaxation },
@@ -531,6 +560,24 @@ export default function BiofeedbackEntryCreateScreen({ initialDateKey }: Props) 
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      <Stack.Screen
+        options={{
+          headerBackVisible: false,
+          headerLeft: () => (
+            <Pressable
+              onPress={handleBackToDashboard}
+              hitSlop={8}
+              style={styles.headerBackButton}
+            >
+              <MaterialCommunityIcons
+                name="arrow-left"
+                size={24}
+                color="#1e4f8a"
+              />
+            </Pressable>
+          ),
+        }}
+      />
       <View style={styles.screen}>
         <ScrollView contentContainerStyle={styles.content}>
           <Text style={styles.title}>הוספת מדידת ביופידבק</Text>
@@ -1049,6 +1096,9 @@ const styles = StyleSheet.create({
   content: {
     padding: 16,
     paddingBottom: 120,
+  },
+  headerBackButton: {
+    padding: 4,
   },
   title: {
     fontSize: 24,

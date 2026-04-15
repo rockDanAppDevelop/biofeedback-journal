@@ -16,6 +16,7 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <Stack>
         <Stack.Screen name="index" options={{ headerShown: false }} />
+        <Stack.Screen name="dashboard" options={{ headerShown: false }} />
         <Stack.Screen name="entries/new" options={{ title: 'הוספת מדידה' }} />
         <Stack.Screen name="entries/[entryId]" options={{ title: 'פרטי מדידה' }} />
         <Stack.Screen name="day/[dateKey]" options={{ title: 'רשומות יום' }} />
