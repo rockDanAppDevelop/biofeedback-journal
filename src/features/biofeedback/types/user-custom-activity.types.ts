@@ -4,6 +4,7 @@ export type UserCustomActivity = {
   measurementType: 'hrv' | 'rlx' | 'none';
   createdAt: string;
   isActive: boolean;
+  isFavorite: boolean;
 };
 
 export type CreateUserCustomActivityInput = {

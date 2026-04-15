@@ -28,6 +28,7 @@ import {
   addCustomActivityToFirestore,
   hideCustomActivityInFirestore,
   listActiveCustomActivitiesFromFirestore,
+  toggleCustomActivityFavoriteInFirestore,
 } from '../data/firebase-custom-activities-repository';
 
 import {
@@ -92,6 +93,7 @@ export default function BiofeedbackEntryCreateScreen({ initialDateKey }: Props) 
   const [customActivities, setCustomActivities] = useState<UserCustomActivity[]>([]);
   const [isLoadingCustomActivities, setIsLoadingCustomActivities] = useState(false);
   const [hasLoadedCustomActivities, setHasLoadedCustomActivities] = useState(false);
+  const [showAllCustomActivities, setShowAllCustomActivities] = useState(false);
 
   const categoryOptions = useMemo(
     () => [
@@ -168,6 +170,32 @@ export default function BiofeedbackEntryCreateScreen({ initialDateKey }: Props) 
     );
   }, [values.selectedCategoryId]);
 
+  const sortedCustomActivities = useMemo(
+    () =>
+      [...customActivities].sort((a, b) => {
+        if (a.isFavorite !== b.isFavorite) {
+          return a.isFavorite ? -1 : 1;
+        }
+
+        return b.createdAt.localeCompare(a.createdAt);
+      }),
+    [customActivities],
+  );
+
+  const favoriteCustomActivities = useMemo(
+    () => sortedCustomActivities.filter((activity) => activity.isFavorite),
+    [sortedCustomActivities],
+  );
+
+  const displayedCustomActivities =
+    favoriteCustomActivities.length > 0 && !showAllCustomActivities
+      ? favoriteCustomActivities
+      : sortedCustomActivities;
+
+  const shouldShowAllCustomActivitiesToggle =
+    favoriteCustomActivities.length > 0 &&
+    favoriteCustomActivities.length < sortedCustomActivities.length;
+
   const isMonitoring =
     values.selectedCategoryId === 'monitoring' ||
     selectedCatalogItem?.activityType === 'monitoring';
@@ -224,6 +252,7 @@ export default function BiofeedbackEntryCreateScreen({ initialDateKey }: Props) 
       breathingHoldAfterExhale: '',
       monitoringType: '',
     }));
+    setShowAllCustomActivities(false);
     setShowExtraHrvFields(false);
     setShowExtraRlxFields(false);
   }
@@ -267,6 +296,28 @@ export default function BiofeedbackEntryCreateScreen({ initialDateKey }: Props) 
       exerciseName: '',
       customMeasurementType: '',
     }));
+  }
+
+  async function handleToggleCustomActivityFavorite(activity: UserCustomActivity) {
+    const nextIsFavorite = !activity.isFavorite;
+
+    try {
+      await toggleCustomActivityFavoriteInFirestore(activity.id, nextIsFavorite);
+
+      setCustomActivities((current) =>
+        current.map((item) =>
+          item.id === activity.id
+            ? {
+                ...item,
+                isFavorite: nextIsFavorite,
+              }
+            : item,
+        ),
+      );
+    } catch (error) {
+      console.error('FAILED TO TOGGLE CUSTOM ACTIVITY FAVORITE:', error);
+      Alert.alert('׳©׳’׳™׳׳”', '׳¢׳“׳›׳•׳ ׳”׳׳•׳¢׳“׳₪׳•׳× ׳ ׳›׳©׳׳”.');
+    }
   }
 
   function handleHideCustomActivity(activity: UserCustomActivity) {
@@ -569,8 +620,18 @@ export default function BiofeedbackEntryCreateScreen({ initialDateKey }: Props) 
                 ) : customActivities.length > 0 ? (
                   <>
                     <Text style={styles.label}>פעילויות שמורות</Text>
+                    {shouldShowAllCustomActivitiesToggle ? (
+                      <Pressable
+                        onPress={() => setShowAllCustomActivities((current) => !current)}
+                        style={styles.secondarySectionToggle}
+                      >
+                        <Text style={styles.secondarySectionToggleText}>
+                          {showAllCustomActivities ? 'הצג מועדפים בלבד' : 'הצג הכל'}
+                        </Text>
+                      </Pressable>
+                    ) : null}
                     <View style={styles.exerciseOptionsContainer}>
-                      {customActivities.map((activity) => {
+                      {displayedCustomActivities.map((activity) => {
                         const isSelected = values.userCustomActivityId === activity.id;
 
                         return (
@@ -593,6 +654,16 @@ export default function BiofeedbackEntryCreateScreen({ initialDateKey }: Props) 
                                 ]}
                               >
                                 {activity.label}
+                              </Text>
+                            </Pressable>
+
+                            <Pressable
+                              onPress={() => void handleToggleCustomActivityFavorite(activity)}
+                              hitSlop={8}
+                              style={styles.favoriteCustomActivityButton}
+                            >
+                              <Text style={styles.favoriteCustomActivityButtonText}>
+                                {activity.isFavorite ? '⭐' : '☆'}
                               </Text>
                             </Pressable>
 
@@ -1057,6 +1128,12 @@ const styles = StyleSheet.create({
   },
   hideCustomActivityButton: {
     paddingVertical: 4,
+  },
+  favoriteCustomActivityButton: {
+    paddingVertical: 4,
+  },
+  favoriteCustomActivityButtonText: {
+    fontSize: 18,
   },
   hideCustomActivityButtonText: {
     fontSize: 13,

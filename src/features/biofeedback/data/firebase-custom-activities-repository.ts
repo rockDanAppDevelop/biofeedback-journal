@@ -10,6 +10,7 @@ type FirebaseCustomActivityDocument = {
   measurementType: UserCustomActivity['measurementType'];
   createdAt: string;
   isActive: boolean;
+  isFavorite?: boolean;
 };
 
 export async function listActiveCustomActivitiesFromFirestore(): Promise<UserCustomActivity[]> {
@@ -38,6 +39,7 @@ export async function listActiveCustomActivitiesFromFirestore(): Promise<UserCus
         measurementType: data.measurementType,
         createdAt: data.createdAt,
         isActive: data.isActive,
+        isFavorite: data.isFavorite ?? false,
       };
     })
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
@@ -61,13 +63,18 @@ export async function addCustomActivityToFirestore(
     measurementType: input.measurementType,
     createdAt,
     isActive: true,
+    isFavorite: false,
   };
 
   const docRef = await addDoc(customActivitiesCollection, docData);
 
   return {
     id: docRef.id,
-    ...docData,
+    label: docData.label,
+    measurementType: docData.measurementType,
+    createdAt: docData.createdAt,
+    isActive: docData.isActive,
+    isFavorite: false,
   };
 }
 
@@ -82,5 +89,22 @@ export async function hideCustomActivityInFirestore(activityId: string): Promise
 
   await updateDoc(activityRef, {
     isActive: false,
+  });
+}
+
+export async function toggleCustomActivityFavoriteInFirestore(
+  activityId: string,
+  isFavorite: boolean,
+): Promise<void> {
+  const user = auth.currentUser;
+
+  if (!user) {
+    throw new Error('No authenticated user');
+  }
+
+  const activityRef = doc(db, 'users', user.uid, 'customActivities', activityId);
+
+  await updateDoc(activityRef, {
+    isFavorite,
   });
 }
