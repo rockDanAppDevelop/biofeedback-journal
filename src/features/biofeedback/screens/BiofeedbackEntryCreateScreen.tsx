@@ -73,6 +73,9 @@ const CATEGORY_ICONS = {
   monitoring: 'chart-line',
 };
 
+const CUSTOM_ACTIVITIES_LOAD_TIMEOUT_MS = 5000;
+const CUSTOM_ACTIVITIES_LOAD_TIMEOUT_ERROR = 'CUSTOM_ACTIVITIES_LOAD_TIMEOUT';
+
 
 export default function BiofeedbackEntryCreateScreen({ initialDateKey }: Props) {
   useEffect(() => {
@@ -124,13 +127,31 @@ export default function BiofeedbackEntryCreateScreen({ initialDateKey }: Props) 
     setIsLoadingCustomActivities(true);
 
     try {
-      const items = await listActiveCustomActivitiesFromFirestore();
+      const items = await Promise.race([
+        listActiveCustomActivitiesFromFirestore(),
+        new Promise<UserCustomActivity[]>((_, reject) => {
+          setTimeout(() => {
+            reject(new Error(CUSTOM_ACTIVITIES_LOAD_TIMEOUT_ERROR));
+          }, CUSTOM_ACTIVITIES_LOAD_TIMEOUT_MS);
+        }),
+      ]);
 
       console.log('CUSTOM ACTIVITIES LOADED:', items);
       setCustomActivities(items);
       setHasLoadedCustomActivities(true);
     } catch (error) {
-      console.error('FAILED TO LOAD CUSTOM ACTIVITIES:', error);
+      if (
+        error instanceof Error &&
+        error.message === CUSTOM_ACTIVITIES_LOAD_TIMEOUT_ERROR
+      ) {
+        console.warn(
+          'CUSTOM ACTIVITIES LOAD TIMED OUT. Falling back to empty custom activities state.',
+        );
+        setCustomActivities([]);
+        setHasLoadedCustomActivities(true);
+      } else {
+        console.error('FAILED TO LOAD CUSTOM ACTIVITIES:', error);
+      }
     } finally {
       setIsLoadingCustomActivities(false);
     }
