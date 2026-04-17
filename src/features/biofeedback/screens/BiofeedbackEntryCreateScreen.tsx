@@ -280,8 +280,18 @@ export default function BiofeedbackEntryCreateScreen({ initialDateKey }: Props) 
     return null;
   }, [selectedCatalogItem, selectedSavedCustomActivity]);
 
+  const shouldAutoShowFirstCustomActivityForm =
+    isCustomTraining &&
+    hasLoadedCustomActivities &&
+    !isLoadingCustomActivities &&
+    customActivities.length === 0;
+
   const shouldShowCustomNameInput =
-    isCustomTraining && isCreatingNewCustomActivity;
+    isCustomTraining &&
+    (
+      isCreatingNewCustomActivity ||
+      shouldAutoShowFirstCustomActivityForm
+    );
 
   const shouldShowHrvFields =
     !isMonitoring &&
@@ -849,7 +859,16 @@ export default function BiofeedbackEntryCreateScreen({ initialDateKey }: Props) 
                       <Text style={styles.secondarySectionToggleText}>יצירת פעילות חדשה</Text>
                     </Pressable>
                   </>
-                ) : null}
+                ) : (
+                  <Pressable
+                    onPress={handleStartNewCustomActivity}
+                    style={styles.secondarySectionToggle}
+                  >
+                    <Text style={styles.secondarySectionToggleText}>
+                      יצירת הפעילות האישית הראשונה
+                    </Text>
+                  </Pressable>
+                )}
                 <Pressable
                   onPress={() => router.push('/custom-activities/manage')}
                   style={styles.secondarySectionToggle}
