@@ -2,7 +2,7 @@
 
 import { Stack, router, useFocusEffect } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import {
   Alert,
   Pressable,
@@ -74,7 +74,6 @@ const CATEGORY_ICONS = {
 };
 
 const CUSTOM_ACTIVITIES_LOAD_TIMEOUT_MS = 5000;
-const CUSTOM_ACTIVITIES_LOAD_TIMEOUT_ERROR = 'CUSTOM_ACTIVITIES_LOAD_TIMEOUT';
 
 
 export default function BiofeedbackEntryCreateScreen({ initialDateKey }: Props) {
@@ -106,6 +105,8 @@ export default function BiofeedbackEntryCreateScreen({ initialDateKey }: Props) 
   const [isCreatingNewCustomActivity, setIsCreatingNewCustomActivity] = useState(false);
   const todayDateKey = useMemo(() => toDateKey(new Date()), []);
   const shouldWarnBeforeLeaving = initialDateKey === todayDateKey;
+  const customActivitiesLoadTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const customActivitiesLoadRequestIdRef = useRef(0);
 
   const categoryOptions = useMemo(
     () => [
@@ -124,36 +125,53 @@ export default function BiofeedbackEntryCreateScreen({ initialDateKey }: Props) 
   );
 
   const loadCustomActivities = useCallback(async () => {
+    customActivitiesLoadRequestIdRef.current += 1;
+    const requestId = customActivitiesLoadRequestIdRef.current;
+
+    if (customActivitiesLoadTimeoutRef.current) {
+      clearTimeout(customActivitiesLoadTimeoutRef.current);
+    }
+
     setIsLoadingCustomActivities(true);
+    customActivitiesLoadTimeoutRef.current = setTimeout(() => {
+      if (customActivitiesLoadRequestIdRef.current !== requestId) {
+        return;
+      }
+
+      console.warn(
+        'CUSTOM ACTIVITIES LOAD TIMED OUT. Falling back to empty custom activities state.',
+      );
+      setCustomActivities([]);
+      setHasLoadedCustomActivities(true);
+      setIsLoadingCustomActivities(false);
+      customActivitiesLoadTimeoutRef.current = null;
+    }, CUSTOM_ACTIVITIES_LOAD_TIMEOUT_MS);
 
     try {
-      const items = await Promise.race([
-        listActiveCustomActivitiesFromFirestore(),
-        new Promise<UserCustomActivity[]>((_, reject) => {
-          setTimeout(() => {
-            reject(new Error(CUSTOM_ACTIVITIES_LOAD_TIMEOUT_ERROR));
-          }, CUSTOM_ACTIVITIES_LOAD_TIMEOUT_MS);
-        }),
-      ]);
+      const items = await listActiveCustomActivitiesFromFirestore();
+
+      if (customActivitiesLoadRequestIdRef.current !== requestId) {
+        return;
+      }
 
       console.log('CUSTOM ACTIVITIES LOADED:', items);
       setCustomActivities(items);
       setHasLoadedCustomActivities(true);
     } catch (error) {
-      if (
-        error instanceof Error &&
-        error.message === CUSTOM_ACTIVITIES_LOAD_TIMEOUT_ERROR
-      ) {
-        console.warn(
-          'CUSTOM ACTIVITIES LOAD TIMED OUT. Falling back to empty custom activities state.',
-        );
-        setCustomActivities([]);
-        setHasLoadedCustomActivities(true);
-      } else {
-        console.error('FAILED TO LOAD CUSTOM ACTIVITIES:', error);
+      if (customActivitiesLoadRequestIdRef.current !== requestId) {
+        return;
       }
+
+      console.error('FAILED TO LOAD CUSTOM ACTIVITIES:', error);
     } finally {
-      setIsLoadingCustomActivities(false);
+      if (customActivitiesLoadTimeoutRef.current) {
+        clearTimeout(customActivitiesLoadTimeoutRef.current);
+        customActivitiesLoadTimeoutRef.current = null;
+      }
+
+      if (customActivitiesLoadRequestIdRef.current === requestId) {
+        setIsLoadingCustomActivities(false);
+      }
     }
   }, []);
 
