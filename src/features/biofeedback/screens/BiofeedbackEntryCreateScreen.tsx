@@ -23,6 +23,8 @@ import { validateBiofeedbackEntryForm } from '../forms/biofeedback-entry-form.va
 import type { UserCustomActivity } from '../types/user-custom-activity.types';
 
 import { useEffect } from 'react';
+import { getAppEnv, isDev, isProd } from '../../../lib/app-env';
+import { app, auth } from '../../../lib/firebase';
 import { testFirebaseConnection } from '../../../lib/testFirebase';
 import { addBiofeedbackEntryToFirestore } from '../data/firebase-biofeedback-repository';
 import {
@@ -103,10 +105,26 @@ export default function BiofeedbackEntryCreateScreen({ initialDateKey }: Props) 
   const [hasLoadedCustomActivities, setHasLoadedCustomActivities] = useState(false);
   const [showAllCustomActivities, setShowAllCustomActivities] = useState(false);
   const [isCreatingNewCustomActivity, setIsCreatingNewCustomActivity] = useState(false);
+  const [customLoadCurrentRequestId, setCustomLoadCurrentRequestId] = useState(0);
+  const [customLoadTimeoutScheduled, setCustomLoadTimeoutScheduled] = useState(false);
+  const [customLoadTimeoutFiredCount, setCustomLoadTimeoutFiredCount] = useState(0);
+  const [customLoadStartCount, setCustomLoadStartCount] = useState(0);
+  const [customLoadSuccessCount, setCustomLoadSuccessCount] = useState(0);
+  const [customLoadCatchCount, setCustomLoadCatchCount] = useState(0);
+  const [customLoadFinallyCount, setCustomLoadFinallyCount] = useState(0);
+  const [customLoadLastEvent, setCustomLoadLastEvent] = useState('');
+  const [customLoadLastErrorMessage, setCustomLoadLastErrorMessage] = useState('');
+  const [customLoadLastEventTimestamp, setCustomLoadLastEventTimestamp] = useState('');
   const todayDateKey = useMemo(() => toDateKey(new Date()), []);
   const shouldWarnBeforeLeaving = initialDateKey === todayDateKey;
   const customActivitiesLoadTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const customActivitiesLoadRequestIdRef = useRef(0);
+
+  const recordCustomLoadEvent = useCallback((eventText: string, errorMessage = '') => {
+    setCustomLoadLastEvent(eventText);
+    setCustomLoadLastErrorMessage(errorMessage);
+    setCustomLoadLastEventTimestamp(new Date().toISOString());
+  }, []);
 
   const categoryOptions = useMemo(
     () => [
@@ -127,17 +145,25 @@ export default function BiofeedbackEntryCreateScreen({ initialDateKey }: Props) 
   const loadCustomActivities = useCallback(async () => {
     customActivitiesLoadRequestIdRef.current += 1;
     const requestId = customActivitiesLoadRequestIdRef.current;
+    setCustomLoadCurrentRequestId(requestId);
+    setCustomLoadStartCount((current) => current + 1);
+    recordCustomLoadEvent(`load started #${requestId}`);
 
     if (customActivitiesLoadTimeoutRef.current) {
       clearTimeout(customActivitiesLoadTimeoutRef.current);
     }
 
     setIsLoadingCustomActivities(true);
+    setCustomLoadTimeoutScheduled(true);
+    recordCustomLoadEvent(`timeout scheduled for request ${requestId}`);
     customActivitiesLoadTimeoutRef.current = setTimeout(() => {
       if (customActivitiesLoadRequestIdRef.current !== requestId) {
         return;
       }
 
+      setCustomLoadTimeoutFiredCount((current) => current + 1);
+      setCustomLoadTimeoutScheduled(false);
+      recordCustomLoadEvent(`timeout fired for request ${requestId}`);
       console.warn(
         'CUSTOM ACTIVITIES LOAD TIMED OUT. Falling back to empty custom activities state.',
       );
@@ -154,6 +180,9 @@ export default function BiofeedbackEntryCreateScreen({ initialDateKey }: Props) 
         return;
       }
 
+      setCustomLoadSuccessCount((current) => current + 1);
+      setCustomLoadTimeoutScheduled(false);
+      recordCustomLoadEvent(`load success #${requestId}`);
       console.log('CUSTOM ACTIVITIES LOADED:', items);
       setCustomActivities(items);
       setHasLoadedCustomActivities(true);
@@ -162,6 +191,12 @@ export default function BiofeedbackEntryCreateScreen({ initialDateKey }: Props) 
         return;
       }
 
+      setCustomLoadCatchCount((current) => current + 1);
+      setCustomLoadTimeoutScheduled(false);
+      recordCustomLoadEvent(
+        `load catch #${requestId}`,
+        error instanceof Error ? error.message : String(error),
+      );
       console.error('FAILED TO LOAD CUSTOM ACTIVITIES:', error);
     } finally {
       if (customActivitiesLoadTimeoutRef.current) {
@@ -169,11 +204,14 @@ export default function BiofeedbackEntryCreateScreen({ initialDateKey }: Props) 
         customActivitiesLoadTimeoutRef.current = null;
       }
 
+      setCustomLoadFinallyCount((current) => current + 1);
+      setCustomLoadTimeoutScheduled(false);
+      recordCustomLoadEvent(`finally for request ${requestId}`, customLoadLastErrorMessage);
       if (customActivitiesLoadRequestIdRef.current === requestId) {
         setIsLoadingCustomActivities(false);
       }
     }
-  }, []);
+  }, [customLoadLastErrorMessage, recordCustomLoadEvent]);
 
   const loadFavoriteCatalogActivityIds = useCallback(async () => {
     try {
@@ -197,8 +235,15 @@ export default function BiofeedbackEntryCreateScreen({ initialDateKey }: Props) 
       return;
     }
 
+    recordCustomLoadEvent('custom category effect triggered load');
     void loadCustomActivities();
-  }, [values.selectedCategoryId, hasLoadedCustomActivities, isLoadingCustomActivities, loadCustomActivities]);
+  }, [
+    values.selectedCategoryId,
+    hasLoadedCustomActivities,
+    isLoadingCustomActivities,
+    loadCustomActivities,
+    recordCustomLoadEvent,
+  ]);
 
   useFocusEffect(
     useCallback(() => {
@@ -207,8 +252,9 @@ export default function BiofeedbackEntryCreateScreen({ initialDateKey }: Props) 
       }
 
       setIsCreatingNewCustomActivity(false);
+      recordCustomLoadEvent('focus reload triggered');
       void loadCustomActivities();
-    }, [values.selectedCategoryId, hasLoadedCustomActivities, loadCustomActivities]),
+    }, [values.selectedCategoryId, hasLoadedCustomActivities, loadCustomActivities, recordCustomLoadEvent]),
   );
 
   const selectedCatalogItem = useMemo(
@@ -381,6 +427,10 @@ export default function BiofeedbackEntryCreateScreen({ initialDateKey }: Props) 
   }
 
   function handleCategorySelect(categoryId: ActivityCategoryId) {
+    if (categoryId === 'custom') {
+      recordCustomLoadEvent('category selected custom');
+    }
+
     resetActivitySpecificFields(categoryId);
   }
 
@@ -823,6 +873,19 @@ export default function BiofeedbackEntryCreateScreen({ initialDateKey }: Props) 
                 <View style={styles.parameterSection}>
                   <Text style={styles.sectionTitle}>Custom Debug</Text>
                   <Text style={styles.label}>
+                    auth.currentUser exists: {String(auth.currentUser !== null)}
+                  </Text>
+                  <Text style={styles.label}>
+                    auth.currentUser.uid: {auth.currentUser?.uid ?? 'null'}
+                  </Text>
+                  <Text style={styles.label}>
+                    auth.currentUser.email: {auth.currentUser?.email ?? 'null'}
+                  </Text>
+                  <Text style={styles.label}>Firebase app name: {app.name}</Text>
+                  <Text style={styles.label}>getAppEnv(): {getAppEnv()}</Text>
+                  <Text style={styles.label}>isDev(): {String(isDev())}</Text>
+                  <Text style={styles.label}>isProd(): {String(isProd())}</Text>
+                  <Text style={styles.label}>
                     isLoadingCustomActivities: {String(isLoadingCustomActivities)}
                   </Text>
                   <Text style={styles.label}>
@@ -840,6 +903,28 @@ export default function BiofeedbackEntryCreateScreen({ initialDateKey }: Props) 
                   </Text>
                   <Text style={styles.label}>
                     shouldShowCustomNameInput: {String(shouldShowCustomNameInput)}
+                  </Text>
+                  <Text style={styles.label}>
+                    current requestId: {customLoadCurrentRequestId}
+                  </Text>
+                  <Text style={styles.label}>
+                    timeout scheduled: {customLoadTimeoutScheduled ? 'yes' : 'no'}
+                  </Text>
+                  <Text style={styles.label}>
+                    timeout fired count: {customLoadTimeoutFiredCount}
+                  </Text>
+                  <Text style={styles.label}>load start count: {customLoadStartCount}</Text>
+                  <Text style={styles.label}>load success count: {customLoadSuccessCount}</Text>
+                  <Text style={styles.label}>load catch count: {customLoadCatchCount}</Text>
+                  <Text style={styles.label}>load finally count: {customLoadFinallyCount}</Text>
+                  <Text style={styles.label}>
+                    last custom load event: {customLoadLastEvent || 'n/a'}
+                  </Text>
+                  <Text style={styles.label}>
+                    last error message: {customLoadLastErrorMessage || 'n/a'}
+                  </Text>
+                  <Text style={styles.label}>
+                    last event timestamp: {customLoadLastEventTimestamp || 'n/a'}
                   </Text>
                 </View>
                 {isLoadingCustomActivities ? (
