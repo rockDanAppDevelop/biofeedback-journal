@@ -802,6 +802,28 @@ export default function BiofeedbackEntryCreateScreen({ initialDateKey }: Props) 
 
             {isCustomTraining ? (
               <>
+                <View style={styles.parameterSection}>
+                  <Text style={styles.sectionTitle}>Custom Debug</Text>
+                  <Text style={styles.label}>
+                    isLoadingCustomActivities: {String(isLoadingCustomActivities)}
+                  </Text>
+                  <Text style={styles.label}>
+                    hasLoadedCustomActivities: {String(hasLoadedCustomActivities)}
+                  </Text>
+                  <Text style={styles.label}>
+                    customActivities.length: {customActivities.length}
+                  </Text>
+                  <Text style={styles.label}>
+                    isCreatingNewCustomActivity: {String(isCreatingNewCustomActivity)}
+                  </Text>
+                  <Text style={styles.label}>
+                    shouldAutoShowFirstCustomActivityForm:{' '}
+                    {String(shouldAutoShowFirstCustomActivityForm)}
+                  </Text>
+                  <Text style={styles.label}>
+                    shouldShowCustomNameInput: {String(shouldShowCustomNameInput)}
+                  </Text>
+                </View>
                 {isLoadingCustomActivities ? (
                   <Text style={styles.label}>טוען פעילויות שמורות...</Text>
                 ) : customActivities.length > 0 ? (
