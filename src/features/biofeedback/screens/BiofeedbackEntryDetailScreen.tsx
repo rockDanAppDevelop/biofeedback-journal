@@ -130,6 +130,7 @@ export default function BiofeedbackEntryDetailScreen({ entryId, fromDay }: Props
   const [values, setValues] = useState(createDefaultBiofeedbackEntryFormValues());
   const [isLoading, setIsLoading] = useState(true);
   const [selectedExerciseId, setSelectedExerciseId] = useState<string | null>(null);
+  const [isReplacingExercise, setIsReplacingExercise] = useState(false);
 
   const selectedExerciseOption = useMemo(
     () => EXERCISE_OPTIONS.find((option) => option.id === selectedExerciseId) ?? null,
@@ -250,6 +251,25 @@ router.replace('/');
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.title}>עריכת מדידה</Text>
 
+        <View style={styles.exerciseSummaryCard}>
+          <Text style={styles.exerciseSummaryLabel}>התרגיל הנוכחי</Text>
+          <Text style={styles.exerciseSummaryValue}>{values.exerciseName || 'ללא תרגיל'}</Text>
+          {(values.customMeasurementType !== '' || inferredMeasurementType) ? (
+            <Text style={styles.exerciseSummaryMeta}>
+              סוג מדידה:{' '}
+              {values.customMeasurementType !== ''
+                ? values.customMeasurementType.toUpperCase()
+                : inferredMeasurementType?.toUpperCase()}
+            </Text>
+          ) : null}
+          <Pressable
+            style={styles.changeExerciseButton}
+            onPress={() => setIsReplacingExercise(true)}
+          >
+            <Text style={styles.changeExerciseButtonText}>החלף תרגיל</Text>
+          </Pressable>
+        </View>
+
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>פרטי מדידה</Text>
 
@@ -273,57 +293,68 @@ router.replace('/');
   <Text style={styles.errorText}>{errors.measurementTime}</Text>
 ) : null}
 
-          <Text style={styles.label}>תרגיל</Text>
+          {isReplacingExercise ? (
+            <>
+              <Text style={styles.label}>תרגיל</Text>
 
-          <View style={styles.exerciseOptionsContainer}>
-            {EXERCISE_OPTIONS.map((option) => {
-              const isSelected = selectedExerciseId === option.id;
+              <Pressable
+                style={styles.closeReplaceExerciseButton}
+                onPress={() => setIsReplacingExercise(false)}
+              >
+                <Text style={styles.closeReplaceExerciseButtonText}>סגור החלפת תרגיל</Text>
+              </Pressable>
 
-              return (
-                <Pressable
-                  key={option.id}
-                  onPress={() => {
-                    setSelectedExerciseId(option.id);
-                    updateField('exerciseName', option.label);
-                  }}
-                  style={[
-                    styles.exerciseOptionButton,
-                    isSelected && styles.exerciseOptionButtonSelected,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.exerciseOptionButtonText,
-                      isSelected && styles.exerciseOptionButtonTextSelected,
-                    ]}
-                  >
-                    {option.label}
+              <View style={styles.exerciseOptionsContainer}>
+                {EXERCISE_OPTIONS.map((option) => {
+                  const isSelected = selectedExerciseId === option.id;
+
+                  return (
+                    <Pressable
+                      key={option.id}
+                      onPress={() => {
+                        setSelectedExerciseId(option.id);
+                        updateField('exerciseName', option.label);
+                      }}
+                      style={[
+                        styles.exerciseOptionButton,
+                        isSelected && styles.exerciseOptionButtonSelected,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.exerciseOptionButtonText,
+                          isSelected && styles.exerciseOptionButtonTextSelected,
+                        ]}
+                      >
+                        {option.label}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+
+              <TextInput
+                value={values.exerciseName}
+                onChangeText={(text) => {
+                  setSelectedExerciseId(null);
+                  updateField('exerciseName', text);
+                }}
+                style={styles.input}
+                placeholder="או כתבו תרגיל אחר"
+              />
+              {errors.exerciseName ? (
+                <Text style={styles.errorText}>{errors.exerciseName}</Text>
+              ) : null}
+
+              {inferredMeasurementType ? (
+                <View style={styles.measurementTypeInfoBox}>
+                  <Text style={styles.measurementTypeInfoLabel}>סוג מדידה שזוהה</Text>
+                  <Text style={styles.measurementTypeInfoValue}>
+                    {inferredMeasurementType === 'hrv' ? 'HRV' : 'RLX'}
                   </Text>
-                </Pressable>
-              );
-            })}
-          </View>
-
-          <TextInput
-            value={values.exerciseName}
-            onChangeText={(text) => {
-              setSelectedExerciseId(null);
-              updateField('exerciseName', text);
-            }}
-            style={styles.input}
-            placeholder="או כתבו תרגיל אחר"
-          />
-          {errors.exerciseName ? (
-            <Text style={styles.errorText}>{errors.exerciseName}</Text>
-          ) : null}
-
-          {inferredMeasurementType ? (
-            <View style={styles.measurementTypeInfoBox}>
-              <Text style={styles.measurementTypeInfoLabel}>סוג מדידה שזוהה</Text>
-              <Text style={styles.measurementTypeInfoValue}>
-                {inferredMeasurementType === 'hrv' ? 'HRV' : 'RLX'}
-              </Text>
-            </View>
+                </View>
+              ) : null}
+            </>
           ) : null}
 
           <Text style={styles.label}>משך בדקות</Text>
@@ -564,6 +595,44 @@ deleteButtonText: {
     fontWeight: '700',
     marginBottom: 20,
   },
+  exerciseSummaryCard: {
+    marginBottom: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#d6e4f5',
+    borderRadius: 12,
+    backgroundColor: '#f8fbff',
+  },
+  exerciseSummaryLabel: {
+    fontSize: 12,
+    color: '#46607a',
+    marginBottom: 4,
+  },
+  exerciseSummaryValue: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1b2a3a',
+    marginBottom: 6,
+  },
+  exerciseSummaryMeta: {
+    fontSize: 13,
+    color: '#46607a',
+    marginBottom: 12,
+  },
+  changeExerciseButton: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#d6e4f5',
+    backgroundColor: '#ffffff',
+  },
+  changeExerciseButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1e4f8a',
+  },
   section: {
     marginBottom: 24,
     padding: 16,
@@ -634,6 +703,21 @@ deleteButtonText: {
     fontSize: 16,
     fontWeight: '700',
     color: '#0d47a1',
+  },
+  closeReplaceExerciseButton: {
+    alignSelf: 'flex-start',
+    marginBottom: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#d6e4f5',
+    backgroundColor: '#f8fbff',
+  },
+  closeReplaceExerciseButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#1e4f8a',
   },
   notesInput: {
     minHeight: 110,
