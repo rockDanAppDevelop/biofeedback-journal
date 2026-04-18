@@ -1,5 +1,6 @@
 //src\features\biofeedback\forms\biofeedback-entry-form.from-entry.ts
 
+import { ACTIVITY_CATALOG } from '../constants/activity-catalog';
 import { BiofeedbackEntry } from '../types/biofeedback-entry.types';
 import { BiofeedbackEntryFormValues } from '../types/biofeedback-entry-form.types';
 
@@ -11,13 +12,38 @@ function toTimeInputValue(isoString: string): string {
   return isoString.slice(11, 16);
 }
 
+function deriveSelectedCategoryId(
+  entry: BiofeedbackEntry,
+): BiofeedbackEntryFormValues['selectedCategoryId'] {
+  if (
+    entry.activity?.userCustomActivityId ||
+    entry.activity?.customExerciseName
+  ) {
+    return 'custom';
+  }
+
+  if (entry.activity?.catalogItemId) {
+    const catalogItem = ACTIVITY_CATALOG.find(
+      (item) => item.id === entry.activity?.catalogItemId,
+    );
+
+    return catalogItem?.categoryId ?? '';
+  }
+
+  if (entry.activity?.activityType === 'monitoring') {
+    return 'monitoring';
+  }
+
+  return '';
+}
+
 export function createBiofeedbackEntryFormValuesFromEntry(
   entry: BiofeedbackEntry,
 ): BiofeedbackEntryFormValues {
   return {
     measurementDate: toDateInputValue(entry.measuredAt),
     measurementTime: toTimeInputValue(entry.measuredAt),
-    selectedCategoryId: '',
+    selectedCategoryId: deriveSelectedCategoryId(entry),
     selectedCatalogItemId: entry.activity?.catalogItemId ?? '',
     userCustomActivityId: entry.activity?.userCustomActivityId ?? '',
     exerciseName: entry.exerciseName,

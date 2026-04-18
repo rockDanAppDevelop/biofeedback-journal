@@ -77,6 +77,20 @@ function mapFirebaseEntryToBiofeedbackEntry(entry: {
   measuredAt: string;
   exerciseName: string;
   measurementType?: 'hrv' | 'rlx' | null;
+  activity?: {
+    activityType: 'training' | 'monitoring';
+    catalogItemId: string | null;
+    userCustomActivityId: string | null;
+    measurementType: 'hrv' | 'rlx' | 'none' | null;
+    customExerciseName: string | null;
+    exerciseParameters: {
+      inhale?: number | null;
+      holdAfterInhale?: number | null;
+      exhale?: number | null;
+      holdAfterExhale?: number | null;
+    } | null;
+    monitoringType: 'morning' | 'short' | null;
+  };
   durationMinutes: number;
   hrvStressPercent: string;
   hrvMidRangePercent: string;
@@ -93,6 +107,7 @@ function mapFirebaseEntryToBiofeedbackEntry(entry: {
     measuredAt: entry.measuredAt,
     dateKey: entry.dateKey,
     timeOfDay: mapTimeToTimeOfDay(entry.measurementTime),
+    activity: entry.activity,
     exerciseName: entry.exerciseName,
     measurementType: entry.measurementType ?? null,
     durationMinutes: entry.durationMinutes,
@@ -175,22 +190,34 @@ setValues(createBiofeedbackEntryFormValuesFromEntry(mappedEntry));
 
     try {
       const input = toCreateBiofeedbackEntryInput(values);
+      const payload = {
+        measurementDate: values.measurementDate,
+        measurementTime: values.measurementTime,
+        dateKey: values.measurementDate,
+        measuredAt: input.measuredAt,
+        exerciseName: values.exerciseName.trim(),
+        measurementType: input.activity?.measurementType ?? null,
+        durationMinutes: Number(values.durationMinutes),
+        hrvStressPercent: values.hrvStressPercent.trim(),
+        hrvMidRangePercent: values.hrvMidRangePercent.trim(),
+        hrvRelaxationPercent: values.hrvRelaxationPercent.trim(),
+        rlxStartValue: values.rlxStartValue.trim(),
+        rlxEndValue: values.rlxEndValue.trim(),
+        notes: values.notes.trim(),
+      };
 
-      await updateBiofeedbackEntryInFirestore(entryId, {
-  measurementDate: values.measurementDate,
-  measurementTime: values.measurementTime,
-  dateKey: values.measurementDate,
-  measuredAt: input.measuredAt,
-  exerciseName: values.exerciseName.trim(),
-  measurementType: inferredMeasurementType,
-  durationMinutes: Number(values.durationMinutes),
-  hrvStressPercent: values.hrvStressPercent.trim(),
-  hrvMidRangePercent: values.hrvMidRangePercent.trim(),
-  hrvRelaxationPercent: values.hrvRelaxationPercent.trim(),
-  rlxStartValue: values.rlxStartValue.trim(),
-  rlxEndValue: values.rlxEndValue.trim(),
-  notes: values.notes.trim(),
-});
+      console.log('ENTRY EDIT DEBUG BEFORE SAVE:', {
+        selectedCategoryId: values.selectedCategoryId,
+        selectedCatalogItemId: values.selectedCatalogItemId,
+        userCustomActivityId: values.userCustomActivityId,
+        customExerciseName: values.customExerciseName,
+        customMeasurementType: values.customMeasurementType,
+        inferredMeasurementType,
+        'payload.measurementType': payload.measurementType,
+        'payload.activity.measurementType': input.activity?.measurementType ?? null,
+      });
+
+      await updateBiofeedbackEntryInFirestore(entryId, payload);
 
       if (fromDay) {
   router.back();

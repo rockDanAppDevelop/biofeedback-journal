@@ -12,6 +12,20 @@ export type FirebaseBiofeedbackEntryById = {
   measuredAt: string;
   exerciseName: string;
   measurementType: MeasurementType | null;
+  activity?: {
+    activityType: 'training' | 'monitoring';
+    catalogItemId: string | null;
+    userCustomActivityId: string | null;
+    customExerciseName: string | null;
+    measurementType: MeasurementType | 'none' | null;
+    exerciseParameters: {
+      inhale?: number | null;
+      holdAfterInhale?: number | null;
+      exhale?: number | null;
+      holdAfterExhale?: number | null;
+    } | null;
+    monitoringType: 'morning' | 'short' | null;
+  };
   durationMinutes: number;
   hrvStressPercent: string;
   hrvMidRangePercent: string;
@@ -49,6 +63,17 @@ export async function getBiofeedbackEntryByIdFromFirestore(
     measuredAt: data.measuredAt,
     exerciseName: data.exerciseName,
     measurementType: data.measurementType ?? null,
+    activity: data.activity
+      ? {
+          activityType: data.activity.activityType,
+          catalogItemId: data.activity.catalogItemId ?? null,
+          userCustomActivityId: data.activity.userCustomActivityId ?? null,
+          customExerciseName: data.activity.customExerciseName ?? null,
+          measurementType: data.activity.measurementType ?? null,
+          exerciseParameters: data.activity.exerciseParameters ?? null,
+          monitoringType: data.activity.monitoringType ?? null,
+        }
+      : undefined,
     durationMinutes: data.durationMinutes,
     hrvStressPercent: data.hrvStressPercent ?? '',
     hrvMidRangePercent: data.hrvMidRangePercent ?? '',
