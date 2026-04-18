@@ -105,6 +105,7 @@ export async function updateBiofeedbackEntryInFirestore(
     measuredAt: input.measuredAt,
     exerciseName: input.exerciseName,
     measurementType: input.measurementType,
+    activity: input.activity,
     durationMinutes: input.durationMinutes,
     hrvStressPercent: input.hrvStressPercent,
     hrvMidRangePercent: input.hrvMidRangePercent,

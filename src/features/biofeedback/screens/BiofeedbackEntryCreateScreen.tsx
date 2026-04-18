@@ -557,9 +557,78 @@ export default function BiofeedbackEntryCreateScreen({ initialDateKey }: Props) 
     setIsSaving(true);
 
     try {
-      const input = toCreateBiofeedbackEntryInput(values) as MapperSaveInput;
+      let nextValues = values;
+      const isCreatingNewCustomActivityEntry =
+        values.selectedCategoryId === 'custom' &&
+        values.userCustomActivityId === '' &&
+        values.customExerciseName.trim() !== '' &&
+        values.customMeasurementType !== '';
+
+      console.log(
+        'CUSTOM CREATE DIAGNOSTIC: detected new custom without userCustomActivityId:',
+        isCreatingNewCustomActivityEntry,
+      );
+
+      if (isCreatingNewCustomActivityEntry) {
+        const existingCustomActivity = customActivities.find(
+          (activity) =>
+            activity.label.trim() === values.customExerciseName.trim() &&
+            activity.measurementType === values.customMeasurementType,
+        );
+
+        console.log(
+          'CUSTOM CREATE DIAGNOSTIC: found matching existing custom activity:',
+          existingCustomActivity
+            ? {
+                id: existingCustomActivity.id,
+                label: existingCustomActivity.label,
+                measurementType: existingCustomActivity.measurementType,
+              }
+            : null,
+        );
+
+        if (existingCustomActivity) {
+          nextValues = {
+            ...values,
+            userCustomActivityId: existingCustomActivity.id,
+          };
+        } else {
+          const savedCustomActivity = await addCustomActivityToFirestore({
+            label: values.customExerciseName.trim(),
+            measurementType: values.customMeasurementType,
+          });
+
+          console.log(
+            'CUSTOM CREATE DIAGNOSTIC: created new custom activity with ID:',
+            savedCustomActivity.id,
+          );
+
+          setCustomActivities((current) => [savedCustomActivity, ...current]);
+
+          nextValues = {
+            ...values,
+            userCustomActivityId: savedCustomActivity.id,
+          };
+        }
+      }
+
+      console.log(
+        'CUSTOM CREATE DIAGNOSTIC: nextValues.userCustomActivityId before mapper:',
+        nextValues.userCustomActivityId,
+      );
+
+      const input = toCreateBiofeedbackEntryInput(nextValues) as MapperSaveInput;
+
+      console.log(
+        'CUSTOM CREATE DIAGNOSTIC: input.activity.userCustomActivityId before entry save:',
+        input.activity?.userCustomActivityId ?? null,
+      );
 
       console.log('BEFORE FIREBASE SAVE');
+      console.log('CUSTOM CREATE DIAGNOSTIC: entry payload activity before save:', {
+        userCustomActivityId: input.activity?.userCustomActivityId ?? null,
+        activity: input.activity ?? null,
+      });
 
       const firebaseId = await addBiofeedbackEntryToFirestore({
         measurementDate: values.measurementDate,
@@ -580,28 +649,6 @@ export default function BiofeedbackEntryCreateScreen({ initialDateKey }: Props) 
 
       console.log('AFTER FIREBASE SAVE');
       console.log('FIREBASE SAVE SUCCESS:', firebaseId);
-
-      if (
-        values.selectedCategoryId === 'custom' &&
-        values.userCustomActivityId === '' &&
-        values.customExerciseName.trim() !== '' &&
-        values.customMeasurementType !== ''
-      ) {
-        const alreadyExists = customActivities.some(
-          (activity) =>
-            activity.label.trim() === values.customExerciseName.trim() &&
-            activity.measurementType === values.customMeasurementType,
-        );
-
-        if (!alreadyExists) {
-          const savedCustomActivity = await addCustomActivityToFirestore({
-            label: values.customExerciseName.trim(),
-            measurementType: values.customMeasurementType,
-          });
-
-          setCustomActivities((current) => [savedCustomActivity, ...current]);
-        }
-      }
 
       setShowExtraHrvFields(false);
       setShowExtraRlxFields(false);

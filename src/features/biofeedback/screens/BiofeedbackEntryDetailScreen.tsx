@@ -312,6 +312,7 @@ export default function BiofeedbackEntryDetailScreen({ entryId, fromDay }: Props
         measuredAt: input.measuredAt,
         exerciseName: values.exerciseName.trim(),
         measurementType: input.activity?.measurementType ?? null,
+        activity: input.activity,
         durationMinutes: Number(values.durationMinutes),
         hrvStressPercent: values.hrvStressPercent.trim(),
         hrvMidRangePercent: values.hrvMidRangePercent.trim(),
