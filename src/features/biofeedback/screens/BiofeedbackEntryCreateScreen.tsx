@@ -197,6 +197,8 @@ export default function BiofeedbackEntryCreateScreen({ initialDateKey }: Props) 
         `load catch #${requestId}`,
         error instanceof Error ? error.message : String(error),
       );
+      setCustomActivities([]);
+      setHasLoadedCustomActivities(true);
       console.error('FAILED TO LOAD CUSTOM ACTIVITIES:', error);
     } finally {
       if (customActivitiesLoadTimeoutRef.current) {

@@ -37,7 +37,7 @@ export async function listActiveCustomActivitiesFromFirestore(): Promise<UserCus
   const user = auth.currentUser;
 
   if (!user) {
-    throw new Error('No authenticated user');
+    throw new Error('Failed to load custom activities: no authenticated user');
   }
 
   const customActivitiesCollection = collection(db, 'users', user.uid, 'customActivities');
@@ -47,11 +47,30 @@ export async function listActiveCustomActivitiesFromFirestore(): Promise<UserCus
     where('isActive', '==', true),
   );
 
-  const snapshot = await getDocs(customActivitiesQuery);
+  try {
+    const snapshot = await getDocs(customActivitiesQuery);
 
-  return snapshot.docs
-    .map((docSnapshot) => mapCustomActivityDocument(docSnapshot))
-    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    return snapshot.docs
+      .map((docSnapshot) => mapCustomActivityDocument(docSnapshot))
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  } catch (error) {
+    const errorCode =
+      typeof error === 'object' &&
+      error !== null &&
+      'code' in error &&
+      typeof error.code === 'string'
+        ? error.code
+        : null;
+
+    const errorMessage =
+      error instanceof Error ? error.message : String(error);
+
+    throw new Error(
+      errorCode
+        ? `Failed to load custom activities from Firestore [${errorCode}]: ${errorMessage}`
+        : `Failed to load custom activities from Firestore: ${errorMessage}`,
+    );
+  }
 }
 
 export async function listAllCustomActivitiesFromFirestore(): Promise<UserCustomActivity[]> {
