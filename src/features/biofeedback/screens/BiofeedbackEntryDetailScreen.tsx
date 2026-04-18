@@ -1,6 +1,7 @@
 //src\features\biofeedback\screens\BiofeedbackEntryDetailScreen.tsx
 
 import { router } from 'expo-router';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
@@ -26,14 +27,37 @@ import { validateBiofeedbackEntryForm } from '../forms/biofeedback-entry-form.va
 
 import DateTimeField from '../components/DateTimeField';
 import type { BiofeedbackEntry, TimeOfDay } from '../types/biofeedback-entry.types';
-
 import {
-  EXERCISE_OPTIONS,
-} from '../constants/exercise-options';
+  ACTIVITY_CATALOG,
+  type ActivityCatalogItem,
+  type ActivityCategoryId,
+} from '../constants/activity-catalog';
 
 type Props = {
   entryId: string;
   fromDay?: string;
+};
+
+const CATEGORY_LABELS: Record<ActivityCategoryId, string> = {
+  trainers: 'מאמנים',
+  relaxation: 'הרפיה',
+  guided: 'מונחה',
+  monitoring: 'ניטור',
+  custom: 'מותאם אישית',
+};
+
+const CATEGORY_DISPLAY_ORDER: Exclude<ActivityCategoryId, 'custom'>[] = [
+  'trainers',
+  'relaxation',
+  'guided',
+  'monitoring',
+];
+
+const CATEGORY_ICONS = {
+  trainers: 'whistle',
+  relaxation: 'meditation',
+  guided: 'flower-tulip-outline',
+  monitoring: 'chart-line',
 };
 
 function toOptionalNumber(value: string): number | null {
@@ -129,25 +153,30 @@ function mapFirebaseEntryToBiofeedbackEntry(entry: {
 export default function BiofeedbackEntryDetailScreen({ entryId, fromDay }: Props) {
   const [values, setValues] = useState(createDefaultBiofeedbackEntryFormValues());
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedExerciseId, setSelectedExerciseId] = useState<string | null>(null);
   const [isReplacingExercise, setIsReplacingExercise] = useState(false);
 
-  const selectedExerciseOption = useMemo(
-    () => EXERCISE_OPTIONS.find((option) => option.id === selectedExerciseId) ?? null,
-    [selectedExerciseId]
+  const selectedCatalogItem = useMemo(
+    () =>
+      ACTIVITY_CATALOG.find((item) => item.id === values.selectedCatalogItemId) ?? null,
+    [values.selectedCatalogItemId],
   );
 
-  const inferredMeasurementType = selectedExerciseOption?.measurementType ?? null;
+  const visibleCatalogItems = useMemo(() => {
+    if (
+      values.selectedCategoryId === '' ||
+      values.selectedCategoryId === 'custom'
+    ) {
+      return [];
+    }
+
+    return ACTIVITY_CATALOG.filter(
+      (item) =>
+        item.categoryId === values.selectedCategoryId &&
+        item.isActive,
+    );
+  }, [values.selectedCategoryId]);
 
   const errors = useMemo(() => validateBiofeedbackEntryForm(values), [values]);
-
-  useEffect(() => {
-    const matched = EXERCISE_OPTIONS.find(
-      (option) => option.label === values.exerciseName
-    );
-
-    setSelectedExerciseId(matched?.id ?? null);
-  }, [values.exerciseName]);
 
       useEffect(() => {
     loadEntry();
@@ -175,6 +204,37 @@ setValues(createBiofeedbackEntryFormValuesFromEntry(mappedEntry));
     setValues((current) => ({
       ...current,
       [key]: value,
+    }));
+  }
+
+  function resetExerciseSelectionFields() {
+    return {
+      selectedCatalogItemId: '',
+      userCustomActivityId: '',
+      exerciseName: '',
+      customExerciseName: '',
+      customMeasurementType: '',
+      monitoringType: '',
+    } as const;
+  }
+
+  function handleCategorySelect(categoryId: Exclude<ActivityCategoryId, 'custom'>) {
+    setValues((current) => ({
+      ...current,
+      selectedCategoryId: categoryId,
+      ...resetExerciseSelectionFields(),
+    }));
+  }
+
+  function handleCatalogItemSelect(item: ActivityCatalogItem) {
+    setValues((current) => ({
+      ...current,
+      selectedCategoryId: item.categoryId,
+      ...resetExerciseSelectionFields(),
+      selectedCatalogItemId: item.id,
+      exerciseName: item.label,
+      monitoringType:
+        item.activityType === 'monitoring' ? item.monitoringType : '',
     }));
   }
 
@@ -254,12 +314,12 @@ router.replace('/');
         <View style={styles.exerciseSummaryCard}>
           <Text style={styles.exerciseSummaryLabel}>התרגיל הנוכחי</Text>
           <Text style={styles.exerciseSummaryValue}>{values.exerciseName || 'ללא תרגיל'}</Text>
-          {(values.customMeasurementType !== '' || inferredMeasurementType) ? (
+          {(values.customMeasurementType !== '' || selectedCatalogItem?.measurementType) ? (
             <Text style={styles.exerciseSummaryMeta}>
               סוג מדידה:{' '}
               {values.customMeasurementType !== ''
                 ? values.customMeasurementType.toUpperCase()
-                : inferredMeasurementType?.toUpperCase()}
+                : selectedCatalogItem?.measurementType.toUpperCase()}
             </Text>
           ) : null}
           <Pressable
@@ -295,7 +355,7 @@ router.replace('/');
 
           {isReplacingExercise ? (
             <>
-              <Text style={styles.label}>תרגיל</Text>
+              <Text style={styles.label}>קטגוריה</Text>
 
               <Pressable
                 style={styles.closeReplaceExerciseButton}
@@ -304,17 +364,50 @@ router.replace('/');
                 <Text style={styles.closeReplaceExerciseButtonText}>סגור החלפת תרגיל</Text>
               </Pressable>
 
-              <View style={styles.exerciseOptionsContainer}>
-                {EXERCISE_OPTIONS.map((option) => {
-                  const isSelected = selectedExerciseId === option.id;
+              <View style={styles.categoryTopRow}>
+                {CATEGORY_DISPLAY_ORDER.map((categoryId) => {
+                  const isSelected = values.selectedCategoryId === categoryId;
 
                   return (
                     <Pressable
-                      key={option.id}
-                      onPress={() => {
-                        setSelectedExerciseId(option.id);
-                        updateField('exerciseName', option.label);
-                      }}
+                      key={categoryId}
+                      onPress={() => handleCategorySelect(categoryId)}
+                      style={styles.categoryCircleItem}
+                    >
+                      <View
+                        style={[
+                          styles.categoryCircleButton,
+                          isSelected && styles.categoryCircleButtonSelected,
+                        ]}
+                      >
+                        <MaterialCommunityIcons
+                          name={CATEGORY_ICONS[categoryId]}
+                          size={24}
+                          color={isSelected ? '#0d47a1' : '#46607a'}
+                        />
+                      </View>
+                      <Text
+                        style={[
+                          styles.categoryCircleLabel,
+                          isSelected && styles.categoryCircleLabelSelected,
+                        ]}
+                      >
+                        {CATEGORY_LABELS[categoryId]}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+
+              <Text style={styles.label}>תרגיל</Text>
+              <View style={styles.exerciseOptionsContainer}>
+                {visibleCatalogItems.map((item) => {
+                  const isSelected = values.selectedCatalogItemId === item.id;
+
+                  return (
+                    <Pressable
+                      key={item.id}
+                      onPress={() => handleCatalogItemSelect(item)}
                       style={[
                         styles.exerciseOptionButton,
                         isSelected && styles.exerciseOptionButtonSelected,
@@ -326,34 +419,12 @@ router.replace('/');
                           isSelected && styles.exerciseOptionButtonTextSelected,
                         ]}
                       >
-                        {option.label}
+                        {item.label}
                       </Text>
                     </Pressable>
                   );
                 })}
               </View>
-
-              <TextInput
-                value={values.exerciseName}
-                onChangeText={(text) => {
-                  setSelectedExerciseId(null);
-                  updateField('exerciseName', text);
-                }}
-                style={styles.input}
-                placeholder="או כתבו תרגיל אחר"
-              />
-              {errors.exerciseName ? (
-                <Text style={styles.errorText}>{errors.exerciseName}</Text>
-              ) : null}
-
-              {inferredMeasurementType ? (
-                <View style={styles.measurementTypeInfoBox}>
-                  <Text style={styles.measurementTypeInfoLabel}>סוג מדידה שזוהה</Text>
-                  <Text style={styles.measurementTypeInfoValue}>
-                    {inferredMeasurementType === 'hrv' ? 'HRV' : 'RLX'}
-                  </Text>
-                </View>
-              ) : null}
             </>
           ) : null}
 
@@ -660,7 +731,42 @@ deleteButtonText: {
     backgroundColor: '#ffffff',
     marginBottom: 8,
   },
-    exerciseOptionsContainer: {
+  categoryTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  categoryCircleItem: {
+    flex: 1,
+    alignItems: 'center',
+    marginHorizontal: 4,
+  },
+  categoryCircleButton: {
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    borderWidth: 1,
+    borderColor: '#cfcfcf',
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 6,
+  },
+  categoryCircleButtonSelected: {
+    borderColor: '#1e88e5',
+    backgroundColor: '#e3f2fd',
+  },
+  categoryCircleLabel: {
+    fontSize: 12,
+    color: '#222222',
+    fontWeight: '500',
+    textAlign: 'center',
+  },
+  categoryCircleLabelSelected: {
+    color: '#0d47a1',
+    fontWeight: '700',
+  },
+  exerciseOptionsContainer: {
     gap: 8,
     marginBottom: 12,
   },
