@@ -24,9 +24,11 @@ import { createDefaultBiofeedbackEntryFormValues } from '../forms/biofeedback-en
 import { createBiofeedbackEntryFormValuesFromEntry } from '../forms/biofeedback-entry-form.from-entry';
 import { toCreateBiofeedbackEntryInput } from '../forms/biofeedback-entry-form.mapper';
 import { validateBiofeedbackEntryForm } from '../forms/biofeedback-entry-form.validation';
+import { listActiveCustomActivitiesFromFirestore } from '../data/firebase-custom-activities-repository';
 
 import DateTimeField from '../components/DateTimeField';
 import type { BiofeedbackEntry, TimeOfDay } from '../types/biofeedback-entry.types';
+import type { UserCustomActivity } from '../types/user-custom-activity.types';
 import {
   ACTIVITY_CATALOG,
   type ActivityCatalogItem,
@@ -154,6 +156,9 @@ export default function BiofeedbackEntryDetailScreen({ entryId, fromDay }: Props
   const [values, setValues] = useState(createDefaultBiofeedbackEntryFormValues());
   const [isLoading, setIsLoading] = useState(true);
   const [isReplacingExercise, setIsReplacingExercise] = useState(false);
+  const [customActivities, setCustomActivities] = useState<UserCustomActivity[]>([]);
+  const [isLoadingCustomActivities, setIsLoadingCustomActivities] = useState(false);
+  const [hasLoadedCustomActivities, setHasLoadedCustomActivities] = useState(false);
 
   const selectedCatalogItem = useMemo(
     () =>
@@ -178,9 +183,27 @@ export default function BiofeedbackEntryDetailScreen({ entryId, fromDay }: Props
 
   const errors = useMemo(() => validateBiofeedbackEntryForm(values), [values]);
 
-      useEffect(() => {
+  useEffect(() => {
     loadEntry();
   }, [entryId]);
+
+  useEffect(() => {
+    if (
+      !isReplacingExercise ||
+      values.selectedCategoryId !== 'custom' ||
+      hasLoadedCustomActivities ||
+      isLoadingCustomActivities
+    ) {
+      return;
+    }
+
+    void loadCustomActivities();
+  }, [
+    hasLoadedCustomActivities,
+    isLoadingCustomActivities,
+    isReplacingExercise,
+    values.selectedCategoryId,
+  ]);
 
   async function loadEntry() {
     const entry = await getBiofeedbackEntryByIdFromFirestore(entryId);
@@ -196,8 +219,24 @@ export default function BiofeedbackEntryDetailScreen({ entryId, fromDay }: Props
     }
 
     const mappedEntry = mapFirebaseEntryToBiofeedbackEntry(entry);
-setValues(createBiofeedbackEntryFormValuesFromEntry(mappedEntry));
+    setValues(createBiofeedbackEntryFormValuesFromEntry(mappedEntry));
     setIsLoading(false);
+  }
+
+  async function loadCustomActivities() {
+    setIsLoadingCustomActivities(true);
+
+    try {
+      const items = await listActiveCustomActivitiesFromFirestore();
+      setCustomActivities(items);
+      setHasLoadedCustomActivities(true);
+    } catch (error) {
+      console.error('FAILED TO LOAD CUSTOM ACTIVITIES:', error);
+      setCustomActivities([]);
+      setHasLoadedCustomActivities(true);
+    } finally {
+      setIsLoadingCustomActivities(false);
+    }
   }
 
   function updateField<K extends keyof typeof values>(key: K, value: (typeof values)[K]) {
@@ -218,7 +257,7 @@ setValues(createBiofeedbackEntryFormValuesFromEntry(mappedEntry));
     } as const;
   }
 
-  function handleCategorySelect(categoryId: Exclude<ActivityCategoryId, 'custom'>) {
+  function handleCategorySelect(categoryId: ActivityCategoryId) {
     setValues((current) => ({
       ...current,
       selectedCategoryId: categoryId,
@@ -238,7 +277,24 @@ setValues(createBiofeedbackEntryFormValuesFromEntry(mappedEntry));
     }));
   }
 
-    async function handleUpdate() {
+  function handleExistingCustomActivitySelect(activity: UserCustomActivity) {
+    setValues((current) => ({
+      ...current,
+      selectedCategoryId: 'custom',
+      selectedCatalogItemId: '',
+      userCustomActivityId: activity.id,
+      exerciseName: activity.label,
+      customExerciseName: activity.label,
+      customMeasurementType: activity.measurementType,
+      monitoringType: '',
+      breathingInhale: '',
+      breathingHoldAfterInhale: '',
+      breathingExhale: '',
+      breathingHoldAfterExhale: '',
+    }));
+  }
+
+  async function handleUpdate() {
     const nextErrors = validateBiofeedbackEntryForm(values);
     const hasErrors = Object.keys(nextErrors).length > 0;
 
@@ -268,16 +324,16 @@ setValues(createBiofeedbackEntryFormValuesFromEntry(mappedEntry));
       await updateBiofeedbackEntryInFirestore(entryId, payload);
 
       if (fromDay) {
-  router.back();
-  return;
-}
+        router.back();
+        return;
+      }
 
-router.replace('/');
+      router.replace('/');
     } catch {
       Alert.alert('שגיאה', 'עדכון המדידה נכשל.');
     }
   }
-  
+
   function handleDelete() {
     Alert.alert('מחיקת מדידה', 'האם למחוק את המדידה?', [
       { text: 'ביטול', style: 'cancel' },
@@ -334,24 +390,24 @@ router.replace('/');
           <Text style={styles.sectionTitle}>פרטי מדידה</Text>
 
           <DateTimeField
-  label="תאריך"
-  value={values.measurementDate}
-  mode="date"
-  onChangeValue={(nextValue) => updateField('measurementDate', nextValue)}
-/>
-{errors.measurementDate ? (
-  <Text style={styles.errorText}>{errors.measurementDate}</Text>
-) : null}
+            label="תאריך"
+            value={values.measurementDate}
+            mode="date"
+            onChangeValue={(nextValue) => updateField('measurementDate', nextValue)}
+          />
+          {errors.measurementDate ? (
+            <Text style={styles.errorText}>{errors.measurementDate}</Text>
+          ) : null}
 
-<DateTimeField
-  label="שעה"
-  value={values.measurementTime}
-  mode="time"
-  onChangeValue={(nextValue) => updateField('measurementTime', nextValue)}
-/>
-{errors.measurementTime ? (
-  <Text style={styles.errorText}>{errors.measurementTime}</Text>
-) : null}
+          <DateTimeField
+            label="שעה"
+            value={values.measurementTime}
+            mode="time"
+            onChangeValue={(nextValue) => updateField('measurementTime', nextValue)}
+          />
+          {errors.measurementTime ? (
+            <Text style={styles.errorText}>{errors.measurementTime}</Text>
+          ) : null}
 
           {isReplacingExercise ? (
             <>
@@ -399,32 +455,88 @@ router.replace('/');
                 })}
               </View>
 
-              <Text style={styles.label}>תרגיל</Text>
-              <View style={styles.exerciseOptionsContainer}>
-                {visibleCatalogItems.map((item) => {
-                  const isSelected = values.selectedCatalogItemId === item.id;
+              <Pressable
+                onPress={() => handleCategorySelect('custom')}
+                style={[
+                  styles.exerciseOptionButton,
+                  values.selectedCategoryId === 'custom' &&
+                    styles.exerciseOptionButtonSelected,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.exerciseOptionButtonText,
+                    values.selectedCategoryId === 'custom' &&
+                      styles.exerciseOptionButtonTextSelected,
+                  ]}
+                >
+                  {CATEGORY_LABELS.custom}
+                </Text>
+              </Pressable>
 
-                  return (
-                    <Pressable
-                      key={item.id}
-                      onPress={() => handleCatalogItemSelect(item)}
-                      style={[
-                        styles.exerciseOptionButton,
-                        isSelected && styles.exerciseOptionButtonSelected,
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.exerciseOptionButtonText,
-                          isSelected && styles.exerciseOptionButtonTextSelected,
-                        ]}
-                      >
-                        {item.label}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
+              {values.selectedCategoryId === 'custom' ? (
+                <>
+                  <Text style={styles.label}>פעילויות שמורות</Text>
+                  {isLoadingCustomActivities ? (
+                    <Text style={styles.label}>טוען פעילויות שמורות...</Text>
+                  ) : (
+                    <View style={styles.exerciseOptionsContainer}>
+                      {customActivities.map((activity) => {
+                        const isSelected = values.userCustomActivityId === activity.id;
+
+                        return (
+                          <Pressable
+                            key={activity.id}
+                            onPress={() => handleExistingCustomActivitySelect(activity)}
+                            style={[
+                              styles.exerciseOptionButton,
+                              isSelected && styles.exerciseOptionButtonSelected,
+                            ]}
+                          >
+                            <Text
+                              style={[
+                                styles.exerciseOptionButtonText,
+                                isSelected && styles.exerciseOptionButtonTextSelected,
+                              ]}
+                            >
+                              {activity.label}
+                            </Text>
+                          </Pressable>
+                        );
+                      })}
+                    </View>
+                  )}
+                </>
+              ) : (
+                <>
+                  <Text style={styles.label}>תרגיל</Text>
+                  <View style={styles.exerciseOptionsContainer}>
+                    {visibleCatalogItems.map((item) => {
+                      const isSelected = values.selectedCatalogItemId === item.id;
+
+                      return (
+                        <Pressable
+                          key={item.id}
+                          onPress={() => handleCatalogItemSelect(item)}
+                          style={[
+                            styles.exerciseOptionButton,
+                            isSelected && styles.exerciseOptionButtonSelected,
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.exerciseOptionButtonText,
+                              isSelected && styles.exerciseOptionButtonTextSelected,
+                            ]}
+                          >
+                            {item.label}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                </>
+              )}
             </>
           ) : null}
 
@@ -441,49 +553,49 @@ router.replace('/');
         </View>
 
         <View style={[styles.section, styles.hrvSection]}>
-  <Text style={[styles.sectionTitle, styles.hrvSectionTitle]}>HRV</Text>
+          <Text style={[styles.sectionTitle, styles.hrvSectionTitle]}>HRV</Text>
 
-  <View style={styles.hrvFieldBlockRelax}>
-    <Text style={[styles.label, styles.hrvRelaxLabel]}>אחוז זמן בטווח רגיעה</Text>
-    <TextInput
-      value={values.hrvRelaxationPercent}
-      onChangeText={(text) => updateField('hrvRelaxationPercent', text)}
-      style={[styles.input, styles.hrvRelaxInput]}
-      keyboardType="numeric"
-      placeholder="הערך החשוב ביותר"
-      placeholderTextColor="#7aa7d9"
-    />
-    {errors.hrvRelaxationPercent ? (
-      <Text style={styles.errorText}>{errors.hrvRelaxationPercent}</Text>
-    ) : null}
-  </View>
+          <View style={styles.hrvFieldBlockRelax}>
+            <Text style={[styles.label, styles.hrvRelaxLabel]}>אחוז זמן בטווח רגיעה</Text>
+            <TextInput
+              value={values.hrvRelaxationPercent}
+              onChangeText={(text) => updateField('hrvRelaxationPercent', text)}
+              style={[styles.input, styles.hrvRelaxInput]}
+              keyboardType="numeric"
+              placeholder="הערך החשוב ביותר"
+              placeholderTextColor="#7aa7d9"
+            />
+            {errors.hrvRelaxationPercent ? (
+              <Text style={styles.errorText}>{errors.hrvRelaxationPercent}</Text>
+            ) : null}
+          </View>
 
-  <View style={styles.hrvFieldBlockMid}>
-    <Text style={[styles.label, styles.hrvMidLabel]}>אחוז זמן בטווח ביניים</Text>
-    <TextInput
-      value={values.hrvMidRangePercent}
-      onChangeText={(text) => updateField('hrvMidRangePercent', text)}
-      style={[styles.input, styles.hrvMidInput]}
-      keyboardType="numeric"
-    />
-    {errors.hrvMidRangePercent ? (
-      <Text style={styles.errorText}>{errors.hrvMidRangePercent}</Text>
-    ) : null}
-  </View>
+          <View style={styles.hrvFieldBlockMid}>
+            <Text style={[styles.label, styles.hrvMidLabel]}>אחוז זמן בטווח ביניים</Text>
+            <TextInput
+              value={values.hrvMidRangePercent}
+              onChangeText={(text) => updateField('hrvMidRangePercent', text)}
+              style={[styles.input, styles.hrvMidInput]}
+              keyboardType="numeric"
+            />
+            {errors.hrvMidRangePercent ? (
+              <Text style={styles.errorText}>{errors.hrvMidRangePercent}</Text>
+            ) : null}
+          </View>
 
-  <View style={styles.hrvFieldBlockStress}>
-    <Text style={[styles.label, styles.hrvStressLabel]}>אחוז זמן בטווח לחץ</Text>
-    <TextInput
-      value={values.hrvStressPercent}
-      onChangeText={(text) => updateField('hrvStressPercent', text)}
-      style={[styles.input, styles.hrvStressInput]}
-      keyboardType="numeric"
-    />
-    {errors.hrvStressPercent ? (
-      <Text style={styles.errorText}>{errors.hrvStressPercent}</Text>
-    ) : null}
-  </View>
-</View>
+          <View style={styles.hrvFieldBlockStress}>
+            <Text style={[styles.label, styles.hrvStressLabel]}>אחוז זמן בטווח לחץ</Text>
+            <TextInput
+              value={values.hrvStressPercent}
+              onChangeText={(text) => updateField('hrvStressPercent', text)}
+              style={[styles.input, styles.hrvStressInput]}
+              keyboardType="numeric"
+            />
+            {errors.hrvStressPercent ? (
+              <Text style={styles.errorText}>{errors.hrvStressPercent}</Text>
+            ) : null}
+          </View>
+        </View>
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>RLX</Text>
@@ -519,38 +631,38 @@ router.replace('/');
         </View>
 
         <View style={styles.actions}>
-  <Pressable style={styles.saveButton} onPress={handleUpdate}>
-    <Text style={styles.saveButtonText}>שמור שינויים</Text>
-  </Pressable>
-</View>
+          <Pressable style={styles.saveButton} onPress={handleUpdate}>
+            <Text style={styles.saveButtonText}>שמור שינויים</Text>
+          </Pressable>
+        </View>
 
-<View style={styles.cancelAction}>
-  <Pressable
-    style={styles.cancelButton}
-    onPress={() => {
-      if (fromDay) {
-        router.back();
-        return;
-      }
-      router.replace('/');
-    }}
-  >
-    <Text style={styles.cancelButtonText}>ביטול עריכה</Text>
-  </Pressable>
-</View>
+        <View style={styles.cancelAction}>
+          <Pressable
+            style={styles.cancelButton}
+            onPress={() => {
+              if (fromDay) {
+                router.back();
+                return;
+              }
+              router.replace('/');
+            }}
+          >
+            <Text style={styles.cancelButtonText}>ביטול עריכה</Text>
+          </Pressable>
+        </View>
 
-<View style={styles.deleteAction}>
-  <Pressable style={styles.deleteButton} onPress={handleDelete}>
-    <Text style={styles.deleteButtonText}>מחק מדידה</Text>
-  </Pressable>
-</View>
+        <View style={styles.deleteAction}>
+          <Pressable style={styles.deleteButton} onPress={handleDelete}>
+            <Text style={styles.deleteButtonText}>מחק מדידה</Text>
+          </Pressable>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-    hrvSection: {
+  hrvSection: {
     borderColor: '#cfe3ff',
     backgroundColor: '#f4f9ff',
   },
@@ -605,47 +717,42 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
   },
   saveButton: {
-  height: 48,
-  borderRadius: 12,
-  backgroundColor: '#43a047',
-  alignItems: 'center',
-  justifyContent: 'center',
-},
-
-saveButtonText: {
-  color: '#ffffff',
-  fontSize: 16,
-  fontWeight: '700',
-},
-
-cancelButton: {
-  height: 48,
-  borderRadius: 12,
-  backgroundColor: '#eeeeee',
-  alignItems: 'center',
-  justifyContent: 'center',
-},
-
-cancelButtonText: {
-  color: '#333333',
-  fontSize: 16,
-  fontWeight: '600',
-},
-
-deleteButton: {
-  height: 48,
-  borderRadius: 12,
-  backgroundColor: '#c62828',
-  alignItems: 'center',
-  justifyContent: 'center',
-},
-
-deleteButtonText: {
-  color: '#ffffff',
-  fontSize: 16,
-  fontWeight: '700',
-},
-    cancelAction: {
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: '#43a047',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  saveButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  cancelButton: {
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: '#eeeeee',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cancelButtonText: {
+    color: '#333333',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  deleteButton: {
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: '#c62828',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  deleteButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  cancelAction: {
     marginTop: 12,
   },
   safeArea: {
