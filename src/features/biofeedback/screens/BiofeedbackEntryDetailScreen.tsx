@@ -155,8 +155,6 @@ export default function BiofeedbackEntryDetailScreen({ entryId, fromDay }: Props
   async function loadEntry() {
     const entry = await getBiofeedbackEntryByIdFromFirestore(entryId);
 
-console.log('ENTRY FROM FIREBASE:', entry);
-
     if (!entry) {
       Alert.alert('שגיאה', 'הרשומה לא נמצאה', [
         {
@@ -205,17 +203,6 @@ setValues(createBiofeedbackEntryFormValuesFromEntry(mappedEntry));
         rlxEndValue: values.rlxEndValue.trim(),
         notes: values.notes.trim(),
       };
-
-      console.log('ENTRY EDIT DEBUG BEFORE SAVE:', {
-        selectedCategoryId: values.selectedCategoryId,
-        selectedCatalogItemId: values.selectedCatalogItemId,
-        userCustomActivityId: values.userCustomActivityId,
-        customExerciseName: values.customExerciseName,
-        customMeasurementType: values.customMeasurementType,
-        inferredMeasurementType,
-        'payload.measurementType': payload.measurementType,
-        'payload.activity.measurementType': input.activity?.measurementType ?? null,
-      });
 
       await updateBiofeedbackEntryInFirestore(entryId, payload);
 
