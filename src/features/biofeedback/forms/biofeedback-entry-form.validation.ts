@@ -50,19 +50,19 @@ export function validateBiofeedbackEntryForm(
   const errors: ValidationErrorMap = {};
 
   if (!values.measurementDate) {
-    errors.measurementDate = '׳³ג„¢׳³ֲ© ׳³ֲ׳³ג€˜׳³ג€”׳³ג€¢׳³ֲ¨ ׳³ֳ—׳³ֲ׳³ֲ¨׳³ג„¢׳³ֲ';
+    errors.measurementDate = 'יש למלא תאריך';
   } else if (!isValidDateInput(values.measurementDate)) {
-    errors.measurementDate = '׳³ג‚×׳³ג€¢׳³ֲ¨׳³ֲ׳³ֻ ׳³ֳ—׳³ֲ׳³ֲ¨׳³ג„¢׳³ֲ ׳³ֲ¦׳³ֲ¨׳³ג„¢׳³ֲ ׳³ֲ׳³ג€׳³ג„¢׳³ג€¢׳³ֳ— YYYY-MM-DD';
+    errors.measurementDate = 'התאריך צריך להיות בפורמט YYYY-MM-DD';
   }
 
   if (!values.measurementTime) {
-    errors.measurementTime = '׳³ג„¢׳³ֲ© ׳³ֲ׳³ג€˜׳³ג€”׳³ג€¢׳³ֲ¨ ׳³ֲ©׳³ֲ¢׳³ג€';
+    errors.measurementTime = 'יש למלא שעה';
   } else if (!isValidTimeInput(values.measurementTime)) {
-    errors.measurementTime = '׳³ג‚×׳³ג€¢׳³ֲ¨׳³ֲ׳³ֻ ׳³ֲ©׳³ֲ¢׳³ג€ ׳³ֲ¦׳³ֲ¨׳³ג„¢׳³ֲ ׳³ֲ׳³ג€׳³ג„¢׳³ג€¢׳³ֳ— HH:mm';
+    errors.measurementTime = 'השעה צריכה להיות בפורמט HH:mm';
   }
 
   if (!values.exerciseName.trim()) {
-    errors.exerciseName = '׳³ג„¢׳³ֲ© ׳³ֲ׳³ג€׳³ג€“׳³ג„¢׳³ֲ ׳³ֲ©׳³ֲ ׳³ֳ—׳³ֲ¨׳³ג€™׳³ג„¢׳³ֲ ׳³ֲ׳³ג€¢ ׳³ֲ¡׳³ג€¢׳³ג€™ ׳³ֲ׳³ג€׳³ג„¢׳³ג€׳³ג€';
+    errors.exerciseName = 'יש למלא שם תרגיל';
   }
 
   if (
@@ -70,19 +70,19 @@ export function validateBiofeedbackEntryForm(
     !values.customExerciseName.trim() &&
     !values.exerciseName.trim()
   ) {
-    errors.customExerciseName = 'הזן שם לתרגיל האישי';
+    errors.customExerciseName = '׳”׳–׳ ׳©׳ ׳׳×׳¨׳’׳™׳ ׳”׳׳™׳©׳™';
   }
 
   if (values.selectedCategoryId === 'custom' && values.customMeasurementType === '') {
-    errors.customMeasurementType = 'בחר סוג מדידה לתרגיל האישי';
+    errors.customMeasurementType = '׳‘׳—׳¨ ׳¡׳•׳’ ׳׳“׳™׳“׳” ׳׳×׳¨׳’׳™׳ ׳”׳׳™׳©׳™';
   }
 
   if (values.selectedCategoryId === 'monitoring' && values.monitoringType === '') {
-    errors.monitoringType = 'בחר סוג ניטור';
+    errors.monitoringType = '׳‘׳—׳¨ ׳¡׳•׳’ ׳ ׳™׳˜׳•׳¨';
   }
 
   if (!Number.isFinite(values.durationMinutes) || values.durationMinutes <= 0) {
-    errors.durationMinutes = '׳³ֲ׳³ֲ©׳³ֲ ׳³ג€׳³ג€“׳³ֲ׳³ֲ ׳³ג€”׳³ג„¢׳³ג„¢׳³ג€˜ ׳³ֲ׳³ג€׳³ג„¢׳³ג€¢׳³ֳ— ׳³ג€™׳³ג€׳³ג€¢׳³ֲ ׳³ֲ-0';
+    errors.durationMinutes = 'משך בדקות חייב להיות גדול מ-0';
   }
 
   const stress = values.hrvStressPercent === '' ? null : Number(values.hrvStressPercent);
@@ -97,27 +97,27 @@ export function validateBiofeedbackEntryForm(
   const breathingHoldAfterExhale = toOptionalNumber(values.breathingHoldAfterExhale);
 
   if (rlxStart !== null && !Number.isFinite(rlxStart)) {
-    errors.rlxStartValue = '׳³ֲ¢׳³ֲ¨׳³ֲ RLX ׳³ג€׳³ֳ—׳³ג€”׳³ֲ׳³ֳ—׳³ג„¢ ׳³ג€”׳³ג„¢׳³ג„¢׳³ג€˜ ׳³ֲ׳³ג€׳³ג„¢׳³ג€¢׳³ֳ— ׳³ֲ׳³ֲ¡׳³ג‚×׳³ֲ¨';
+    errors.rlxStartValue = 'ערך RLX התחלתי חייב להיות מספר';
   }
 
   if (rlxEnd !== null && !Number.isFinite(rlxEnd)) {
-    errors.rlxEndValue = '׳³ֲ¢׳³ֲ¨׳³ֲ RLX ׳³ֲ¡׳³ג„¢׳³ג€¢׳³ֲ ׳³ג€”׳³ג„¢׳³ג„¢׳³ג€˜ ׳³ֲ׳³ג€׳³ג„¢׳³ג€¢׳³ֳ— ׳³ֲ׳³ֲ¡׳³ג‚×׳³ֲ¨';
+    errors.rlxEndValue = 'ערך RLX סיום חייב להיות מספר';
   }
 
   if (values.breathingInhale !== '' && breathingInhale === null) {
-    errors.breathingInhale = '׳³ג„¢׳³ֲ© ׳³ֲ׳³ג€׳³ג€“׳³ג„¢׳³ֲ ׳³ֲ¢׳³ֲ¨׳³ֲ ׳³ֲ׳³ֲ¡׳³ג‚×׳³ֲ¨׳³ג„¢';
+    errors.breathingInhale = 'יש למלא ערך מספרי';
   }
 
   if (values.breathingHoldAfterInhale !== '' && breathingHoldAfterInhale === null) {
-    errors.breathingHoldAfterInhale = '׳³ג„¢׳³ֲ© ׳³ֲ׳³ג€׳³ג€“׳³ג„¢׳³ֲ ׳³ֲ¢׳³ֲ¨׳³ֲ ׳³ֲ׳³ֲ¡׳³ג‚×׳³ֲ¨׳³ג„¢';
+    errors.breathingHoldAfterInhale = 'יש למלא ערך מספרי';
   }
 
   if (values.breathingExhale !== '' && breathingExhale === null) {
-    errors.breathingExhale = '׳³ג„¢׳³ֲ© ׳³ֲ׳³ג€׳³ג€“׳³ג„¢׳³ֲ ׳³ֲ¢׳³ֲ¨׳³ֲ ׳³ֲ׳³ֲ¡׳³ג‚×׳³ֲ¨׳³ג„¢';
+    errors.breathingExhale = 'יש למלא ערך מספרי';
   }
 
   if (values.breathingHoldAfterExhale !== '' && breathingHoldAfterExhale === null) {
-    errors.breathingHoldAfterExhale = '׳³ג„¢׳³ֲ© ׳³ֲ׳³ג€׳³ג€“׳³ג„¢׳³ֲ ׳³ֲ¢׳³ֲ¨׳³ֲ ׳³ֲ׳³ֲ¡׳³ג‚×׳³ֲ¨׳³ג„¢';
+    errors.breathingHoldAfterExhale = 'יש למלא ערך מספרי';
   }
 
   const hasStress = stress !== null;
@@ -125,28 +125,28 @@ export function validateBiofeedbackEntryForm(
   const hasRelax = relax !== null;
 
   if (hasStress && (stress < 0 || stress > 100)) {
-    errors.hrvStressPercent = '׳³ג„¢׳³ֲ© ׳³ֲ׳³ג€׳³ג€“׳³ג„¢׳³ֲ ׳³ֲ¢׳³ֲ¨׳³ֲ ׳³ג€˜׳³ג„¢׳³ֲ 0 ׳³ֲ-100';
+    errors.hrvStressPercent = 'יש למלא ערך בין 0 ל-100';
   }
 
   if (hasMid && (mid < 0 || mid > 100)) {
-    errors.hrvMidRangePercent = '׳³ג„¢׳³ֲ© ׳³ֲ׳³ג€׳³ג€“׳³ג„¢׳³ֲ ׳³ֲ¢׳³ֲ¨׳³ֲ ׳³ג€˜׳³ג„¢׳³ֲ 0 ׳³ֲ-100';
+    errors.hrvMidRangePercent = 'יש למלא ערך בין 0 ל-100';
   }
 
   if (hasRelax && (relax < 0 || relax > 100)) {
-    errors.hrvRelaxationPercent = '׳³ג„¢׳³ֲ© ׳³ֲ׳³ג€׳³ג€“׳³ג„¢׳³ֲ ׳³ֲ¢׳³ֲ¨׳³ֲ ׳³ג€˜׳³ג„¢׳³ֲ 0 ׳³ֲ-100';
+    errors.hrvRelaxationPercent = 'יש למלא ערך בין 0 ל-100';
   }
 
   const hasExtraValues = hasStress || hasMid;
 
   if (!hasRelax && hasExtraValues) {
-    errors.hrvRelaxationPercent = '׳³ֲ׳³ֲ ׳³ֲ׳³ג€“׳³ג„¢׳³ֲ ׳³ג„¢׳³ֲ ׳³ג€˜׳³ג„¢׳³ֲ ׳³ג„¢׳³ג„¢׳³ֲ ׳³ֲ׳³ג€¢ ׳³ֲ׳³ג€”׳³ֲ¥, ׳³ֲ¦׳³ֲ¨׳³ג„¢׳³ֲ ׳³ג€™׳³ֲ ׳³ֲ¢׳³ֲ¨׳³ֲ ׳³ֲ¨׳³ג€™׳³ג„¢׳³ֲ¢׳³ג€';
+    errors.hrvRelaxationPercent = 'אם ממלאים ערכי HRV נוספים, צריך גם להזין ערך רגיעה';
   }
 
   if (hasRelax && hasExtraValues) {
     const total = (stress ?? 0) + (mid ?? 0) + (relax ?? 0);
 
     if (Math.abs(total - 100) > 2) {
-      const message = '׳³ג€÷׳³ֲ©׳³ֲ׳³ֲ׳³ֲ׳³ֲ׳³ג„¢׳³ֲ ׳³ג„¢׳³ג€¢׳³ֳ—׳³ֲ¨ ׳³ֲ׳³ֲ¨׳³ג€™׳³ג„¢׳³ֲ¢׳³ג€ ׳³ג€˜׳³ֲ׳³ג€˜׳³ג€, ׳³ג€׳³ֲ¡׳³ג€÷׳³ג€¢׳³ֲ ׳³ֲ¦׳³ֲ¨׳³ג„¢׳³ֲ ׳³ֲ׳³ג€׳³ג„¢׳³ג€¢׳³ֳ— 100 ׳³ֲ¢׳³ֲ ׳³ֲ¡׳³ֻ׳³ג„¢׳³ג„¢׳³ג€ ׳³ֲ©׳³ֲ ׳³ֲ¢׳³ג€ 2';
+      const message = 'סכום אחוזי ה-HRV צריך להיות 100, עם סטייה מותרת של עד 2';
 
       if (!errors.hrvRelaxationPercent) {
         errors.hrvRelaxationPercent = message;
