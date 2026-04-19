@@ -391,7 +391,7 @@ export default function BiofeedbackEntryDetailScreen({ entryId, fromDay }: Props
           <Text style={styles.sectionTitle}>פרטי מדידה</Text>
 
           <DateTimeField
-            label="תאריך"
+            label='תאריך'
             value={values.measurementDate}
             mode="date"
             onChangeValue={(nextValue) => updateField('measurementDate', nextValue)}
@@ -401,7 +401,7 @@ export default function BiofeedbackEntryDetailScreen({ entryId, fromDay }: Props
           ) : null}
 
           <DateTimeField
-            label="שעה"
+            label='שעה'
             value={values.measurementTime}
             mode="time"
             onChangeValue={(nextValue) => updateField('measurementTime', nextValue)}
@@ -563,7 +563,7 @@ export default function BiofeedbackEntryDetailScreen({ entryId, fromDay }: Props
               onChangeText={(text) => updateField('hrvRelaxationPercent', text)}
               style={[styles.input, styles.hrvRelaxInput]}
               keyboardType="numeric"
-              placeholder="הערך החשוב ביותר"
+              placeholder='הערך החשוב ביותר'
               placeholderTextColor="#7aa7d9"
             />
             {errors.hrvRelaxationPercent ? (
