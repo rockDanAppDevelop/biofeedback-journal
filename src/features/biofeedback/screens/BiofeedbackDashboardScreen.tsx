@@ -147,7 +147,10 @@ export default function BiofeedbackDashboardScreen() {
           <Text style={styles.exportButtonText}>ייצוא נתונים</Text>
         </Pressable>
 
-        <Text style={styles.streakInsightText}>{streakInsightText}</Text>
+        <View style={styles.dailyStatusCard}>
+          <Text style={styles.dailyStatusLabel}>היום שלך</Text>
+          <Text style={styles.dailyStatusMessage}>{streakInsightText}</Text>
+        </View>
 
         <MonthGrid
           referenceDate={referenceDate}
@@ -178,13 +181,29 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#1e4f8a',
   },
-  streakInsightText: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#4f5d75',
+  dailyStatusCard: {
+    backgroundColor: '#eef4fb',
+    borderWidth: 1,
+    borderColor: '#cfdceb',
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    marginTop: 6,
+    marginBottom: 16,
+  },
+  dailyStatusLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#6b7280',
     textAlign: 'right',
-    marginTop: 4,
-    marginBottom: 12,
+    marginBottom: 4,
+  },
+  dailyStatusMessage: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#243447',
+    textAlign: 'right',
+    lineHeight: 24,
   },
   safeArea: {
     flex: 1,
