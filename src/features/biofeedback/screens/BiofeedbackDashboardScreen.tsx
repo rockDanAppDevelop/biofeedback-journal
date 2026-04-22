@@ -8,6 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import FloatingAddButton from '../components/FloatingAddButton';
 import MonthGrid from '../components/MonthGrid';
 import { toDateKey } from '../components/calendar.utils';
+import { getStreakInsight } from '../lib/streak-insight';
 
 import { collection, getDocs } from 'firebase/firestore';
 import { testFirebaseConnection } from '../../../lib/testFirebase';
@@ -25,6 +26,12 @@ function getMonthTitle(date: Date): string {
 
 function addMonths(date: Date, amount: number): Date {
   return new Date(date.getFullYear(), date.getMonth() + amount, 1);
+}
+
+function formatStreakDays(count: number): string {
+  const dayLabel = count === 1 ? 'יום' : 'ימים';
+
+  return `${count} ${dayLabel}`;
 }
 
 export default function BiofeedbackDashboardScreen() {
@@ -95,6 +102,22 @@ export default function BiofeedbackDashboardScreen() {
   }
 
   const monthTitle = useMemo(() => getMonthTitle(referenceDate), [referenceDate]);
+  const streakInsight = useMemo(
+    () => getStreakInsight(entryDateKeys, toDateKey(new Date())),
+    [entryDateKeys],
+  );
+  const streakInsightText = useMemo(() => {
+    switch (streakInsight.kind) {
+      case 'active':
+        return `🔥 ${formatStreakDays(streakInsight.streakCount)} ברצף`;
+      case 'keep-going':
+        return `🔥 ${formatStreakDays(streakInsight.streakCount)} ברצף · בוא נשמור על הרצף`;
+      case 'restart':
+        return `🔄 הרצף האחרון: ${formatStreakDays(streakInsight.lastStreakCount)} · מתחילים מחדש היום`;
+      case 'empty':
+        return '✨ היום הוא התחלה טובה לתרגול קטן';
+    }
+  }, [streakInsight]);
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -124,6 +147,8 @@ export default function BiofeedbackDashboardScreen() {
           <Text style={styles.exportButtonText}>ייצוא נתונים</Text>
         </Pressable>
 
+        <Text style={styles.streakInsightText}>{streakInsightText}</Text>
+
         <MonthGrid
           referenceDate={referenceDate}
           entryDateKeys={entryDateKeys}
@@ -152,6 +177,14 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#1e4f8a',
+  },
+  streakInsightText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#4f5d75',
+    textAlign: 'right',
+    marginTop: 4,
+    marginBottom: 12,
   },
   safeArea: {
     flex: 1,
