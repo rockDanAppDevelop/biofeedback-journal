@@ -7,12 +7,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import FloatingAddButton from '../components/FloatingAddButton';
 import MonthGrid from '../components/MonthGrid';
+import { toDateKey } from '../components/calendar.utils';
 
 import { collection, getDocs } from 'firebase/firestore';
 import { testFirebaseConnection } from '../../../lib/testFirebase';
 import { auth, db } from '../../../lib/firebase';
 import { UserMenu } from '../../auth/components/UserMenu';
 import { getCurrentUserProfile } from '../../auth/data/get-current-user-profile';
+import { syncDailyReminderForToday } from '../../notifications/lib/daily-reminder';
 
 function getMonthTitle(date: Date): string {
   return new Intl.DateTimeFormat('he-IL', {
@@ -27,49 +29,49 @@ function addMonths(date: Date, amount: number): Date {
 
 export default function BiofeedbackDashboardScreen() {
   const [entryDateKeys, setEntryDateKeys] = useState<string[]>([]);
-const [firstSeenDateKey, setFirstSeenDateKey] = useState('');
-const [referenceDate, setReferenceDate] = useState(() => new Date());
+  const [firstSeenDateKey, setFirstSeenDateKey] = useState('');
+  const [referenceDate, setReferenceDate] = useState(() => new Date());
 
   useFocusEffect(
     useCallback(() => {
-      loadEntries();
+      void loadEntries();
     }, []),
   );
 
-async function loadEntries() {
-  try {
-    await testFirebaseConnection();
+  async function loadEntries() {
+    try {
+      await testFirebaseConnection();
 
-    const user = auth.currentUser;
+      const user = auth.currentUser;
 
-    if (!user) {
-      console.log('DASHBOARD LOAD FAILED: No authenticated user');
-      setEntryDateKeys([]);
-      return;
+      if (!user) {
+        console.log('DASHBOARD LOAD FAILED: No authenticated user');
+        setEntryDateKeys([]);
+        return;
+      }
+
+      const profile = await getCurrentUserProfile();
+      setFirstSeenDateKey(profile?.firstSeenDateKey ?? '');
+
+      const entriesCollection = collection(db, 'users', user.uid, 'entries');
+      const snapshot = await getDocs(entriesCollection);
+
+      const uniqueDateKeys = Array.from(
+        new Set(
+          snapshot.docs
+            .map((docSnapshot) => docSnapshot.data().dateKey)
+            .filter((value): value is string => typeof value === 'string' && value.length > 0),
+        ),
+      );
+
+      setEntryDateKeys(uniqueDateKeys);
+      await syncDailyReminderForToday(uniqueDateKeys.includes(toDateKey(new Date())));
+    } catch (error) {
+      console.log('🔥 FIRESTORE ERROR:', error);
     }
-
-    const profile = await getCurrentUserProfile();
-setFirstSeenDateKey(profile?.firstSeenDateKey ?? '');
-    const entriesCollection = collection(db, 'users', user.uid, 'entries');
-    const snapshot = await getDocs(entriesCollection);
-
-    const uniqueDateKeys = Array.from(
-      new Set(
-        snapshot.docs
-          .map((docSnapshot) => docSnapshot.data().dateKey)
-          .filter((value): value is string => typeof value === 'string' && value.length > 0)
-      )
-    );
-
-    setEntryDateKeys(uniqueDateKeys);
-
-  } catch (error) {
-    console.log('🔥 FIRESTORE ERROR:', error);
   }
-}
 
-
-    function handleDayPress(dateKey: string) {
+  function handleDayPress(dateKey: string) {
     const hasEntryForDay = entryDateKeys.includes(dateKey);
 
     if (hasEntryForDay) {
@@ -92,31 +94,30 @@ setFirstSeenDateKey(profile?.firstSeenDateKey ?? '');
     setReferenceDate(new Date());
   }
 
-
   const monthTitle = useMemo(() => getMonthTitle(referenceDate), [referenceDate]);
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <View style={styles.container}>
         <UserMenu />
-        
+
         <Text style={styles.monthTitle}>{monthTitle}</Text>
 
         <View style={styles.navigationRow}>
           <Pressable style={styles.navButton} onPress={handleNextMonth}>
-  <Text style={styles.navButtonText}>◀</Text>
-</Pressable>
+            <Text style={styles.navButtonText}>◀</Text>
+          </Pressable>
 
           <Pressable style={styles.todayButton} onPress={handleGoToToday}>
             <Text style={styles.todayButtonText}>היום</Text>
           </Pressable>
 
           <Pressable style={styles.navButton} onPress={handlePreviousMonth}>
-  <Text style={styles.navButtonText}>▶</Text>
-</Pressable>
+            <Text style={styles.navButtonText}>▶</Text>
+          </Pressable>
         </View>
 
-                <Pressable
+        <Pressable
           style={styles.exportButton}
           onPress={() => router.push('/export')}
         >
@@ -124,11 +125,11 @@ setFirstSeenDateKey(profile?.firstSeenDateKey ?? '');
         </Pressable>
 
         <MonthGrid
-  referenceDate={referenceDate}
-  entryDateKeys={entryDateKeys}
-  onDayPress={handleDayPress}
-  firstSeenDateKey={firstSeenDateKey}
-/>
+          referenceDate={referenceDate}
+          entryDateKeys={entryDateKeys}
+          onDayPress={handleDayPress}
+          firstSeenDateKey={firstSeenDateKey}
+        />
 
         <FloatingAddButton />
       </View>
@@ -137,7 +138,7 @@ setFirstSeenDateKey(profile?.firstSeenDateKey ?? '');
 }
 
 const styles = StyleSheet.create({
-    exportButton: {
+  exportButton: {
     height: 44,
     borderRadius: 12,
     backgroundColor: '#f3f6fb',

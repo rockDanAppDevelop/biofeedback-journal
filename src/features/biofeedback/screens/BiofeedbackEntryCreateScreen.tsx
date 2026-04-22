@@ -42,6 +42,7 @@ import {
   type ActivityCategoryId,
   type ActivityParameterFieldId,
 } from '../constants/activity-catalog';
+import { syncDailyReminderForToday } from '../../notifications/lib/daily-reminder';
 
 type Props = {
   initialDateKey?: string;
@@ -665,6 +666,10 @@ export default function BiofeedbackEntryCreateScreen({ initialDateKey }: Props) 
 
         return defaults;
       });
+
+      if (values.measurementDate === toDateKey(new Date())) {
+        await syncDailyReminderForToday(true);
+      }
 
       router.replace('/');
     } catch (error) {
