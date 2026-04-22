@@ -1,4 +1,4 @@
-import * as Notifications from 'expo-notifications';
+import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 
 const DAILY_REMINDER_NOTIFICATION_KIND = 'daily-reminder';
@@ -15,14 +15,26 @@ const ENCOURAGING_MESSAGES = [
   'תזכורת קטנה ועדינה: כדאי לבדוק איך עבר עליך היום.',
 ];
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowBanner: true,
-    shouldShowList: true,
-    shouldPlaySound: false,
-    shouldSetBadge: false,
-  }),
-});
+function isExpoGo(): boolean {
+  return Constants.appOwnership === 'expo';
+}
+
+async function loadNotificationsModule() {
+  return import('expo-notifications');
+}
+
+async function ensureNotificationHandlerConfigured(
+  Notifications: typeof import('expo-notifications'),
+): Promise<void> {
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowBanner: true,
+      shouldShowList: true,
+      shouldPlaySound: false,
+      shouldSetBadge: false,
+    }),
+  });
+}
 
 function getRandomEncouragingMessage(): string {
   const randomIndex = Math.floor(Math.random() * ENCOURAGING_MESSAGES.length);
@@ -57,7 +69,9 @@ function getDebugReminderDate(now: Date): Date {
   return new Date(now.getTime() + DEBUG_REMINDER_DELAY_MINUTES * 60 * 1000);
 }
 
-async function ensureNotificationPermissions(): Promise<boolean> {
+async function ensureNotificationPermissions(
+  Notifications: typeof import('expo-notifications'),
+): Promise<boolean> {
   const existingPermissions = await Notifications.getPermissionsAsync();
 
   if (existingPermissions.granted) {
@@ -75,7 +89,9 @@ async function ensureNotificationPermissions(): Promise<boolean> {
   return requestedPermissions.granted;
 }
 
-async function ensureAndroidNotificationChannel(): Promise<void> {
+async function ensureAndroidNotificationChannel(
+  Notifications: typeof import('expo-notifications'),
+): Promise<void> {
   if (Platform.OS !== 'android') {
     return;
   }
@@ -86,7 +102,9 @@ async function ensureAndroidNotificationChannel(): Promise<void> {
   });
 }
 
-async function cancelExistingDailyReminder(): Promise<void> {
+async function cancelExistingDailyReminder(
+  Notifications: typeof import('expo-notifications'),
+): Promise<void> {
   const scheduledNotifications = await Notifications.getAllScheduledNotificationsAsync();
 
   const reminderNotifications = scheduledNotifications.filter(
@@ -122,16 +140,23 @@ function getNextReminderDate(hasEntryForToday: boolean, now: Date): Date {
 export async function syncDailyReminderForToday(
   hasEntryForToday: boolean,
 ): Promise<void> {
+  if (isExpoGo()) {
+    return;
+  }
+
+  const Notifications = await loadNotificationsModule();
+  await ensureNotificationHandlerConfigured(Notifications);
+
   const now = new Date();
 
-  const hasPermissions = await ensureNotificationPermissions();
+  const hasPermissions = await ensureNotificationPermissions(Notifications);
 
   if (!hasPermissions) {
     return;
   }
 
-  await ensureAndroidNotificationChannel();
-  await cancelExistingDailyReminder();
+  await ensureAndroidNotificationChannel(Notifications);
+  await cancelExistingDailyReminder(Notifications);
 
   const nextReminderDate = getNextReminderDate(hasEntryForToday, now);
 
