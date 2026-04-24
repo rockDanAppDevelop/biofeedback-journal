@@ -114,9 +114,9 @@ export default function BiofeedbackWeeklySummaryScreen() {
             <SummaryCard title="דקות תרגול" value={String(summary.totalDurationMinutes)} />
             {summary.totalRlxSessions > 0 ? (
               <SummaryCard
-                title="דקות שהסתיימו רגוע יותר"
-                value={String(summary.totalMinutesImproved)}
-                subtitle={`${summary.rlxImprovedCount} מתוך ${summary.totalRlxSessions} תרגולי RLX`}
+                title="שיפור בתרגולי RLX"
+                value={`${summary.rlxImprovedCount} מתוך ${summary.totalRlxSessions}`}
+                subtitle="תרגולי RLX הסתיימו בשיפור"
               />
             ) : null}
             {summary.averageRelaxationPercent !== null ? (

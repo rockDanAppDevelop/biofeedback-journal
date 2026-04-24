@@ -55,7 +55,7 @@ export function getWeeklySummary(
 
   const rlxEntries = weeklyEntries.filter(hasRlxMetrics);
   const improvedRlxEntries = rlxEntries.filter(
-    (entry) => entry.rlx.endValue! < entry.rlx.startValue!,
+    (entry) => entry.rlx.endValue! > entry.rlx.startValue!,
   );
 
   const hrvEntries = weeklyEntries.filter(hasHrvRelaxationPercent);
