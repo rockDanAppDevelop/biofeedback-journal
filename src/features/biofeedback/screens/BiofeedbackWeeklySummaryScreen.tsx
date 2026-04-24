@@ -1,7 +1,9 @@
 import { useFocusEffect } from 'expo-router';
-import { useCallback, useMemo, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useMemo, useRef, useState } from 'react';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import * as Sharing from 'expo-sharing';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { captureRef } from 'react-native-view-shot';
 
 import { toDateKey } from '../components/calendar.utils';
 import { listAllBiofeedbackEntriesFromFirestore } from '../data/firebase-biofeedback-read-repository';
@@ -37,7 +39,9 @@ function SummaryCard({ title, value, subtitle }: SummaryCardProps) {
 export default function BiofeedbackWeeklySummaryScreen() {
   const [entries, setEntries] = useState<BiofeedbackEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSharing, setIsSharing] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const summaryRef = useRef<View>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -86,47 +90,90 @@ export default function BiofeedbackWeeklySummaryScreen() {
   const weekRangeText =
     `${formatDateKeyForRange(summary.weekStartDateKey)} - ` +
     formatDateKeyForRange(summary.weekEndDateKey);
+  const canShareSummary = !isLoading && !errorMessage && hasWeeklyEntries && !isSharing;
+
+  const handleShareWeeklySummary = useCallback(async () => {
+    if (!summaryRef.current || !canShareSummary) {
+      return;
+    }
+
+    try {
+      setIsSharing(true);
+
+      const canShare = await Sharing.isAvailableAsync();
+
+      if (!canShare) {
+        throw new Error('Sharing is not available on this device');
+      }
+
+      const uri = await captureRef(summaryRef.current, {
+        format: 'png',
+        quality: 1,
+      });
+
+      await Sharing.shareAsync(uri, {
+        mimeType: 'image/png',
+        dialogTitle: 'שיתוף סיכום שבועי',
+      });
+    } catch (error) {
+      console.log('WEEKLY SUMMARY SHARE FAILED:', error);
+    } finally {
+      setIsSharing(false);
+    }
+  }, [canShareSummary]);
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <Text style={styles.title}>סיכום שבועי</Text>
-        <Text style={styles.subtitle}>{weekRangeText}</Text>
+        <View ref={summaryRef} collapsable={false} style={styles.summaryCaptureArea}>
+          <Text style={styles.title}>סיכום שבועי</Text>
+          <Text style={styles.subtitle}>{weekRangeText}</Text>
 
-        {isLoading ? (
-          <View style={styles.stateCard}>
-            <ActivityIndicator size="small" color="#1e4f8a" />
-            <Text style={styles.stateText}>טוען את נתוני השבוע...</Text>
-          </View>
-        ) : errorMessage ? (
-          <View style={styles.stateCard}>
-            <Text style={styles.stateText}>{errorMessage}</Text>
-          </View>
-        ) : !hasWeeklyEntries ? (
-          <View style={styles.stateCard}>
-            <Text style={styles.emptyTitle}>עדיין אין תרגולים השבוע</Text>
-            <Text style={styles.stateText}>כשתהיה פעילות, הסיכום השבועי יופיע כאן.</Text>
-          </View>
-        ) : (
-          <View style={styles.cardsContainer}>
-            <SummaryCard title="ימים מתורגלים" value={`${summary.daysWithEntries} / 7`} />
-            <SummaryCard title="מספר תרגולים" value={String(summary.totalEntries)} />
-            <SummaryCard title="דקות תרגול" value={String(summary.totalDurationMinutes)} />
-            {summary.totalRlxSessions > 0 ? (
-              <SummaryCard
-                title="שיפור בתרגולי RLX"
-                value={`${summary.rlxImprovedCount} מתוך ${summary.totalRlxSessions}`}
-                subtitle="תרגולי RLX הסתיימו בשיפור"
-              />
-            ) : null}
-            {summary.averageRelaxationPercent !== null ? (
-              <SummaryCard
-                title="ממוצע אחוז זמן ברגיעה"
-                value={`${Math.round(summary.averageRelaxationPercent)}%`}
-              />
-            ) : null}
-          </View>
-        )}
+          {isLoading ? (
+            <View style={styles.stateCard}>
+              <ActivityIndicator size="small" color="#1e4f8a" />
+              <Text style={styles.stateText}>טוען את נתוני השבוע...</Text>
+            </View>
+          ) : errorMessage ? (
+            <View style={styles.stateCard}>
+              <Text style={styles.stateText}>{errorMessage}</Text>
+            </View>
+          ) : !hasWeeklyEntries ? (
+            <View style={styles.stateCard}>
+              <Text style={styles.emptyTitle}>עדיין אין תרגולים השבוע</Text>
+              <Text style={styles.stateText}>כשתהיה פעילות, הסיכום השבועי יופיע כאן.</Text>
+            </View>
+          ) : (
+            <View style={styles.cardsContainer}>
+              <SummaryCard title="ימים מתורגלים" value={`${summary.daysWithEntries} / 7`} />
+              <SummaryCard title="מספר תרגולים" value={String(summary.totalEntries)} />
+              <SummaryCard title="דקות תרגול" value={String(summary.totalDurationMinutes)} />
+              {summary.totalRlxSessions > 0 ? (
+                <SummaryCard
+                  title="שיפור בתרגולי RLX"
+                  value={`${summary.rlxImprovedCount} מתוך ${summary.totalRlxSessions}`}
+                  subtitle="תרגולי RLX הסתיימו בשיפור"
+                />
+              ) : null}
+              {summary.averageRelaxationPercent !== null ? (
+                <SummaryCard
+                  title="ממוצע אחוז זמן ברגיעה"
+                  value={`${Math.round(summary.averageRelaxationPercent)}%`}
+                />
+              ) : null}
+            </View>
+          )}
+        </View>
+
+        <Pressable
+          style={[styles.shareButton, !canShareSummary ? styles.shareButtonDisabled : null]}
+          onPress={handleShareWeeklySummary}
+          disabled={!canShareSummary}
+        >
+          <Text style={styles.shareButtonText}>
+            {isSharing ? 'מכין תמונה לשיתוף...' : 'שיתוף סיכום שבועי'}
+          </Text>
+        </Pressable>
       </ScrollView>
     </SafeAreaView>
   );
@@ -141,6 +188,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 12,
     paddingBottom: 24,
+  },
+  summaryCaptureArea: {
+    backgroundColor: '#ffffff',
   },
   title: {
     fontSize: 28,
@@ -209,5 +259,21 @@ const styles = StyleSheet.create({
     color: '#243447',
     textAlign: 'center',
     marginBottom: 8,
+  },
+  shareButton: {
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: '#1e4f8a',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 16,
+  },
+  shareButtonDisabled: {
+    opacity: 0.5,
+  },
+  shareButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#ffffff',
   },
 });
