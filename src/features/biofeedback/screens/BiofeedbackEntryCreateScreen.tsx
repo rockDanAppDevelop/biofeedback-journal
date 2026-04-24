@@ -353,7 +353,10 @@ export default function BiofeedbackEntryCreateScreen({ initialDateKey }: Props) 
       showExtraRlxFields
     );
 
-  const errors = useMemo(() => validateBiofeedbackEntryForm(values), [values]);
+  const errors = useMemo(
+    () => validateBiofeedbackEntryForm(values, { todayDateKey }),
+    [todayDateKey, values],
+  );
 
   function updateField<K extends keyof typeof values>(key: K, value: (typeof values)[K]) {
     setValues((current) => ({
@@ -547,7 +550,7 @@ export default function BiofeedbackEntryCreateScreen({ initialDateKey }: Props) 
 
     console.log('HANDLE SAVE START');
 
-    const nextErrors = validateBiofeedbackEntryForm(values);
+    const nextErrors = validateBiofeedbackEntryForm(values, { todayDateKey });
     const hasErrors = Object.keys(nextErrors).length > 0;
 
     if (hasErrors) {

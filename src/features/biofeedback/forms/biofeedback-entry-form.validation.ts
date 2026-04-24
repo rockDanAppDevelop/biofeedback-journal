@@ -4,28 +4,16 @@ import { BiofeedbackEntryFormValues } from '../types/biofeedback-entry-form.type
 
 export type ValidationErrorMap = Partial<Record<keyof BiofeedbackEntryFormValues, string>>;
 
+type ValidateBiofeedbackEntryFormOptions = {
+  todayDateKey?: string;
+};
+
 function isValidDateInput(value: string): boolean {
   return /^\d{4}-\d{2}-\d{2}$/.test(value);
 }
 
 function isValidTimeInput(value: string): boolean {
   return /^\d{2}:\d{2}$/.test(value);
-}
-
-function toOptionalPercent(value: string): number | null {
-  const trimmed = value.trim();
-
-  if (!trimmed) {
-    return null;
-  }
-
-  const parsed = Number(trimmed);
-
-  if (Number.isNaN(parsed)) {
-    return null;
-  }
-
-  return parsed;
 }
 
 function toOptionalNumber(value: string): number | null {
@@ -46,6 +34,7 @@ function toOptionalNumber(value: string): number | null {
 
 export function validateBiofeedbackEntryForm(
   values: BiofeedbackEntryFormValues,
+  options: ValidateBiofeedbackEntryFormOptions = {},
 ): ValidationErrorMap {
   const errors: ValidationErrorMap = {};
 
@@ -53,6 +42,8 @@ export function validateBiofeedbackEntryForm(
     errors.measurementDate = 'יש למלא תאריך';
   } else if (!isValidDateInput(values.measurementDate)) {
     errors.measurementDate = 'התאריך צריך להיות בפורמט YYYY-MM-DD';
+  } else if (options.todayDateKey && values.measurementDate > options.todayDateKey) {
+    errors.measurementDate = 'אי אפשר להזין תרגול לתאריך עתידי';
   }
 
   if (!values.measurementTime) {
@@ -70,15 +61,15 @@ export function validateBiofeedbackEntryForm(
     !values.customExerciseName.trim() &&
     !values.exerciseName.trim()
   ) {
-    errors.customExerciseName = '׳”׳–׳ ׳©׳ ׳׳×׳¨׳’׳™׳ ׳”׳׳™׳©׳™';
+    errors.customExerciseName = 'יש למלא שם לתרגיל המותאם האישית';
   }
 
   if (values.selectedCategoryId === 'custom' && values.customMeasurementType === '') {
-    errors.customMeasurementType = '׳‘׳—׳¨ ׳¡׳•׳’ ׳׳“׳™׳“׳” ׳׳×׳¨׳’׳™׳ ׳”׳׳™׳©׳™';
+    errors.customMeasurementType = 'בחר סוג מדידה מתאים לתרגיל המותאם האישית';
   }
 
   if (values.selectedCategoryId === 'monitoring' && values.monitoringType === '') {
-    errors.monitoringType = '׳‘׳—׳¨ ׳¡׳•׳’ ׳ ׳™׳˜׳•׳¨';
+    errors.monitoringType = 'בחר סוג ניטור';
   }
 
   if (!Number.isFinite(values.durationMinutes) || values.durationMinutes <= 0) {

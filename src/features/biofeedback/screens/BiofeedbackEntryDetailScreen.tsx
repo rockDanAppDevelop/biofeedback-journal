@@ -26,6 +26,7 @@ import { toCreateBiofeedbackEntryInput } from '../forms/biofeedback-entry-form.m
 import { validateBiofeedbackEntryForm } from '../forms/biofeedback-entry-form.validation';
 import { listActiveCustomActivitiesFromFirestore } from '../data/firebase-custom-activities-repository';
 
+import { toDateKey } from '../components/calendar.utils';
 import DateTimeField from '../components/DateTimeField';
 import type { BiofeedbackEntry, TimeOfDay } from '../types/biofeedback-entry.types';
 import type { UserCustomActivity } from '../types/user-custom-activity.types';
@@ -159,6 +160,7 @@ export default function BiofeedbackEntryDetailScreen({ entryId, fromDay }: Props
   const [customActivities, setCustomActivities] = useState<UserCustomActivity[]>([]);
   const [isLoadingCustomActivities, setIsLoadingCustomActivities] = useState(false);
   const [hasLoadedCustomActivities, setHasLoadedCustomActivities] = useState(false);
+  const todayDateKey = useMemo(() => toDateKey(new Date()), []);
 
   const selectedCatalogItem = useMemo(
     () =>
@@ -181,7 +183,10 @@ export default function BiofeedbackEntryDetailScreen({ entryId, fromDay }: Props
     );
   }, [values.selectedCategoryId]);
 
-  const errors = useMemo(() => validateBiofeedbackEntryForm(values), [values]);
+  const errors = useMemo(
+    () => validateBiofeedbackEntryForm(values, { todayDateKey }),
+    [todayDateKey, values],
+  );
 
   useEffect(() => {
     loadEntry();
@@ -295,7 +300,7 @@ export default function BiofeedbackEntryDetailScreen({ entryId, fromDay }: Props
   }
 
   async function handleUpdate() {
-    const nextErrors = validateBiofeedbackEntryForm(values);
+    const nextErrors = validateBiofeedbackEntryForm(values, { todayDateKey });
     const hasErrors = Object.keys(nextErrors).length > 0;
 
     if (hasErrors) {
