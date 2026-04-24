@@ -147,6 +147,13 @@ export default function BiofeedbackDashboardScreen() {
           <Text style={styles.exportButtonText}>ייצוא נתונים</Text>
         </Pressable>
 
+        <Pressable
+          style={styles.secondaryActionButton}
+          onPress={() => router.push('/weekly-summary')}
+        >
+          <Text style={styles.secondaryActionButtonText}>סיכום שבועי</Text>
+        </Pressable>
+
         <View style={styles.dailyStatusCard}>
           <Text style={styles.dailyStatusLabel}>היום שלך</Text>
           <Text style={styles.dailyStatusMessage}>{streakInsightText}</Text>
@@ -180,6 +187,21 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#1e4f8a',
+  },
+  secondaryActionButton: {
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#d7e3f4',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  secondaryActionButtonText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#355f93',
   },
   dailyStatusCard: {
     backgroundColor: '#eef4fb',
