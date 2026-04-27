@@ -42,6 +42,9 @@ function mapPlannedPracticeDocument(
     id: docSnapshot.id,
     userId,
     dateKey: data.dateKey,
+    routineId: data.routineId ?? null,
+    routineItemId: data.routineItemId ?? null,
+    sortOrder: data.sortOrder ?? null,
     activityType: data.activityType,
     measurementType: data.measurementType,
     catalogItemId: data.catalogItemId,
@@ -50,6 +53,7 @@ function mapPlannedPracticeDocument(
     monitoringType: data.monitoringType,
     durationMinutes: data.durationMinutes,
     exerciseParameters: data.exerciseParameters,
+    completedEntryId: data.completedEntryId ?? null,
     createdAt: data.createdAt,
     updatedAt: data.updatedAt,
   };
@@ -64,6 +68,9 @@ export async function createPlannedPractice(
 
   const docData: FirebasePlannedPracticeDocument = {
     dateKey: input.dateKey,
+    routineId: null,
+    routineItemId: null,
+    sortOrder: null,
     activityType: input.activityType,
     measurementType: input.measurementType,
     catalogItemId: input.catalogItemId,
@@ -72,6 +79,7 @@ export async function createPlannedPractice(
     monitoringType: input.monitoringType,
     durationMinutes: input.durationMinutes,
     exerciseParameters: input.exerciseParameters,
+    completedEntryId: null,
     createdAt: nowIso,
     updatedAt: nowIso,
   };
