@@ -1,6 +1,11 @@
 export type RoutineItem = {
   id: string;
+
+  dayOffset: number;
   sortOrder: number;
+
+  effectiveFromDateKey: string;
+  removedFromDateKey: string | null;
 
   activityType: 'training' | 'monitoring';
   measurementType: 'hrv' | 'rlx' | 'none';
@@ -26,6 +31,8 @@ export type Routine = {
   userId: string;
   name: string;
   isActive: boolean;
+  startDateKey: string;
+  cycleLengthDays: number;
   items: RoutineItem[];
   createdAt: string;
   updatedAt: string;
