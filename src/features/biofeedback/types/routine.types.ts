@@ -1,11 +1,6 @@
-export type PlannedPractice = {
+export type RoutineItem = {
   id: string;
-  userId: string;
-  dateKey: string;
-
-  routineId: string | null;
-  routineItemId: string | null;
-  sortOrder: number | null;
+  sortOrder: number;
 
   activityType: 'training' | 'monitoring';
   measurementType: 'hrv' | 'rlx' | 'none';
@@ -24,9 +19,14 @@ export type PlannedPractice = {
     exhale?: number | null;
     holdAfterExhale?: number | null;
   } | null;
+};
 
-  completedEntryId: string | null;
-
+export type Routine = {
+  id: string;
+  userId: string;
+  name: string;
+  isActive: boolean;
+  items: RoutineItem[];
   createdAt: string;
-  updatedAt?: string;
+  updatedAt: string;
 };
