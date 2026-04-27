@@ -76,6 +76,25 @@ const CATEGORY_ICONS = {
 
 const CUSTOM_ACTIVITIES_LOAD_TIMEOUT_MS = 5000;
 
+function isEarlyMorningTime(timeValue: string): boolean {
+  const [hourText, minuteText] = timeValue.split(':');
+  const hour = Number(hourText);
+  const minute = Number(minuteText);
+
+  if (!Number.isFinite(hour) || !Number.isFinite(minute)) {
+    return false;
+  }
+
+  return hour >= 0 && hour < 6;
+}
+
+function addDaysToDateKey(dateKey: string, days: number): string {
+  const date = new Date(`${dateKey}T00:00:00`);
+  date.setDate(date.getDate() + days);
+
+  return toDateKey(date);
+}
+
 
 export default function BiofeedbackEntryCreateScreen({ initialDateKey }: Props) {
   useEffect(() => {
@@ -352,7 +371,6 @@ export default function BiofeedbackEntryCreateScreen({ initialDateKey }: Props) 
       finalMeasurementTypeForUI === 'none' ||
       showExtraRlxFields
     );
-
   const errors = useMemo(
     () => validateBiofeedbackEntryForm(values, { todayDateKey }),
     [todayDateKey, values],
@@ -543,7 +561,7 @@ export default function BiofeedbackEntryCreateScreen({ initialDateKey }: Props) 
     }
   }
 
-  async function handleSave() {
+  async function saveEntryWithHabitDateKey(habitDateKey: string) {
     if (isSaving) {
       return;
     }
@@ -637,7 +655,7 @@ export default function BiofeedbackEntryCreateScreen({ initialDateKey }: Props) 
       const firebaseId = await addBiofeedbackEntryToFirestore({
         measurementDate: values.measurementDate,
         measurementTime: values.measurementTime,
-        dateKey: values.measurementDate,
+        dateKey: habitDateKey,
         measuredAt: input.measuredAt,
         exerciseName: input.exerciseName,
         measurementType: input.measurementType ?? null,
@@ -670,7 +688,7 @@ export default function BiofeedbackEntryCreateScreen({ initialDateKey }: Props) 
         return defaults;
       });
 
-      if (values.measurementDate === toDateKey(new Date())) {
+      if (habitDateKey === toDateKey(new Date())) {
         await syncDailyReminderForToday(true);
       }
 
@@ -684,6 +702,41 @@ export default function BiofeedbackEntryCreateScreen({ initialDateKey }: Props) 
     } finally {
       setIsSaving(false);
     }
+  }
+
+  async function handleSave() {
+    if (isSaving) {
+      return;
+    }
+
+    const nextErrors = validateBiofeedbackEntryForm(values, { todayDateKey });
+    const hasErrors = Object.keys(nextErrors).length > 0;
+
+    if (hasErrors) {
+      Alert.alert('הטופס לא תקין', 'יש לבדוק את השדות ולתקן את הערכים.');
+      return;
+    }
+
+    if (isEarlyMorningTime(values.measurementTime)) {
+      Alert.alert(
+        'לאיזה יום לשייך את התרגול?',
+        'התרגול בוצע בשעות הלילה. לאיזה יום תרצה לשייך אותו?',
+        [
+          {
+            text: 'אתמול',
+            onPress: () =>
+              void saveEntryWithHabitDateKey(addDaysToDateKey(values.measurementDate, -1)),
+          },
+          {
+            text: 'היום',
+            onPress: () => void saveEntryWithHabitDateKey(values.measurementDate),
+          },
+        ],
+      );
+      return;
+    }
+
+    await saveEntryWithHabitDateKey(values.measurementDate);
   }
 
   function navigateToDashboard() {
@@ -773,6 +826,7 @@ export default function BiofeedbackEntryCreateScreen({ initialDateKey }: Props) 
             {errors.measurementTime ? (
               <Text style={styles.errorText}>{errors.measurementTime}</Text>
             ) : null}
+
 
             <Text style={styles.label}>קטגוריה</Text>
 
