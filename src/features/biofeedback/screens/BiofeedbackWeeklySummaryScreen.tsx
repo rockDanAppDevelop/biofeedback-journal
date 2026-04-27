@@ -20,6 +20,13 @@ function formatDateKeyForRange(dateKey: string): string {
   return `${day}.${month}`;
 }
 
+function addDaysToDateKey(dateKey: string, days: number): string {
+  const date = new Date(`${dateKey}T00:00:00`);
+  date.setDate(date.getDate() + days);
+
+  return toDateKey(date);
+}
+
 type SummaryCardProps = {
   title: string;
   value: string;
@@ -37,10 +44,12 @@ function SummaryCard({ title, value, subtitle }: SummaryCardProps) {
 }
 
 export default function BiofeedbackWeeklySummaryScreen() {
+  const todayDateKey = toDateKey(new Date());
   const [entries, setEntries] = useState<BiofeedbackEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSharing, setIsSharing] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [referenceDateKey, setReferenceDateKey] = useState(todayDateKey);
   const summaryRef = useRef<View>(null);
 
   useFocusEffect(
@@ -81,8 +90,11 @@ export default function BiofeedbackWeeklySummaryScreen() {
     }, []),
   );
 
-  const todayDateKey = toDateKey(new Date());
   const summary = useMemo(
+    () => getWeeklySummary(entries, referenceDateKey),
+    [entries, referenceDateKey],
+  );
+  const currentWeekSummary = useMemo(
     () => getWeeklySummary(entries, todayDateKey),
     [entries, todayDateKey],
   );
@@ -90,7 +102,25 @@ export default function BiofeedbackWeeklySummaryScreen() {
   const weekRangeText =
     `${formatDateKeyForRange(summary.weekStartDateKey)} - ` +
     formatDateKeyForRange(summary.weekEndDateKey);
+  const canGoNextWeek = summary.weekEndDateKey < currentWeekSummary.weekEndDateKey;
   const canShareSummary = !isLoading && !errorMessage && hasWeeklyEntries && !isSharing;
+
+  const handleGoToPreviousWeek = useCallback(() => {
+    setReferenceDateKey((currentDateKey) => addDaysToDateKey(currentDateKey, -7));
+  }, []);
+
+  const handleGoToNextWeek = useCallback(() => {
+    setReferenceDateKey((currentDateKey) => {
+      const nextDateKey = addDaysToDateKey(currentDateKey, 7);
+      const nextSummary = getWeeklySummary(entries, nextDateKey);
+
+      if (nextSummary.weekEndDateKey > currentWeekSummary.weekEndDateKey) {
+        return currentDateKey;
+      }
+
+      return nextDateKey;
+    });
+  }, [currentWeekSummary.weekEndDateKey, entries]);
 
   const handleShareWeeklySummary = useCallback(async () => {
     if (!summaryRef.current || !canShareSummary) {
@@ -128,6 +158,23 @@ export default function BiofeedbackWeeklySummaryScreen() {
         <View ref={summaryRef} collapsable={false} style={styles.summaryCaptureArea}>
           <Text style={styles.title}>סיכום שבועי</Text>
           <Text style={styles.subtitle}>{weekRangeText}</Text>
+
+          <View style={styles.weekNavigation}>
+            <Pressable style={styles.weekNavButton} onPress={handleGoToPreviousWeek}>
+              <Text style={styles.weekNavButtonText}>שבוע קודם</Text>
+            </Pressable>
+
+            <Pressable
+              style={[
+                styles.weekNavButton,
+                !canGoNextWeek ? styles.weekNavButtonDisabled : null,
+              ]}
+              onPress={handleGoToNextWeek}
+              disabled={!canGoNextWeek}
+            >
+              <Text style={styles.weekNavButtonText}>שבוע הבא</Text>
+            </Pressable>
+          </View>
 
           {isLoading ? (
             <View style={styles.stateCard}>
@@ -203,7 +250,31 @@ const styles = StyleSheet.create({
     color: '#6b7280',
     textAlign: 'right',
     marginTop: 6,
+    marginBottom: 12,
+  },
+  weekNavigation: {
+    flexDirection: 'row-reverse',
+    gap: 10,
     marginBottom: 20,
+  },
+  weekNavButton: {
+    flex: 1,
+    minHeight: 44,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#bfd4ee',
+    backgroundColor: '#eef6ff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 12,
+  },
+  weekNavButtonDisabled: {
+    opacity: 0.45,
+  },
+  weekNavButtonText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#1e4f8a',
   },
   cardsContainer: {
     gap: 12,

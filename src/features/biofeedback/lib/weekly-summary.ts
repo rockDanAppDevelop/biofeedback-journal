@@ -28,6 +28,15 @@ function getDayOfWeekFromDateKey(dateKey: string): number {
   return date.getDay();
 }
 
+function getDateKeyFromMeasuredAt(measuredAt: string): string {
+  const date = new Date(measuredAt);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+
+  return `${year}-${month}-${day}`;
+}
+
 function hasRlxMetrics(entry: BiofeedbackEntry): boolean {
   return entry.rlx.startValue !== null && entry.rlx.endValue !== null;
 }
@@ -43,22 +52,29 @@ export function getWeeklySummary(
   const dayOfWeek = getDayOfWeekFromDateKey(todayDateKey);
   const weekStartDateKey = addDaysToDateKey(todayDateKey, -dayOfWeek);
   const weekEndDateKey = addDaysToDateKey(weekStartDateKey, 6);
-  const weeklyEntries = entries.filter(
+
+  // dateKey = habit day assignment; measuredAt = actual practice time.
+  const habitWeekEntries = entries.filter(
     (entry) => entry.dateKey >= weekStartDateKey && entry.dateKey <= weekEndDateKey,
   );
+  const actualWeekEntries = entries.filter((entry) => {
+    const actualDateKey = getDateKeyFromMeasuredAt(entry.measuredAt);
 
-  const daysWithEntries = new Set(weeklyEntries.map((entry) => entry.dateKey)).size;
-  const totalDurationMinutes = weeklyEntries.reduce(
+    return actualDateKey >= weekStartDateKey && actualDateKey <= weekEndDateKey;
+  });
+
+  const daysWithEntries = new Set(habitWeekEntries.map((entry) => entry.dateKey)).size;
+  const totalDurationMinutes = actualWeekEntries.reduce(
     (sum, entry) => sum + entry.durationMinutes,
     0,
   );
 
-  const rlxEntries = weeklyEntries.filter(hasRlxMetrics);
+  const rlxEntries = actualWeekEntries.filter(hasRlxMetrics);
   const improvedRlxEntries = rlxEntries.filter(
     (entry) => entry.rlx.endValue! > entry.rlx.startValue!,
   );
 
-  const hrvEntries = weeklyEntries.filter(hasHrvRelaxationPercent);
+  const hrvEntries = actualWeekEntries.filter(hasHrvRelaxationPercent);
   const totalRelaxationPercent = hrvEntries.reduce(
     (sum, entry) => sum + entry.hrvDistribution.relaxationPercent!,
     0,
@@ -68,7 +84,7 @@ export function getWeeklySummary(
     weekStartDateKey,
     weekEndDateKey,
     daysWithEntries,
-    totalEntries: weeklyEntries.length,
+    totalEntries: actualWeekEntries.length,
     totalDurationMinutes,
     totalRlxSessions: rlxEntries.length,
     rlxImprovedCount: improvedRlxEntries.length,
