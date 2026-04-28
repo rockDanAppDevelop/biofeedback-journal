@@ -154,6 +154,13 @@ export default function BiofeedbackDashboardScreen() {
           <Text style={styles.secondaryActionButtonText}>סיכום שבועי</Text>
         </Pressable>
 
+        <Pressable
+          style={styles.secondaryActionButton}
+          onPress={() => router.push('/planning')}
+        >
+          <Text style={styles.secondaryActionButtonText}>תכנון</Text>
+        </Pressable>
+
         <View style={styles.dailyStatusCard}>
           <Text style={styles.dailyStatusLabel}>היום שלך</Text>
           <Text style={styles.dailyStatusMessage}>{streakInsightText}</Text>
