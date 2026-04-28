@@ -1,6 +1,6 @@
-import { useFocusEffect } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { getRoutineById } from '../data/firebase-routines-repository';
@@ -12,6 +12,39 @@ type Props = {
 
 function formatCycleLength(cycleLengthDays: number): string {
   return `מחזור כל ${cycleLengthDays} ימים`;
+}
+
+type RoutineItemsByDay = {
+  dayOffset: number;
+  items: Routine['items'];
+};
+
+function getRoutineItemDisplayName(item: Routine['items'][number]): string {
+  if (item.customExerciseName) {
+    return item.customExerciseName;
+  }
+
+  if (item.activityType === 'monitoring' && item.monitoringType) {
+    return item.monitoringType === 'morning' ? 'ניטור בוקר' : 'ניטור קצר';
+  }
+
+  return item.catalogItemId ?? item.userCustomActivityId ?? 'תרגיל';
+}
+
+function groupRoutineItemsByDay(items: Routine['items']): RoutineItemsByDay[] {
+  const groupsByDayOffset = new Map<number, Routine['items']>();
+
+  items.forEach((item) => {
+    const currentItems = groupsByDayOffset.get(item.dayOffset) ?? [];
+    groupsByDayOffset.set(item.dayOffset, [...currentItems, item]);
+  });
+
+  return Array.from(groupsByDayOffset.entries())
+    .map(([dayOffset, dayItems]) => ({
+      dayOffset,
+      items: dayItems.slice().sort((a, b) => a.sortOrder - b.sortOrder),
+    }))
+    .sort((a, b) => a.dayOffset - b.dayOffset);
 }
 
 export default function BiofeedbackRoutineDetailScreen({ routineId }: Props) {
@@ -71,7 +104,7 @@ export default function BiofeedbackRoutineDetailScreen({ routineId }: Props) {
   );
 
   function handleAddItemPress() {
-    Alert.alert('הוסף תרגיל', 'השלב הבא יהיה הוספת תרגיל לרוטינה.');
+    router.push(`/routines/${routineId}/add-item`);
   }
 
   return (
@@ -102,19 +135,18 @@ export default function BiofeedbackRoutineDetailScreen({ routineId }: Props) {
               </View>
             ) : (
               <View style={styles.itemsList}>
-                {routine.items
-                  .slice()
-                  .sort((a, b) => a.sortOrder - b.sortOrder)
-                  .map((item) => (
-                    <View key={item.id} style={styles.itemCard}>
-                      <Text style={styles.itemTitle}>
-                        יום {item.dayOffset + 1} · מיקום {item.sortOrder + 1}
-                      </Text>
-                      <Text style={styles.itemMeta}>
-                        {item.catalogItemId ?? item.userCustomActivityId ?? item.customExerciseName ?? 'תרגיל'}
-                      </Text>
-                    </View>
-                  ))}
+                {groupRoutineItemsByDay(routine.items).map((group) => (
+                  <View key={group.dayOffset} style={styles.dayGroup}>
+                    <Text style={styles.dayGroupTitle}>יום {group.dayOffset + 1}</Text>
+
+                    {group.items.map((item, index) => (
+                      <View key={item.id} style={styles.itemRow}>
+                        <Text style={styles.itemIndex}>{index + 1}</Text>
+                        <Text style={styles.itemName}>{getRoutineItemDisplayName(item)}</Text>
+                      </View>
+                    ))}
+                  </View>
+                ))}
               </View>
             )}
           </>
@@ -188,7 +220,7 @@ const styles = StyleSheet.create({
   itemsList: {
     gap: 12,
   },
-  itemCard: {
+  dayGroup: {
     borderRadius: 12,
     borderWidth: 1,
     borderColor: '#d7e3f4',
@@ -196,16 +228,37 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
   },
-  itemTitle: {
-    fontSize: 16,
+  dayGroupTitle: {
+    fontSize: 17,
     fontWeight: '700',
     color: '#243447',
     textAlign: 'right',
-    marginBottom: 6,
+    marginBottom: 10,
   },
-  itemMeta: {
-    fontSize: 14,
-    color: '#5b6b7d',
+  itemRow: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#e4edf8',
+  },
+  itemIndex: {
+    minWidth: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: '#e3f2fd',
+    color: '#0d47a1',
+    fontSize: 13,
+    fontWeight: '700',
+    textAlign: 'center',
+    lineHeight: 26,
+  },
+  itemName: {
+    flex: 1,
+    fontSize: 15,
+    color: '#243447',
+    fontWeight: '600',
     textAlign: 'right',
   },
 });
