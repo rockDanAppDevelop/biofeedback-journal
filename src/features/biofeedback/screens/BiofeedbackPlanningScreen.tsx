@@ -90,14 +90,18 @@ export default function BiofeedbackPlanningScreen() {
         ) : (
           <View style={styles.routinesList}>
             {routines.map((routine) => (
-              <View key={routine.id} style={styles.routineCard}>
+              <Pressable
+                key={routine.id}
+                style={styles.routineCard}
+                onPress={() => router.push(`/routines/${routine.id}`)}
+              >
                 <Text style={styles.routineName}>{routine.name}</Text>
                 <Text style={styles.routineMeta}>{formatItemCount(routine.items.length)}</Text>
                 <Text style={styles.routineMeta}>
                   {formatCycleLength(routine.cycleLengthDays)}
                 </Text>
                 <Text style={styles.routineMeta}>תאריך התחלה: {routine.startDateKey}</Text>
-              </View>
+              </Pressable>
             ))}
           </View>
         )}
