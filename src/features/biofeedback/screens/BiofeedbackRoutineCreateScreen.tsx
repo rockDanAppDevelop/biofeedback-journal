@@ -11,7 +11,6 @@ export default function BiofeedbackRoutineCreateScreen() {
   const todayDateKey = useMemo(() => toDateKey(new Date()), []);
   const [name, setName] = useState('');
   const [startDateKey, setStartDateKey] = useState(todayDateKey);
-  const [cycleLengthDaysText, setCycleLengthDaysText] = useState('9');
   const [isSaving, setIsSaving] = useState(false);
 
   async function handleSave() {
@@ -20,15 +19,9 @@ export default function BiofeedbackRoutineCreateScreen() {
     }
 
     const trimmedName = name.trim();
-    const cycleLengthDays = Number(cycleLengthDaysText);
 
     if (!trimmedName) {
       Alert.alert('שם רוטינה חסר', 'יש להזין שם לרוטינה.');
-      return;
-    }
-
-    if (!Number.isInteger(cycleLengthDays) || cycleLengthDays <= 0) {
-      Alert.alert('אורך מחזור לא תקין', 'יש להזין מספר ימים גדול מ-0.');
       return;
     }
 
@@ -38,7 +31,7 @@ export default function BiofeedbackRoutineCreateScreen() {
       await createRoutine({
         name: trimmedName,
         startDateKey,
-        cycleLengthDays,
+        cycleLengthDays: 1,
         items: [],
       });
 
@@ -75,14 +68,6 @@ export default function BiofeedbackRoutineCreateScreen() {
             onChangeValue={setStartDateKey}
           />
 
-          <Text style={styles.label}>אורך מחזור בימים</Text>
-          <TextInput
-            value={cycleLengthDaysText}
-            onChangeText={setCycleLengthDaysText}
-            style={styles.input}
-            keyboardType="numeric"
-            placeholder="9"
-          />
         </View>
 
         <Pressable
