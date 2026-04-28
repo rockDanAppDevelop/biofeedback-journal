@@ -29,12 +29,11 @@ const CATEGORY_LABELS: Record<ActivityCategoryId, string> = {
   custom: 'מותאם אישית',
 };
 
-const CATEGORY_DISPLAY_ORDER: ActivityCategoryId[] = [
+const BUILT_IN_CATEGORY_DISPLAY_ORDER: Exclude<ActivityCategoryId, 'custom'>[] = [
   'trainers',
   'relaxation',
   'guided',
   'monitoring',
-  'custom',
 ];
 
 function createRoutineItemId(): string {
@@ -227,6 +226,8 @@ export default function BiofeedbackRoutineAddItemScreen({ routineId }: Props) {
             <Text style={styles.subtitle}>{routine.name}</Text>
 
             <View style={styles.section}>
+              <Text style={styles.sectionTitle}>פרטי תרגיל</Text>
+
               <Text style={styles.label}>יום ברוטינה</Text>
               <View style={styles.dayStepper}>
                 <Pressable
@@ -251,20 +252,35 @@ export default function BiofeedbackRoutineAddItemScreen({ routineId }: Props) {
               </View>
 
               <Text style={styles.label}>קטגוריה</Text>
-              <View style={styles.optionList}>
-                {CATEGORY_DISPLAY_ORDER.map((categoryId) => {
+              <View style={styles.categoryTopRow}>
+                {BUILT_IN_CATEGORY_DISPLAY_ORDER.map((categoryId) => {
                   const isSelected = selectedCategoryId === categoryId;
 
                   return (
                     <Pressable
                       key={categoryId}
-                      style={[styles.optionButton, isSelected ? styles.optionButtonSelected : null]}
+                      style={styles.categoryCircleItem}
                       onPress={() => handleCategorySelect(categoryId)}
                     >
+                      <View
+                        style={[
+                          styles.categoryCircleButton,
+                          isSelected ? styles.categoryCircleButtonSelected : null,
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.categoryCircleButtonText,
+                            isSelected ? styles.categoryCircleButtonTextSelected : null,
+                          ]}
+                        >
+                          {CATEGORY_LABELS[categoryId].slice(0, 1)}
+                        </Text>
+                      </View>
                       <Text
                         style={[
-                          styles.optionButtonText,
-                          isSelected ? styles.optionButtonTextSelected : null,
+                          styles.categoryCircleLabel,
+                          isSelected ? styles.categoryCircleLabelSelected : null,
                         ]}
                       >
                         {CATEGORY_LABELS[categoryId]}
@@ -274,10 +290,29 @@ export default function BiofeedbackRoutineAddItemScreen({ routineId }: Props) {
                 })}
               </View>
 
+              <Pressable
+                onPress={() => handleCategorySelect('custom')}
+                style={[
+                  styles.customCategoryButton,
+                  selectedCategoryId === 'custom' ? styles.customCategoryButtonSelected : null,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.customCategoryButtonText,
+                    selectedCategoryId === 'custom'
+                      ? styles.customCategoryButtonTextSelected
+                      : null,
+                  ]}
+                >
+                  {CATEGORY_LABELS.custom}
+                </Text>
+              </Pressable>
+
               {selectedCategoryId !== '' && selectedCategoryId !== 'custom' ? (
                 <>
                   <Text style={styles.label}>תרגיל</Text>
-                  <View style={styles.optionList}>
+                  <View style={styles.exerciseOptionsContainer}>
                     {visibleCatalogItems.map((item) => {
                       const isSelected = selectedCatalogItemId === item.id;
 
@@ -285,15 +320,15 @@ export default function BiofeedbackRoutineAddItemScreen({ routineId }: Props) {
                         <Pressable
                           key={item.id}
                           style={[
-                            styles.optionButton,
-                            isSelected ? styles.optionButtonSelected : null,
+                            styles.exerciseOptionButton,
+                            isSelected ? styles.exerciseOptionButtonSelected : null,
                           ]}
                           onPress={() => setSelectedCatalogItemId(item.id)}
                         >
                           <Text
                             style={[
-                              styles.optionButtonText,
-                              isSelected ? styles.optionButtonTextSelected : null,
+                              styles.exerciseOptionButtonText,
+                              isSelected ? styles.exerciseOptionButtonTextSelected : null,
                             ]}
                           >
                             {item.label}
@@ -311,7 +346,7 @@ export default function BiofeedbackRoutineAddItemScreen({ routineId }: Props) {
                   {customActivities.length === 0 ? (
                     <Text style={styles.helperText}>אין עדיין תרגולים מותאמים אישית.</Text>
                   ) : (
-                    <View style={styles.optionList}>
+                    <View style={styles.exerciseOptionsContainer}>
                       {customActivities.map((activity) => {
                         const isSelected = selectedCustomActivityId === activity.id;
 
@@ -319,15 +354,15 @@ export default function BiofeedbackRoutineAddItemScreen({ routineId }: Props) {
                           <Pressable
                             key={activity.id}
                             style={[
-                              styles.optionButton,
-                              isSelected ? styles.optionButtonSelected : null,
+                              styles.exerciseOptionButton,
+                              isSelected ? styles.exerciseOptionButtonSelected : null,
                             ]}
                             onPress={() => setSelectedCustomActivityId(activity.id)}
                           >
                             <Text
                               style={[
-                                styles.optionButtonText,
-                                isSelected ? styles.optionButtonTextSelected : null,
+                                styles.exerciseOptionButtonText,
+                                isSelected ? styles.exerciseOptionButtonTextSelected : null,
                               ]}
                             >
                               {activity.label}
@@ -381,16 +416,23 @@ const styles = StyleSheet.create({
   section: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#d7e3f4',
-    backgroundColor: '#f8fbff',
+    borderColor: '#dcdcdc',
+    backgroundColor: '#fafafa',
     paddingHorizontal: 16,
     paddingVertical: 16,
     marginBottom: 16,
   },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#243447',
+    textAlign: 'right',
+    marginBottom: 12,
+  },
   label: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#4b5563',
+    fontWeight: '500',
+    color: '#222222',
     textAlign: 'right',
     marginBottom: 6,
   },
@@ -426,11 +468,77 @@ const styles = StyleSheet.create({
     color: '#243447',
     textAlign: 'center',
   },
-  optionList: {
+  categoryTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  categoryCircleItem: {
+    flex: 1,
+    alignItems: 'center',
+    marginHorizontal: 4,
+  },
+  categoryCircleButton: {
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    borderWidth: 1,
+    borderColor: '#cfcfcf',
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 6,
+  },
+  categoryCircleButtonSelected: {
+    borderColor: '#1e88e5',
+    backgroundColor: '#e3f2fd',
+  },
+  categoryCircleButtonText: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#46607a',
+  },
+  categoryCircleButtonTextSelected: {
+    color: '#0d47a1',
+  },
+  categoryCircleLabel: {
+    fontSize: 12,
+    color: '#222222',
+    fontWeight: '500',
+    textAlign: 'center',
+  },
+  categoryCircleLabelSelected: {
+    color: '#0d47a1',
+    fontWeight: '700',
+  },
+  customCategoryButton: {
+    borderWidth: 1,
+    borderColor: '#cfcfcf',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 14,
+    backgroundColor: '#ffffff',
+    marginBottom: 12,
+  },
+  customCategoryButtonSelected: {
+    borderColor: '#1e88e5',
+    backgroundColor: '#e3f2fd',
+  },
+  customCategoryButtonText: {
+    fontSize: 15,
+    color: '#222222',
+    fontWeight: '500',
+    textAlign: 'center',
+  },
+  customCategoryButtonTextSelected: {
+    color: '#0d47a1',
+    fontWeight: '700',
+  },
+  exerciseOptionsContainer: {
     gap: 8,
     marginBottom: 12,
   },
-  optionButton: {
+  exerciseOptionButton: {
     borderWidth: 1,
     borderColor: '#cfcfcf',
     borderRadius: 10,
@@ -438,17 +546,17 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     backgroundColor: '#ffffff',
   },
-  optionButtonSelected: {
+  exerciseOptionButtonSelected: {
     borderColor: '#1e88e5',
     backgroundColor: '#e3f2fd',
   },
-  optionButtonText: {
+  exerciseOptionButtonText: {
     fontSize: 15,
     color: '#222222',
     fontWeight: '500',
     textAlign: 'right',
   },
-  optionButtonTextSelected: {
+  exerciseOptionButtonTextSelected: {
     color: '#0d47a1',
     fontWeight: '700',
   },
