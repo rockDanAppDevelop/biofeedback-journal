@@ -1,6 +1,6 @@
-import { useFocusEffect } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import {
@@ -60,7 +60,7 @@ export default function BiofeedbackPlanningScreen() {
   );
 
   function handleCreateRoutinePress() {
-    Alert.alert('רוטינה חדשה', 'השלב הבא יהיה יצירת רוטינה חדשה');
+    router.push('/routines/new');
   }
 
   return (
