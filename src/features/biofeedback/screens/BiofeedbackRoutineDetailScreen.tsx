@@ -1,10 +1,10 @@
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { getRoutineById } from '../data/firebase-routines-repository';
-import type { Routine } from '../types/routine.types';
+import { getRoutineById, updateRoutine } from '../data/firebase-routines-repository';
+import type { Routine, RoutineItem } from '../types/routine.types';
 
 type Props = {
   routineId: string;
@@ -51,6 +51,7 @@ export default function BiofeedbackRoutineDetailScreen({ routineId }: Props) {
   const [routine, setRoutine] = useState<Routine | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState('');
+  const [updatingItemId, setUpdatingItemId] = useState<string | null>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -107,6 +108,74 @@ export default function BiofeedbackRoutineDetailScreen({ routineId }: Props) {
     router.push(`/routines/${routineId}/add-item`);
   }
 
+  async function updateRoutineItems(nextItems: RoutineItem[], itemId: string) {
+    if (!routine || updatingItemId) {
+      return;
+    }
+
+    try {
+      setUpdatingItemId(itemId);
+      await updateRoutine(routine.id, { items: nextItems });
+      setRoutine({
+        ...routine,
+        items: nextItems,
+      });
+    } catch (error) {
+      console.log('ROUTINE ITEM UPDATE FAILED:', error);
+      Alert.alert('עדכון הרוטינה נכשל', 'לא הצלחנו לעדכן את הרוטינה כרגע.');
+    } finally {
+      setUpdatingItemId(null);
+    }
+  }
+
+  function handleChangeItemDay(item: RoutineItem, delta: number) {
+    if (!routine || updatingItemId) {
+      return;
+    }
+
+    const nextDayOffset = Math.max(0, item.dayOffset + delta);
+
+    if (nextDayOffset === item.dayOffset) {
+      return;
+    }
+
+    const nextItems = routine.items.map((currentItem) =>
+      currentItem.id === item.id
+        ? {
+            ...currentItem,
+            dayOffset: nextDayOffset,
+          }
+        : currentItem,
+    );
+
+    void updateRoutineItems(nextItems, item.id);
+  }
+
+  function handleDeleteItemPress(item: RoutineItem) {
+    if (!routine || updatingItemId) {
+      return;
+    }
+
+    Alert.alert(
+      'למחוק את התרגיל?',
+      'התרגיל יוסר מהרוטינה. תרגולים שכבר תוכננו או בוצעו לא יימחקו.',
+      [
+        {
+          text: 'ביטול',
+          style: 'cancel',
+        },
+        {
+          text: 'מחק',
+          style: 'destructive',
+          onPress: () => {
+            const nextItems = routine.items.filter((currentItem) => currentItem.id !== item.id);
+            void updateRoutineItems(nextItems, item.id);
+          },
+        },
+      ],
+    );
+  }
+
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
@@ -142,7 +211,47 @@ export default function BiofeedbackRoutineDetailScreen({ routineId }: Props) {
                     {group.items.map((item, index) => (
                       <View key={item.id} style={styles.itemRow}>
                         <Text style={styles.itemIndex}>{index + 1}</Text>
-                        <Text style={styles.itemName}>{getRoutineItemDisplayName(item)}</Text>
+                        <View style={styles.itemContent}>
+                          <Text style={styles.itemName}>{getRoutineItemDisplayName(item)}</Text>
+                          <View style={styles.itemActions}>
+                            <Pressable
+                              style={[
+                                styles.itemActionButton,
+                                item.dayOffset <= 0 || updatingItemId !== null
+                                  ? styles.itemActionButtonDisabled
+                                  : null,
+                              ]}
+                              onPress={() => handleChangeItemDay(item, -1)}
+                              disabled={item.dayOffset <= 0 || updatingItemId !== null}
+                            >
+                              <Text style={styles.itemActionButtonText}>-</Text>
+                            </Pressable>
+
+                            <Text style={styles.itemDayText}>יום {item.dayOffset + 1}</Text>
+
+                            <Pressable
+                              style={[
+                                styles.itemActionButton,
+                                updatingItemId !== null ? styles.itemActionButtonDisabled : null,
+                              ]}
+                              onPress={() => handleChangeItemDay(item, 1)}
+                              disabled={updatingItemId !== null}
+                            >
+                              <Text style={styles.itemActionButtonText}>+</Text>
+                            </Pressable>
+
+                            <Pressable
+                              style={[
+                                styles.deleteItemButton,
+                                updatingItemId !== null ? styles.itemActionButtonDisabled : null,
+                              ]}
+                              onPress={() => handleDeleteItemPress(item)}
+                              disabled={updatingItemId !== null}
+                            >
+                              <Text style={styles.deleteItemButtonText}>מחק</Text>
+                            </Pressable>
+                          </View>
+                        </View>
                       </View>
                     ))}
                   </View>
@@ -255,10 +364,60 @@ const styles = StyleSheet.create({
     lineHeight: 26,
   },
   itemName: {
-    flex: 1,
     fontSize: 15,
     color: '#243447',
     fontWeight: '600',
     textAlign: 'right',
+    marginBottom: 8,
+  },
+  itemContent: {
+    flex: 1,
+  },
+  itemActions: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 8,
+    flexWrap: 'wrap',
+  },
+  itemActionButton: {
+    width: 36,
+    height: 32,
+    borderRadius: 9,
+    borderWidth: 1,
+    borderColor: '#bfd4ee',
+    backgroundColor: '#eef6ff',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  itemActionButtonDisabled: {
+    opacity: 0.45,
+  },
+  itemActionButtonText: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1e4f8a',
+  },
+  itemDayText: {
+    minWidth: 58,
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#4b5563',
+    textAlign: 'center',
+  },
+  deleteItemButton: {
+    minWidth: 52,
+    height: 32,
+    borderRadius: 9,
+    borderWidth: 1,
+    borderColor: '#f0b8b8',
+    backgroundColor: '#fff5f5',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 10,
+  },
+  deleteItemButtonText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#b71c1c',
   },
 });
