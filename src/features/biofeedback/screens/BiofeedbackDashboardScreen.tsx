@@ -14,6 +14,7 @@ import {
   listActiveRoutines,
 } from '../data/firebase-routines-repository';
 import { listPlannedPracticesByDateKey } from '../data/firebase-planned-practices-repository';
+import { listBiofeedbackEntriesByDateKeyFromFirestore } from '../data/firebase-biofeedback-read-repository';
 import { findOrCreatePlannedPracticeForRoutineItem } from '../lib/find-or-create-planned-practice';
 import { getStreakInsight } from '../lib/streak-insight';
 import type { RoutineItem } from '../types/routine.types';
@@ -122,6 +123,8 @@ export default function BiofeedbackDashboardScreen() {
       const todayDateKey = toDateKey(new Date());
       const routines = await listActiveRoutines();
       const plannedPractices = await listPlannedPracticesByDateKey(todayDateKey);
+      const todayEntries = await listBiofeedbackEntriesByDateKeyFromFirestore(todayDateKey);
+      const todayEntryIds = new Set(todayEntries.map((entry) => entry.id));
       const nextPlannedRoutineItems = routines.flatMap((routine) =>
         getRoutineItemsForDate(routine, todayDateKey).map((item) => {
           const matchingPlannedPractice = plannedPractices.find(
@@ -136,7 +139,9 @@ export default function BiofeedbackDashboardScreen() {
             routineId: routine.id,
             routineName: routine.name,
             item,
-            isCompleted: matchingPlannedPractice?.completedEntryId !== null,
+            isCompleted:
+              matchingPlannedPractice?.completedEntryId != null &&
+              todayEntryIds.has(matchingPlannedPractice.completedEntryId),
           };
         }),
       );

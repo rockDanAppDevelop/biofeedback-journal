@@ -91,6 +91,7 @@ export default function BiofeedbackDayEntriesScreen({ dateKey }: Props) {
           }),
         );
         setEntries(mapped);
+        const entryIds = new Set(mapped.map((entry) => entry.id));
 
         const routines = await listActiveRoutines();
         const plannedPractices = await listPlannedPracticesByDateKey(dateKey);
@@ -104,7 +105,10 @@ export default function BiofeedbackDayEntriesScreen({ dateKey }: Props) {
                   practice.dateKey === dateKey,
               );
 
-              return matchingPlannedPractice?.completedEntryId == null;
+              return (
+                matchingPlannedPractice?.completedEntryId == null ||
+                !entryIds.has(matchingPlannedPractice.completedEntryId)
+              );
             })
             .map((item) => ({
               id: `${routine.id}:${item.id}:${dateKey}`,

@@ -19,6 +19,7 @@ import {
   updateBiofeedbackEntryInFirestore,
   deleteBiofeedbackEntryFromFirestore,
 } from '../data/firebase-biofeedback-entry-by-id-repository';
+import { clearCompletedPlannedPracticeForEntry } from '../data/firebase-planned-practices-repository';
 
 import { createDefaultBiofeedbackEntryFormValues } from '../forms/biofeedback-entry-form.defaults';
 import { createBiofeedbackEntryFormValuesFromEntry } from '../forms/biofeedback-entry-form.from-entry';
@@ -348,6 +349,7 @@ export default function BiofeedbackEntryDetailScreen({ entryId, fromDay }: Props
         style: 'destructive',
         onPress: async () => {
           try {
+            await clearCompletedPlannedPracticeForEntry(entryId);
             await deleteBiofeedbackEntryFromFirestore(entryId);
             router.replace('/');
           } catch {

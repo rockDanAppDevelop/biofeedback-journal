@@ -166,6 +166,26 @@ export async function markPlannedPracticeCompleted(
   });
 }
 
+export async function clearCompletedPlannedPracticeForEntry(entryId: string): Promise<void> {
+  const user = getCurrentUserOrThrow();
+  const plannedPracticesCollection = collection(db, 'users', user.uid, 'plannedPractices');
+  const plannedPracticesQuery = query(
+    plannedPracticesCollection,
+    where('completedEntryId', '==', entryId),
+  );
+  const snapshot = await getDocs(plannedPracticesQuery);
+  const nowIso = new Date().toISOString();
+
+  await Promise.all(
+    snapshot.docs.map((docSnapshot) =>
+      updateDoc(docSnapshot.ref, {
+        completedEntryId: null,
+        updatedAt: nowIso,
+      }),
+    ),
+  );
+}
+
 export async function deletePlannedPractice(plannedPracticeId: string): Promise<void> {
   const user = getCurrentUserOrThrow();
   const plannedPracticeRef = doc(
