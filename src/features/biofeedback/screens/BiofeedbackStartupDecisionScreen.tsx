@@ -12,9 +12,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { toDateKey } from '../components/calendar.utils';
 import { hasBiofeedbackEntryForDateKeyFromFirestore } from '../data/firebase-biofeedback-read-repository';
 import { syncDailyReminderForToday } from '../../notifications/lib/daily-reminder';
-import BiofeedbackDashboardScreen from './BiofeedbackDashboardScreen';
 
-type StartupState = 'loading' | 'ready' | 'error';
+type StartupState = 'loading' | 'error';
 
 export default function BiofeedbackStartupDecisionScreen() {
   const [state, setState] = useState<StartupState>('loading');
@@ -32,12 +31,7 @@ export default function BiofeedbackStartupDecisionScreen() {
         await hasBiofeedbackEntryForDateKeyFromFirestore(todayDateKey);
       await syncDailyReminderForToday(hasEntryToday);
 
-      if (hasEntryToday) {
-        setState('ready');
-        return;
-      }
-
-      router.replace(`/entries/new?dateKey=${todayDateKey}`);
+      router.replace(`/day/${todayDateKey}`);
     } catch (error) {
       console.error('STARTUP DECISION FAILED:', error);
       setState('error');
@@ -81,7 +75,7 @@ export default function BiofeedbackStartupDecisionScreen() {
     );
   }
 
-  return <BiofeedbackDashboardScreen />;
+  return null;
 }
 
 const styles = StyleSheet.create({

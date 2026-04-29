@@ -150,14 +150,7 @@ export default function BiofeedbackDashboardScreen() {
   }
 
   function handleDayPress(dateKey: string) {
-    const hasEntryForDay = entryDateKeys.includes(dateKey);
-
-    if (hasEntryForDay) {
-      router.push(`/day/${dateKey}`);
-      return;
-    }
-
-    router.push(`/entries/new?dateKey=${dateKey}`);
+    router.push(`/day/${dateKey}`);
   }
 
   function handlePreviousMonth() {

@@ -128,6 +128,10 @@ export default function BiofeedbackDayEntriesScreen({ dateKey }: Props) {
     router.push(`/entries/${entryId}?fromDay=${dateKey}`);
   }
 
+  function handleDashboardPress() {
+    router.replace('/dashboard');
+  }
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
@@ -137,6 +141,10 @@ export default function BiofeedbackDayEntriesScreen({ dateKey }: Props) {
     onPress={() => router.push(`/entries/new?dateKey=${dateKey}`)}
   >
     <Text style={styles.addButtonText}>＋</Text>
+  </Pressable>
+
+  <Pressable style={styles.monthButton} onPress={handleDashboardPress}>
+    <Text style={styles.monthButtonText}>לוח חודשי</Text>
   </Pressable>
 
   <View style={styles.headerTextBlock}>
@@ -268,6 +276,21 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: '600',
     lineHeight: 24,
+  },
+  monthButton: {
+    minHeight: 40,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#d7e3f4',
+    backgroundColor: '#f3f6fb',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 12,
+  },
+  monthButtonText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#1e4f8a',
   },
   safeArea: {
     flex: 1,
