@@ -8,6 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import FloatingAddButton from '../components/FloatingAddButton';
 import MonthGrid from '../components/MonthGrid';
 import { toDateKey } from '../components/calendar.utils';
+import { ACTIVITY_CATALOG } from '../constants/activity-catalog';
 import {
   getRoutineItemsForDate,
   listActiveRoutines,
@@ -58,7 +59,11 @@ function getRoutineItemDisplayName(item: RoutineItem): string {
     return item.monitoringType === 'morning' ? 'ניטור בוקר' : 'ניטור קצר';
   }
 
-  return item.catalogItemId ?? item.userCustomActivityId ?? 'תרגיל';
+  const catalogItem = item.catalogItemId
+    ? ACTIVITY_CATALOG.find((currentItem) => currentItem.id === item.catalogItemId)
+    : null;
+
+  return catalogItem?.label ?? item.catalogItemId ?? item.userCustomActivityId ?? 'תרגיל';
 }
 
 function getMeasurementLabel(measurementType: RoutineItem['measurementType']): string {

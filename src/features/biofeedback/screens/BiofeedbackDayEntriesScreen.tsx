@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BiofeedbackEntry } from '../types/biofeedback-entry.types';
 import { listBiofeedbackEntriesByDateKeyFromFirestore } from '../data/firebase-biofeedback-read-repository';
+import { listPlannedPracticesByDateKey } from '../data/firebase-planned-practices-repository';
 import {
   getRoutineItemsForDate,
   listActiveRoutines,
@@ -15,6 +16,7 @@ import { testFirebaseConnection } from '../../../lib/testFirebase';
 import { auth } from '../../../lib/firebase';
 import { mapFirebaseBiofeedbackEntryToDomain } from '../data/biofeedback-entry.mapper';
 import type { RoutineItem } from '../types/routine.types';
+import { ACTIVITY_CATALOG } from '../constants/activity-catalog';
 
 type Props = {
   dateKey: string;
@@ -45,7 +47,11 @@ function getRoutineItemDisplayName(item: RoutineItem): string {
     return item.monitoringType === 'morning' ? 'ניטור בוקר' : 'ניטור קצר';
   }
 
-  return item.catalogItemId ?? item.userCustomActivityId ?? 'תרגיל';
+  const catalogItem = item.catalogItemId
+    ? ACTIVITY_CATALOG.find((currentItem) => currentItem.id === item.catalogItemId)
+    : null;
+
+  return catalogItem?.label ?? item.catalogItemId ?? item.userCustomActivityId ?? 'תרגיל';
 }
 
 function getMeasurementLabel(measurementType: RoutineItem['measurementType']): string {
@@ -58,6 +64,12 @@ function getMeasurementLabel(measurementType: RoutineItem['measurementType']): s
   }
 
   return 'none';
+}
+
+function getEntryDisplayName(entry: BiofeedbackEntry): string {
+  const catalogItem = ACTIVITY_CATALOG.find((item) => item.id === entry.exerciseName);
+
+  return catalogItem?.label ?? entry.exerciseName;
 }
 
 export default function BiofeedbackDayEntriesScreen({ dateKey }: Props) {
@@ -81,12 +93,24 @@ export default function BiofeedbackDayEntriesScreen({ dateKey }: Props) {
         setEntries(mapped);
 
         const routines = await listActiveRoutines();
+        const plannedPractices = await listPlannedPracticesByDateKey(dateKey);
         const nextPlannedRoutineItems = routines.flatMap((routine) =>
-          getRoutineItemsForDate(routine, dateKey).map((item) => ({
-            id: `${routine.id}:${item.id}:${dateKey}`,
-            routineName: routine.name,
-            item,
-          })),
+          getRoutineItemsForDate(routine, dateKey)
+            .filter((item) => {
+              const matchingPlannedPractice = plannedPractices.find(
+                (practice) =>
+                  practice.routineId === routine.id &&
+                  practice.routineItemId === item.id &&
+                  practice.dateKey === dateKey,
+              );
+
+              return matchingPlannedPractice?.completedEntryId == null;
+            })
+            .map((item) => ({
+              id: `${routine.id}:${item.id}:${dateKey}`,
+              routineName: routine.name,
+              item,
+            })),
         );
 
         setPlannedRoutineItems(nextPlannedRoutineItems);
@@ -176,7 +200,7 @@ export default function BiofeedbackDayEntriesScreen({ dateKey }: Props) {
             >
               <View style={styles.cardHeader}>
                 <View style={styles.titleRow}>
-  <Text style={styles.cardTitle}>{entry.exerciseName}</Text>
+  <Text style={styles.cardTitle}>{getEntryDisplayName(entry)}</Text>
 
   {entry.measurementType ? (
     <View

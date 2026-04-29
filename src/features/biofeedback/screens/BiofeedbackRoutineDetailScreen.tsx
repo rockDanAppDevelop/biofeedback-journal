@@ -4,6 +4,7 @@ import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import DateTimeField from '../components/DateTimeField';
+import { ACTIVITY_CATALOG } from '../constants/activity-catalog';
 import { getRoutineById, updateRoutine } from '../data/firebase-routines-repository';
 import { scheduleRoutineForDate } from '../lib/schedule-routine';
 import type { Routine, RoutineItem } from '../types/routine.types';
@@ -30,7 +31,11 @@ function getRoutineItemDisplayName(item: Routine['items'][number]): string {
     return item.monitoringType === 'morning' ? 'ניטור בוקר' : 'ניטור קצר';
   }
 
-  return item.catalogItemId ?? item.userCustomActivityId ?? 'תרגיל';
+  const catalogItem = item.catalogItemId
+    ? ACTIVITY_CATALOG.find((currentItem) => currentItem.id === item.catalogItemId)
+    : null;
+
+  return catalogItem?.label ?? item.catalogItemId ?? item.userCustomActivityId ?? 'תרגיל';
 }
 
 function groupRoutineItemsByDay(items: Routine['items']): RoutineItemsByDay[] {
