@@ -3,7 +3,9 @@ import { useCallback, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import DateTimeField from '../components/DateTimeField';
 import { getRoutineById, updateRoutine } from '../data/firebase-routines-repository';
+import { scheduleRoutineForDate } from '../lib/schedule-routine';
 import type { Routine, RoutineItem } from '../types/routine.types';
 
 type Props = {
@@ -52,6 +54,8 @@ export default function BiofeedbackRoutineDetailScreen({ routineId }: Props) {
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState('');
   const [updatingItemId, setUpdatingItemId] = useState<string | null>(null);
+  const [selectedDateKey, setSelectedDateKey] = useState('');
+  const [isScheduling, setIsScheduling] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -82,6 +86,7 @@ export default function BiofeedbackRoutineDetailScreen({ routineId }: Props) {
           }
 
           setRoutine(nextRoutine);
+          setSelectedDateKey(nextRoutine.startDateKey);
         } catch (error) {
           if (!isActive) {
             return;
@@ -106,6 +111,38 @@ export default function BiofeedbackRoutineDetailScreen({ routineId }: Props) {
 
   function handleAddItemPress() {
     router.push(`/routines/${routineId}/add-item`);
+  }
+
+  async function handleScheduleForDatePress() {
+    if (!routine || isScheduling) {
+      return;
+    }
+
+    try {
+      setIsScheduling(true);
+
+      const summary = await scheduleRoutineForDate(
+        routine,
+        selectedDateKey || routine.startDateKey,
+      );
+
+      if (summary.createdCount > 0) {
+        Alert.alert('השיבוץ הושלם', `נוצרו ${summary.createdCount} תרגולים`);
+        return;
+      }
+
+      if (summary.skippedCount > 0) {
+        Alert.alert('כבר שובץ', 'היום הזה כבר שובץ מהרוטינה הזו');
+        return;
+      }
+
+      Alert.alert('אין מה לשבץ', 'אין תרגולים רלוונטיים לתאריך הזה');
+    } catch (error) {
+      console.log('ROUTINE SCHEDULE FAILED:', error);
+      Alert.alert('השיבוץ נכשל', 'לא הצלחנו לשבץ את הרוטינה כרגע.');
+    } finally {
+      setIsScheduling(false);
+    }
   }
 
   async function updateRoutineItems(nextItems: RoutineItem[], itemId: string) {
@@ -192,6 +229,28 @@ export default function BiofeedbackRoutineDetailScreen({ routineId }: Props) {
           <>
             <Text style={styles.title}>{routine.name}</Text>
             <Text style={styles.subtitle}>{formatCycleLength(routine.cycleLengthDays)}</Text>
+
+            <View style={styles.scheduleBox}>
+              <DateTimeField
+                label="תאריך לשיבוץ"
+                value={selectedDateKey || routine.startDateKey}
+                mode="date"
+                onChangeValue={setSelectedDateKey}
+              />
+
+              <Pressable
+                style={[
+                  styles.scheduleButton,
+                  isScheduling ? styles.scheduleButtonDisabled : null,
+                ]}
+                onPress={handleScheduleForDatePress}
+                disabled={isScheduling}
+              >
+                <Text style={styles.scheduleButtonText}>
+                  {isScheduling ? 'משבץ...' : 'שבץ ליום'}
+                </Text>
+              </Pressable>
+            </View>
 
             <Pressable style={styles.addButton} onPress={handleAddItemPress}>
               <Text style={styles.addButtonText}>הוסף תרגיל</Text>
@@ -299,6 +358,32 @@ const styles = StyleSheet.create({
   addButtonText: {
     fontSize: 16,
     fontWeight: '600',
+    color: '#ffffff',
+  },
+  scheduleBox: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#d7e3f4',
+    backgroundColor: '#f8fbff',
+    paddingHorizontal: 14,
+    paddingTop: 12,
+    paddingBottom: 14,
+    marginBottom: 16,
+  },
+  scheduleButton: {
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: '#2e7d32',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 8,
+  },
+  scheduleButtonDisabled: {
+    opacity: 0.55,
+  },
+  scheduleButtonText: {
+    fontSize: 16,
+    fontWeight: '700',
     color: '#ffffff',
   },
   stateCard: {
