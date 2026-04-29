@@ -35,6 +35,7 @@ import {
   listActiveCustomActivitiesFromFirestore,
   toggleCustomActivityFavoriteInFirestore,
 } from '../data/firebase-custom-activities-repository';
+import { getPlannedPracticeById } from '../data/firebase-planned-practices-repository';
 
 import {
   ACTIVITY_CATALOG,
@@ -43,9 +44,11 @@ import {
   type ActivityParameterFieldId,
 } from '../constants/activity-catalog';
 import { syncDailyReminderForToday } from '../../notifications/lib/daily-reminder';
+import type { PlannedPractice } from '../types/planned-practice.types';
 
 type Props = {
   initialDateKey?: string;
+  plannedPracticeId?: string;
 };
 
 type MapperSaveInput = ReturnType<typeof toCreateBiofeedbackEntryInput> & {
@@ -95,8 +98,14 @@ function addDaysToDateKey(dateKey: string, days: number): string {
   return toDateKey(date);
 }
 
+function formatOptionalNumber(value: number | null | undefined): string {
+  return value == null ? '' : String(value);
+}
 
-export default function BiofeedbackEntryCreateScreen({ initialDateKey }: Props) {
+export default function BiofeedbackEntryCreateScreen({
+  initialDateKey,
+  plannedPracticeId,
+}: Props) {
   useEffect(() => {
     void testFirebaseConnection();
   }, []);
@@ -123,6 +132,8 @@ export default function BiofeedbackEntryCreateScreen({ initialDateKey }: Props) 
   const [hasLoadedCustomActivities, setHasLoadedCustomActivities] = useState(false);
   const [showAllCustomActivities, setShowAllCustomActivities] = useState(false);
   const [isCreatingNewCustomActivity, setIsCreatingNewCustomActivity] = useState(false);
+  const [plannedPractice, setPlannedPractice] = useState<PlannedPractice | null>(null);
+  const [isExerciseLocked, setIsExerciseLocked] = useState(false);
   const todayDateKey = useMemo(() => toDateKey(new Date()), []);
   const shouldWarnBeforeLeaving = initialDateKey === todayDateKey;
   const customActivitiesLoadTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -239,6 +250,77 @@ export default function BiofeedbackEntryCreateScreen({ initialDateKey }: Props) 
     [values.selectedCatalogItemId],
   );
 
+  useEffect(() => {
+    if (!plannedPracticeId) {
+      setPlannedPractice(null);
+      setIsExerciseLocked(false);
+      return;
+    }
+
+    const plannedPracticeIdToLoad = plannedPracticeId;
+    let isActive = true;
+
+    async function loadPlannedPractice() {
+      try {
+        const nextPlannedPractice = await getPlannedPracticeById(plannedPracticeIdToLoad);
+
+        if (!isActive || !nextPlannedPractice) {
+          return;
+        }
+
+        const catalogItem =
+          nextPlannedPractice.catalogItemId === null
+            ? null
+            : ACTIVITY_CATALOG.find((item) => item.id === nextPlannedPractice.catalogItemId) ??
+              null;
+        const selectedCategoryId =
+          catalogItem?.categoryId ??
+          (nextPlannedPractice.activityType === 'monitoring' ? 'monitoring' : 'custom');
+        const exerciseName =
+          nextPlannedPractice.customExerciseName ??
+          catalogItem?.label ??
+          nextPlannedPractice.catalogItemId ??
+          nextPlannedPractice.userCustomActivityId ??
+          'תרגיל';
+
+        setPlannedPractice(nextPlannedPractice);
+        setIsExerciseLocked(true);
+        setValues((current) => ({
+          ...current,
+          measurementDate: nextPlannedPractice.dateKey,
+          selectedCategoryId,
+          selectedCatalogItemId: nextPlannedPractice.catalogItemId ?? '',
+          userCustomActivityId: nextPlannedPractice.userCustomActivityId ?? '',
+          exerciseName,
+          customExerciseName:
+            nextPlannedPractice.catalogItemId === null ? exerciseName : '',
+          customMeasurementType:
+            nextPlannedPractice.catalogItemId === null
+              ? nextPlannedPractice.measurementType
+              : '',
+          monitoringType: nextPlannedPractice.monitoringType ?? '',
+          durationMinutes: nextPlannedPractice.durationMinutes ?? current.durationMinutes,
+          breathingInhale: formatOptionalNumber(nextPlannedPractice.exerciseParameters?.inhale),
+          breathingHoldAfterInhale: formatOptionalNumber(
+            nextPlannedPractice.exerciseParameters?.holdAfterInhale,
+          ),
+          breathingExhale: formatOptionalNumber(nextPlannedPractice.exerciseParameters?.exhale),
+          breathingHoldAfterExhale: formatOptionalNumber(
+            nextPlannedPractice.exerciseParameters?.holdAfterExhale,
+          ),
+        }));
+      } catch (error) {
+        console.error('FAILED TO LOAD PLANNED PRACTICE:', error);
+      }
+    }
+
+    void loadPlannedPractice();
+
+    return () => {
+      isActive = false;
+    };
+  }, [plannedPracticeId]);
+
   const visibleCatalogItems = useMemo(() => {
     if (
       values.selectedCategoryId === '' ||
@@ -340,6 +422,33 @@ export default function BiofeedbackEntryCreateScreen({ initialDateKey }: Props) 
 
     return null;
   }, [selectedCatalogItem, selectedSavedCustomActivity]);
+
+  const plannedPracticeSummary = useMemo(() => {
+    if (!plannedPractice) {
+      return null;
+    }
+
+    const catalogItem =
+      plannedPractice.catalogItemId === null
+        ? null
+        : ACTIVITY_CATALOG.find((item) => item.id === plannedPractice.catalogItemId) ?? null;
+
+    return {
+      exerciseName:
+        plannedPractice.customExerciseName ??
+        catalogItem?.label ??
+        plannedPractice.catalogItemId ??
+        plannedPractice.userCustomActivityId ??
+        'תרגיל',
+      measurementType:
+        plannedPractice.measurementType === 'hrv'
+          ? 'HRV'
+          : plannedPractice.measurementType === 'rlx'
+            ? 'RLX'
+            : 'none',
+      durationMinutes: plannedPractice.durationMinutes,
+    };
+  }, [plannedPractice]);
 
   const shouldAutoShowFirstCustomActivityForm =
     isCustomTraining &&
@@ -804,6 +913,28 @@ export default function BiofeedbackEntryCreateScreen({ initialDateKey }: Props) 
         <ScrollView contentContainerStyle={styles.content}>
           <Text style={styles.title}>הוספת מדידת ביופידבק</Text>
 
+          {plannedPracticeSummary && isExerciseLocked ? (
+            <View style={styles.plannedPracticeSummaryCard}>
+              <Text style={styles.plannedPracticeSummaryLabel}>תרגול מתוכנן</Text>
+              <Text style={styles.plannedPracticeSummaryTitle}>
+                {plannedPracticeSummary.exerciseName}
+              </Text>
+              <Text style={styles.plannedPracticeSummaryMeta}>
+                {plannedPracticeSummary.measurementType}
+                {plannedPracticeSummary.durationMinutes
+                  ? ` · ${plannedPracticeSummary.durationMinutes} דקות`
+                  : ''}
+              </Text>
+
+              <Pressable
+                style={styles.changeExerciseButton}
+                onPress={() => setIsExerciseLocked(false)}
+              >
+                <Text style={styles.changeExerciseButtonText}>שנה תרגיל</Text>
+              </Pressable>
+            </View>
+          ) : null}
+
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>פרטי מדידה</Text>
 
@@ -827,7 +958,8 @@ export default function BiofeedbackEntryCreateScreen({ initialDateKey }: Props) 
               <Text style={styles.errorText}>{errors.measurementTime}</Text>
             ) : null}
 
-
+            {!isExerciseLocked ? (
+              <>
             <Text style={styles.label}>קטגוריה</Text>
 
             <View style={styles.categoryTopRow}>
@@ -1105,6 +1237,8 @@ export default function BiofeedbackEntryCreateScreen({ initialDateKey }: Props) 
                 </Text>
               </View>
             ) : null}
+              </>
+            ) : null}
 
             {!isMonitoring && finalMeasurementTypeForUI === 'hrv' ? (
               <Pressable
@@ -1351,6 +1485,45 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: '700',
     marginBottom: 20,
+  },
+  plannedPracticeSummaryCard: {
+    marginBottom: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#cfe3d4',
+    borderRadius: 12,
+    backgroundColor: '#f7fcf8',
+  },
+  plannedPracticeSummaryLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#4f6f57',
+    marginBottom: 4,
+  },
+  plannedPracticeSummaryTitle: {
+    fontSize: 19,
+    fontWeight: '700',
+    color: '#243447',
+    marginBottom: 4,
+  },
+  plannedPracticeSummaryMeta: {
+    fontSize: 14,
+    color: '#4b5563',
+    marginBottom: 12,
+  },
+  changeExerciseButton: {
+    borderWidth: 1,
+    borderColor: '#bfd4ee',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: '#ffffff',
+  },
+  changeExerciseButtonText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#1e4f8a',
+    textAlign: 'center',
   },
   section: {
     marginBottom: 24,

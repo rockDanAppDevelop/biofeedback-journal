@@ -1,10 +1,14 @@
-import { addDoc, collection, deleteDoc, doc, getDocs, query, where } from 'firebase/firestore';
+import { addDoc, collection, deleteDoc, doc, getDoc, getDocs, query, where } from 'firebase/firestore';
 
 import { auth, db } from '../../../lib/firebase';
 import type { PlannedPractice } from '../types/planned-practice.types';
 
 export type CreatePlannedPracticeInput = {
   dateKey: string;
+
+  routineId?: string | null;
+  routineItemId?: string | null;
+  sortOrder?: number | null;
 
   activityType: PlannedPractice['activityType'];
   measurementType: PlannedPractice['measurementType'];
@@ -18,6 +22,8 @@ export type CreatePlannedPracticeInput = {
   durationMinutes: number | null;
 
   exerciseParameters: PlannedPractice['exerciseParameters'];
+
+  completedEntryId?: string | null;
 };
 
 type FirebasePlannedPracticeDocument = Omit<PlannedPractice, 'id' | 'userId'>;
@@ -68,9 +74,9 @@ export async function createPlannedPractice(
 
   const docData: FirebasePlannedPracticeDocument = {
     dateKey: input.dateKey,
-    routineId: null,
-    routineItemId: null,
-    sortOrder: null,
+    routineId: input.routineId ?? null,
+    routineItemId: input.routineItemId ?? null,
+    sortOrder: input.sortOrder ?? null,
     activityType: input.activityType,
     measurementType: input.measurementType,
     catalogItemId: input.catalogItemId,
@@ -79,7 +85,7 @@ export async function createPlannedPractice(
     monitoringType: input.monitoringType,
     durationMinutes: input.durationMinutes,
     exerciseParameters: input.exerciseParameters,
-    completedEntryId: null,
+    completedEntryId: input.completedEntryId ?? null,
     createdAt: nowIso,
     updatedAt: nowIso,
   };
@@ -108,6 +114,27 @@ export async function listPlannedPracticesByDateKey(
   return snapshot.docs
     .map((docSnapshot) => mapPlannedPracticeDocument(docSnapshot, user.uid))
     .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+}
+
+export async function getPlannedPracticeById(
+  plannedPracticeId: string,
+): Promise<PlannedPractice | null> {
+  const user = getCurrentUserOrThrow();
+  const plannedPracticeRef = doc(
+    db,
+    'users',
+    user.uid,
+    'plannedPractices',
+    plannedPracticeId,
+  );
+
+  const snapshot = await getDoc(plannedPracticeRef);
+
+  if (!snapshot.exists()) {
+    return null;
+  }
+
+  return mapPlannedPracticeDocument(snapshot, user.uid);
 }
 
 export async function deletePlannedPractice(plannedPracticeId: string): Promise<void> {

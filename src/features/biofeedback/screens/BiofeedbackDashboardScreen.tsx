@@ -12,6 +12,7 @@ import {
   getRoutineItemsForDate,
   listActiveRoutines,
 } from '../data/firebase-routines-repository';
+import { findOrCreatePlannedPracticeForRoutineItem } from '../lib/find-or-create-planned-practice';
 import { getStreakInsight } from '../lib/streak-insight';
 import type { RoutineItem } from '../types/routine.types';
 
@@ -41,6 +42,7 @@ function formatStreakDays(count: number): string {
 
 type PlannedRoutineItem = {
   id: string;
+  routineId: string;
   routineName: string;
   item: RoutineItem;
 };
@@ -74,6 +76,7 @@ export default function BiofeedbackDashboardScreen() {
   const [firstSeenDateKey, setFirstSeenDateKey] = useState('');
   const [referenceDate, setReferenceDate] = useState(() => new Date());
   const [plannedRoutineItems, setPlannedRoutineItems] = useState<PlannedRoutineItem[]>([]);
+  const [startingPlannedItemId, setStartingPlannedItemId] = useState<string | null>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -114,6 +117,7 @@ export default function BiofeedbackDashboardScreen() {
       const nextPlannedRoutineItems = routines.flatMap((routine) =>
         getRoutineItemsForDate(routine, todayDateKey).map((item) => ({
           id: `${routine.id}:${item.id}:${todayDateKey}`,
+          routineId: routine.id,
           routineName: routine.name,
           item,
         })),
@@ -148,6 +152,33 @@ export default function BiofeedbackDashboardScreen() {
 
   function handleGoToToday() {
     setReferenceDate(new Date());
+  }
+
+  async function handlePlannedRoutineItemPress(plannedItem: PlannedRoutineItem) {
+    if (startingPlannedItemId) {
+      return;
+    }
+
+    const todayDateKey = toDateKey(new Date());
+
+    try {
+      setStartingPlannedItemId(plannedItem.id);
+
+      const plannedPractice = await findOrCreatePlannedPracticeForRoutineItem({
+        routineId: plannedItem.routineId,
+        routineItemId: plannedItem.item.id,
+        dateKey: todayDateKey,
+        item: plannedItem.item,
+      });
+
+      router.push(
+        `/entries/new?dateKey=${todayDateKey}&plannedPracticeId=${plannedPractice.id}`,
+      );
+    } catch (error) {
+      console.log('PLANNED ROUTINE START FAILED:', error);
+    } finally {
+      setStartingPlannedItemId(null);
+    }
   }
 
   const monthTitle = useMemo(() => getMonthTitle(referenceDate), [referenceDate]);
@@ -235,7 +266,15 @@ export default function BiofeedbackDashboardScreen() {
             </View>
           ) : (
             plannedRoutineItems.map((plannedItem) => (
-              <View key={plannedItem.id} style={styles.todayPlanCard}>
+              <Pressable
+                key={plannedItem.id}
+                style={[
+                  styles.todayPlanCard,
+                  startingPlannedItemId === plannedItem.id ? styles.todayPlanCardDisabled : null,
+                ]}
+                onPress={() => void handlePlannedRoutineItemPress(plannedItem)}
+                disabled={startingPlannedItemId !== null}
+              >
                 <View style={styles.todayPlanCardHeader}>
                   <Text style={styles.todayPlanExerciseName}>
                     {getRoutineItemDisplayName(plannedItem.item)}
@@ -258,7 +297,7 @@ export default function BiofeedbackDashboardScreen() {
                 </View>
 
                 <Text style={styles.todayPlanRoutineName}>{plannedItem.routineName}</Text>
-              </View>
+              </Pressable>
             ))
           )}
         </View>
@@ -355,6 +394,9 @@ const styles = StyleSheet.create({
     padding: 14,
     backgroundColor: '#f7fcf8',
     marginBottom: 10,
+  },
+  todayPlanCardDisabled: {
+    opacity: 0.6,
   },
   todayPlanCardHeader: {
     flexDirection: 'row-reverse',
