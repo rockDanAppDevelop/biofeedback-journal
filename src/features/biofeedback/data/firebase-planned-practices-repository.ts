@@ -1,4 +1,14 @@
-import { addDoc, collection, deleteDoc, doc, getDoc, getDocs, query, where } from 'firebase/firestore';
+import {
+  addDoc,
+  collection,
+  deleteDoc,
+  doc,
+  getDoc,
+  getDocs,
+  query,
+  updateDoc,
+  where,
+} from 'firebase/firestore';
 
 import { auth, db } from '../../../lib/firebase';
 import type { PlannedPractice } from '../types/planned-practice.types';
@@ -135,6 +145,25 @@ export async function getPlannedPracticeById(
   }
 
   return mapPlannedPracticeDocument(snapshot, user.uid);
+}
+
+export async function markPlannedPracticeCompleted(
+  plannedPracticeId: string,
+  entryId: string,
+): Promise<void> {
+  const user = getCurrentUserOrThrow();
+  const plannedPracticeRef = doc(
+    db,
+    'users',
+    user.uid,
+    'plannedPractices',
+    plannedPracticeId,
+  );
+
+  await updateDoc(plannedPracticeRef, {
+    completedEntryId: entryId,
+    updatedAt: new Date().toISOString(),
+  });
 }
 
 export async function deletePlannedPractice(plannedPracticeId: string): Promise<void> {

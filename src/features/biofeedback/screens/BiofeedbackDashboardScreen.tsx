@@ -12,6 +12,7 @@ import {
   getRoutineItemsForDate,
   listActiveRoutines,
 } from '../data/firebase-routines-repository';
+import { listPlannedPracticesByDateKey } from '../data/firebase-planned-practices-repository';
 import { findOrCreatePlannedPracticeForRoutineItem } from '../lib/find-or-create-planned-practice';
 import { getStreakInsight } from '../lib/streak-insight';
 import type { RoutineItem } from '../types/routine.types';
@@ -45,6 +46,7 @@ type PlannedRoutineItem = {
   routineId: string;
   routineName: string;
   item: RoutineItem;
+  isCompleted: boolean;
 };
 
 function getRoutineItemDisplayName(item: RoutineItem): string {
@@ -114,13 +116,24 @@ export default function BiofeedbackDashboardScreen() {
       setEntryDateKeys(uniqueDateKeys);
       const todayDateKey = toDateKey(new Date());
       const routines = await listActiveRoutines();
+      const plannedPractices = await listPlannedPracticesByDateKey(todayDateKey);
       const nextPlannedRoutineItems = routines.flatMap((routine) =>
-        getRoutineItemsForDate(routine, todayDateKey).map((item) => ({
-          id: `${routine.id}:${item.id}:${todayDateKey}`,
-          routineId: routine.id,
-          routineName: routine.name,
-          item,
-        })),
+        getRoutineItemsForDate(routine, todayDateKey).map((item) => {
+          const matchingPlannedPractice = plannedPractices.find(
+            (practice) =>
+              practice.routineId === routine.id &&
+              practice.routineItemId === item.id &&
+              practice.dateKey === todayDateKey,
+          );
+
+          return {
+            id: `${routine.id}:${item.id}:${todayDateKey}`,
+            routineId: routine.id,
+            routineName: routine.name,
+            item,
+            isCompleted: matchingPlannedPractice?.completedEntryId !== null,
+          };
+        }),
       );
 
       setPlannedRoutineItems(nextPlannedRoutineItems);
@@ -155,7 +168,7 @@ export default function BiofeedbackDashboardScreen() {
   }
 
   async function handlePlannedRoutineItemPress(plannedItem: PlannedRoutineItem) {
-    if (startingPlannedItemId) {
+    if (startingPlannedItemId || plannedItem.isCompleted) {
       return;
     }
 
@@ -270,10 +283,12 @@ export default function BiofeedbackDashboardScreen() {
                 key={plannedItem.id}
                 style={[
                   styles.todayPlanCard,
-                  startingPlannedItemId === plannedItem.id ? styles.todayPlanCardDisabled : null,
+                  plannedItem.isCompleted || startingPlannedItemId === plannedItem.id
+                    ? styles.todayPlanCardDisabled
+                    : null,
                 ]}
                 onPress={() => void handlePlannedRoutineItemPress(plannedItem)}
-                disabled={startingPlannedItemId !== null}
+                disabled={plannedItem.isCompleted || startingPlannedItemId !== null}
               >
                 <View style={styles.todayPlanCardHeader}>
                   <Text style={styles.todayPlanExerciseName}>
@@ -294,6 +309,12 @@ export default function BiofeedbackDashboardScreen() {
                       {getMeasurementLabel(plannedItem.item.measurementType)}
                     </Text>
                   </View>
+
+                  {plannedItem.isCompleted ? (
+                    <View style={styles.completedBadge}>
+                      <Text style={styles.completedBadgeText}>בוצע</Text>
+                    </View>
+                  ) : null}
                 </View>
 
                 <Text style={styles.todayPlanRoutineName}>{plannedItem.routineName}</Text>
@@ -435,6 +456,17 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
     color: '#243447',
+  },
+  completedBadge: {
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    backgroundColor: '#dff3e4',
+  },
+  completedBadgeText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#1b5e20',
   },
   safeArea: {
     flex: 1,

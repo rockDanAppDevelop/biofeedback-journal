@@ -35,7 +35,10 @@ import {
   listActiveCustomActivitiesFromFirestore,
   toggleCustomActivityFavoriteInFirestore,
 } from '../data/firebase-custom-activities-repository';
-import { getPlannedPracticeById } from '../data/firebase-planned-practices-repository';
+import {
+  getPlannedPracticeById,
+  markPlannedPracticeCompleted,
+} from '../data/firebase-planned-practices-repository';
 
 import {
   ACTIVITY_CATALOG,
@@ -780,6 +783,14 @@ export default function BiofeedbackEntryCreateScreen({
 
       console.log('AFTER FIREBASE SAVE');
       console.log('FIREBASE SAVE SUCCESS:', firebaseId);
+
+      if (plannedPracticeId) {
+        try {
+          await markPlannedPracticeCompleted(plannedPracticeId, firebaseId);
+        } catch (error) {
+          console.error('FAILED TO MARK PLANNED PRACTICE COMPLETED:', error);
+        }
+      }
 
       setShowExtraHrvFields(false);
       setShowExtraRlxFields(false);
