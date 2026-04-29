@@ -5,6 +5,7 @@ import { useCallback, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { toDateKey } from '../components/calendar.utils';
 import { BiofeedbackEntry } from '../types/biofeedback-entry.types';
 import { listBiofeedbackEntriesByDateKeyFromFirestore } from '../data/firebase-biofeedback-read-repository';
 import { listPlannedPracticesByDateKey } from '../data/firebase-planned-practices-repository';
@@ -38,6 +39,13 @@ function formatEntryTime(measuredAt: string): string {
     minute: '2-digit',
     hour12: false,
   }).format(date);
+}
+
+function addDaysToDateKey(dateKey: string, days: number): string {
+  const date = new Date(`${dateKey}T00:00:00`);
+  date.setDate(date.getDate() + days);
+
+  return toDateKey(date);
 }
 
 function getRoutineItemDisplayName(item: RoutineItem): string {
@@ -78,6 +86,9 @@ export default function BiofeedbackDayEntriesScreen({ dateKey }: Props) {
   const [entries, setEntries] = useState<BiofeedbackEntry[]>([]);
   const [plannedRoutineItems, setPlannedRoutineItems] = useState<PlannedRoutineItem[]>([]);
   const [startingPlannedItemId, setStartingPlannedItemId] = useState<string | null>(null);
+  const previousDateKey = addDaysToDateKey(dateKey, -1);
+  const todayDateKey = toDateKey(new Date());
+  const nextDateKey = addDaysToDateKey(dateKey, 1);
 
   useFocusEffect(
   useCallback(() => {
@@ -140,6 +151,10 @@ export default function BiofeedbackDayEntriesScreen({ dateKey }: Props) {
     router.replace('/dashboard');
   }
 
+  function handleDateNavigationPress(nextDateKeyToOpen: string) {
+    router.push(`/day/${nextDateKeyToOpen}`);
+  }
+
   async function handlePlannedRoutineItemPress(plannedItem: PlannedRoutineItem) {
     if (startingPlannedItemId) {
       return;
@@ -183,6 +198,29 @@ export default function BiofeedbackDayEntriesScreen({ dateKey }: Props) {
     <Text style={styles.subtitle}>מדידות היום</Text>
   </View>
 </View>
+
+        <View style={styles.dateNavigationRow}>
+          <Pressable
+            style={styles.dateNavigationButton}
+            onPress={() => handleDateNavigationPress(previousDateKey)}
+          >
+            <Text style={styles.dateNavigationButtonText}>יום קודם</Text>
+          </Pressable>
+
+          <Pressable
+            style={styles.dateNavigationButton}
+            onPress={() => handleDateNavigationPress(todayDateKey)}
+          >
+            <Text style={styles.dateNavigationButtonText}>היום</Text>
+          </Pressable>
+
+          <Pressable
+            style={styles.dateNavigationButton}
+            onPress={() => handleDateNavigationPress(nextDateKey)}
+          >
+            <Text style={styles.dateNavigationButtonText}>יום הבא</Text>
+          </Pressable>
+        </View>
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>תרגולים מתוכננים</Text>
@@ -325,6 +363,27 @@ const styles = StyleSheet.create({
   },
   monthButtonText: {
     fontSize: 14,
+    fontWeight: '700',
+    color: '#1e4f8a',
+  },
+  dateNavigationRow: {
+    flexDirection: 'row-reverse',
+    gap: 8,
+    marginBottom: 16,
+  },
+  dateNavigationButton: {
+    flex: 1,
+    minHeight: 38,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#d7e3f4',
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 8,
+  },
+  dateNavigationButtonText: {
+    fontSize: 13,
     fontWeight: '700',
     color: '#1e4f8a',
   },
