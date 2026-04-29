@@ -17,6 +17,7 @@ import { auth } from '../../../lib/firebase';
 import { mapFirebaseBiofeedbackEntryToDomain } from '../data/biofeedback-entry.mapper';
 import type { RoutineItem } from '../types/routine.types';
 import { ACTIVITY_CATALOG } from '../constants/activity-catalog';
+import { findOrCreatePlannedPracticeForRoutineItem } from '../lib/find-or-create-planned-practice';
 
 type Props = {
   dateKey: string;
@@ -24,6 +25,7 @@ type Props = {
 
 type PlannedRoutineItem = {
   id: string;
+  routineId: string;
   routineName: string;
   item: RoutineItem;
 };
@@ -75,6 +77,7 @@ function getEntryDisplayName(entry: BiofeedbackEntry): string {
 export default function BiofeedbackDayEntriesScreen({ dateKey }: Props) {
   const [entries, setEntries] = useState<BiofeedbackEntry[]>([]);
   const [plannedRoutineItems, setPlannedRoutineItems] = useState<PlannedRoutineItem[]>([]);
+  const [startingPlannedItemId, setStartingPlannedItemId] = useState<string | null>(null);
 
   useFocusEffect(
   useCallback(() => {
@@ -112,6 +115,7 @@ export default function BiofeedbackDayEntriesScreen({ dateKey }: Props) {
             })
             .map((item) => ({
               id: `${routine.id}:${item.id}:${dateKey}`,
+              routineId: routine.id,
               routineName: routine.name,
               item,
             })),
@@ -134,6 +138,29 @@ export default function BiofeedbackDayEntriesScreen({ dateKey }: Props) {
 
   function handleDashboardPress() {
     router.replace('/dashboard');
+  }
+
+  async function handlePlannedRoutineItemPress(plannedItem: PlannedRoutineItem) {
+    if (startingPlannedItemId) {
+      return;
+    }
+
+    try {
+      setStartingPlannedItemId(plannedItem.id);
+
+      const plannedPractice = await findOrCreatePlannedPracticeForRoutineItem({
+        routineId: plannedItem.routineId,
+        routineItemId: plannedItem.item.id,
+        dateKey,
+        item: plannedItem.item,
+      });
+
+      router.push(`/entries/new?dateKey=${dateKey}&plannedPracticeId=${plannedPractice.id}`);
+    } catch (error) {
+      console.log('DAY PLANNED ROUTINE START FAILED:', error);
+    } finally {
+      setStartingPlannedItemId(null);
+    }
   }
 
   return (
@@ -166,7 +193,12 @@ export default function BiofeedbackDayEntriesScreen({ dateKey }: Props) {
             </View>
           ) : (
             plannedRoutineItems.map((plannedItem) => (
-              <View key={plannedItem.id} style={styles.plannedCard}>
+              <Pressable
+                key={plannedItem.id}
+                style={styles.plannedCard}
+                onPress={() => void handlePlannedRoutineItemPress(plannedItem)}
+                disabled={startingPlannedItemId !== null}
+              >
                 <View style={styles.cardHeader}>
                   <View style={styles.titleRow}>
                     <Text style={styles.cardTitle}>
@@ -191,7 +223,7 @@ export default function BiofeedbackDayEntriesScreen({ dateKey }: Props) {
                 </View>
 
                 <Text style={styles.plannedRoutineName}>{plannedItem.routineName}</Text>
-              </View>
+              </Pressable>
             ))
           )}
         </View>
