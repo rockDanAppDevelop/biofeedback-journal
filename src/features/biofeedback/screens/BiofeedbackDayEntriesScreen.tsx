@@ -7,12 +7,23 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BiofeedbackEntry } from '../types/biofeedback-entry.types';
 import { listBiofeedbackEntriesByDateKeyFromFirestore } from '../data/firebase-biofeedback-read-repository';
+import {
+  getRoutineItemsForDate,
+  listActiveRoutines,
+} from '../data/firebase-routines-repository';
 import { testFirebaseConnection } from '../../../lib/testFirebase';
 import { auth } from '../../../lib/firebase';
 import { mapFirebaseBiofeedbackEntryToDomain } from '../data/biofeedback-entry.mapper';
+import type { RoutineItem } from '../types/routine.types';
 
 type Props = {
   dateKey: string;
+};
+
+type PlannedRoutineItem = {
+  id: string;
+  routineName: string;
+  item: RoutineItem;
 };
 
 function formatEntryTime(measuredAt: string): string {
@@ -25,8 +36,33 @@ function formatEntryTime(measuredAt: string): string {
   }).format(date);
 }
 
+function getRoutineItemDisplayName(item: RoutineItem): string {
+  if (item.customExerciseName) {
+    return item.customExerciseName;
+  }
+
+  if (item.activityType === 'monitoring' && item.monitoringType) {
+    return item.monitoringType === 'morning' ? 'ניטור בוקר' : 'ניטור קצר';
+  }
+
+  return item.catalogItemId ?? item.userCustomActivityId ?? 'תרגיל';
+}
+
+function getMeasurementLabel(measurementType: RoutineItem['measurementType']): string {
+  if (measurementType === 'hrv') {
+    return 'HRV';
+  }
+
+  if (measurementType === 'rlx') {
+    return 'RLX';
+  }
+
+  return 'none';
+}
+
 export default function BiofeedbackDayEntriesScreen({ dateKey }: Props) {
   const [entries, setEntries] = useState<BiofeedbackEntry[]>([]);
+  const [plannedRoutineItems, setPlannedRoutineItems] = useState<PlannedRoutineItem[]>([]);
 
   useFocusEffect(
   useCallback(() => {
@@ -43,8 +79,20 @@ export default function BiofeedbackDayEntriesScreen({ dateKey }: Props) {
           }),
         );
         setEntries(mapped);
+
+        const routines = await listActiveRoutines();
+        const nextPlannedRoutineItems = routines.flatMap((routine) =>
+          getRoutineItemsForDate(routine, dateKey).map((item) => ({
+            id: `${routine.id}:${item.id}:${dateKey}`,
+            routineName: routine.name,
+            item,
+          })),
+        );
+
+        setPlannedRoutineItems(nextPlannedRoutineItems);
       } catch (e) {
         console.log('FIREBASE LOAD FAILED:', e);
+        setPlannedRoutineItems([]);
       }
     }
 
@@ -72,6 +120,48 @@ export default function BiofeedbackDayEntriesScreen({ dateKey }: Props) {
     <Text style={styles.subtitle}>מדידות היום</Text>
   </View>
 </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>תרגולים מתוכננים</Text>
+
+          {plannedRoutineItems.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyText}>אין תרגולים מתוכננים ליום הזה</Text>
+            </View>
+          ) : (
+            plannedRoutineItems.map((plannedItem) => (
+              <View key={plannedItem.id} style={styles.plannedCard}>
+                <View style={styles.cardHeader}>
+                  <View style={styles.titleRow}>
+                    <Text style={styles.cardTitle}>
+                      {getRoutineItemDisplayName(plannedItem.item)}
+                    </Text>
+
+                    <View
+                      style={[
+                        styles.measurementBadge,
+                        plannedItem.item.measurementType === 'hrv'
+                          ? styles.measurementBadgeHrv
+                          : plannedItem.item.measurementType === 'rlx'
+                            ? styles.measurementBadgeRlx
+                            : styles.measurementBadgeNone,
+                      ]}
+                    >
+                      <Text style={styles.measurementBadgeText}>
+                        {getMeasurementLabel(plannedItem.item.measurementType)}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+
+                <Text style={styles.plannedRoutineName}>{plannedItem.routineName}</Text>
+              </View>
+            ))
+          )}
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>מדידות שבוצעו</Text>
 
         {entries.length === 0 ? (
           <View style={styles.emptyState}>
@@ -124,6 +214,7 @@ export default function BiofeedbackDayEntriesScreen({ dateKey }: Props) {
             </Pressable>
           ))
         )}
+        </View>
       </View>
     </SafeAreaView>
   );
@@ -184,6 +275,29 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666666',
   },
+  section: {
+    marginBottom: 18,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#243447',
+    textAlign: 'right',
+    marginBottom: 10,
+  },
+  plannedCard: {
+    borderWidth: 1,
+    borderColor: '#cfe3d4',
+    borderRadius: 14,
+    padding: 14,
+    backgroundColor: '#f7fcf8',
+    marginBottom: 12,
+  },
+  plannedRoutineName: {
+    fontSize: 14,
+    color: '#4f6f57',
+    textAlign: 'right',
+  },
   card: {
     borderWidth: 1,
     borderColor: '#dcdcdc',
@@ -222,6 +336,10 @@ measurementBadgeHrv: {
 
 measurementBadgeRlx: {
   backgroundColor: '#e8f5e9',
+},
+
+measurementBadgeNone: {
+  backgroundColor: '#eeeeee',
 },
 
 measurementBadgeText: {

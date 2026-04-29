@@ -2,13 +2,18 @@
 
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import FloatingAddButton from '../components/FloatingAddButton';
 import MonthGrid from '../components/MonthGrid';
 import { toDateKey } from '../components/calendar.utils';
+import {
+  getRoutineItemsForDate,
+  listActiveRoutines,
+} from '../data/firebase-routines-repository';
 import { getStreakInsight } from '../lib/streak-insight';
+import type { RoutineItem } from '../types/routine.types';
 
 import { collection, getDocs } from 'firebase/firestore';
 import { testFirebaseConnection } from '../../../lib/testFirebase';
@@ -34,10 +39,41 @@ function formatStreakDays(count: number): string {
   return `${count} ${dayLabel}`;
 }
 
+type PlannedRoutineItem = {
+  id: string;
+  routineName: string;
+  item: RoutineItem;
+};
+
+function getRoutineItemDisplayName(item: RoutineItem): string {
+  if (item.customExerciseName) {
+    return item.customExerciseName;
+  }
+
+  if (item.activityType === 'monitoring' && item.monitoringType) {
+    return item.monitoringType === 'morning' ? 'ניטור בוקר' : 'ניטור קצר';
+  }
+
+  return item.catalogItemId ?? item.userCustomActivityId ?? 'תרגיל';
+}
+
+function getMeasurementLabel(measurementType: RoutineItem['measurementType']): string {
+  if (measurementType === 'hrv') {
+    return 'HRV';
+  }
+
+  if (measurementType === 'rlx') {
+    return 'RLX';
+  }
+
+  return 'none';
+}
+
 export default function BiofeedbackDashboardScreen() {
   const [entryDateKeys, setEntryDateKeys] = useState<string[]>([]);
   const [firstSeenDateKey, setFirstSeenDateKey] = useState('');
   const [referenceDate, setReferenceDate] = useState(() => new Date());
+  const [plannedRoutineItems, setPlannedRoutineItems] = useState<PlannedRoutineItem[]>([]);
 
   useFocusEffect(
     useCallback(() => {
@@ -54,6 +90,7 @@ export default function BiofeedbackDashboardScreen() {
       if (!user) {
         console.log('DASHBOARD LOAD FAILED: No authenticated user');
         setEntryDateKeys([]);
+        setPlannedRoutineItems([]);
         return;
       }
 
@@ -72,9 +109,21 @@ export default function BiofeedbackDashboardScreen() {
       );
 
       setEntryDateKeys(uniqueDateKeys);
-      await syncDailyReminderForToday(uniqueDateKeys.includes(toDateKey(new Date())));
+      const todayDateKey = toDateKey(new Date());
+      const routines = await listActiveRoutines();
+      const nextPlannedRoutineItems = routines.flatMap((routine) =>
+        getRoutineItemsForDate(routine, todayDateKey).map((item) => ({
+          id: `${routine.id}:${item.id}:${todayDateKey}`,
+          routineName: routine.name,
+          item,
+        })),
+      );
+
+      setPlannedRoutineItems(nextPlannedRoutineItems);
+      await syncDailyReminderForToday(uniqueDateKeys.includes(todayDateKey));
     } catch (error) {
       console.log('🔥 FIRESTORE ERROR:', error);
+      setPlannedRoutineItems([]);
     }
   }
 
@@ -122,6 +171,10 @@ export default function BiofeedbackDashboardScreen() {
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <View style={styles.container}>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
         <UserMenu />
 
         <Text style={styles.monthTitle}>{monthTitle}</Text>
@@ -173,6 +226,44 @@ export default function BiofeedbackDashboardScreen() {
           firstSeenDateKey={firstSeenDateKey}
         />
 
+        <View style={styles.todayPlanSection}>
+          <Text style={styles.todayPlanTitle}>התכנון להיום</Text>
+
+          {plannedRoutineItems.length === 0 ? (
+            <View style={styles.todayPlanEmptyCard}>
+              <Text style={styles.todayPlanEmptyText}>אין תרגולים מתוכננים להיום</Text>
+            </View>
+          ) : (
+            plannedRoutineItems.map((plannedItem) => (
+              <View key={plannedItem.id} style={styles.todayPlanCard}>
+                <View style={styles.todayPlanCardHeader}>
+                  <Text style={styles.todayPlanExerciseName}>
+                    {getRoutineItemDisplayName(plannedItem.item)}
+                  </Text>
+
+                  <View
+                    style={[
+                      styles.measurementBadge,
+                      plannedItem.item.measurementType === 'hrv'
+                        ? styles.measurementBadgeHrv
+                        : plannedItem.item.measurementType === 'rlx'
+                          ? styles.measurementBadgeRlx
+                          : styles.measurementBadgeNone,
+                    ]}
+                  >
+                    <Text style={styles.measurementBadgeText}>
+                      {getMeasurementLabel(plannedItem.item.measurementType)}
+                    </Text>
+                  </View>
+                </View>
+
+                <Text style={styles.todayPlanRoutineName}>{plannedItem.routineName}</Text>
+              </View>
+            ))
+          )}
+        </View>
+
+        </ScrollView>
         <FloatingAddButton />
       </View>
     </SafeAreaView>
@@ -234,6 +325,75 @@ const styles = StyleSheet.create({
     textAlign: 'right',
     lineHeight: 24,
   },
+  todayPlanSection: {
+    marginTop: 6,
+    marginBottom: 18,
+  },
+  todayPlanTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#243447',
+    textAlign: 'right',
+    marginBottom: 10,
+  },
+  todayPlanEmptyCard: {
+    borderWidth: 1,
+    borderColor: '#e5e5e5',
+    borderRadius: 14,
+    padding: 14,
+    backgroundColor: '#fafafa',
+  },
+  todayPlanEmptyText: {
+    fontSize: 15,
+    color: '#666666',
+    textAlign: 'right',
+  },
+  todayPlanCard: {
+    borderWidth: 1,
+    borderColor: '#cfe3d4',
+    borderRadius: 14,
+    padding: 14,
+    backgroundColor: '#f7fcf8',
+    marginBottom: 10,
+  },
+  todayPlanCardHeader: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+    marginBottom: 8,
+  },
+  todayPlanExerciseName: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#243447',
+    textAlign: 'right',
+  },
+  todayPlanRoutineName: {
+    fontSize: 14,
+    color: '#4f6f57',
+    textAlign: 'right',
+  },
+  measurementBadge: {
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  measurementBadgeHrv: {
+    backgroundColor: '#e3f2fd',
+  },
+  measurementBadgeRlx: {
+    backgroundColor: '#e8f5e9',
+  },
+  measurementBadgeNone: {
+    backgroundColor: '#eeeeee',
+  },
+  measurementBadgeText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#243447',
+  },
   safeArea: {
     flex: 1,
     backgroundColor: '#ffffff',
@@ -242,8 +402,10 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 16,
     paddingTop: 12,
-    paddingBottom: 20,
     backgroundColor: '#ffffff',
+  },
+  scrollContent: {
+    paddingBottom: 110,
   },
   monthTitle: {
     fontSize: 24,
