@@ -3,6 +3,7 @@ import { useCallback, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { toDateKey } from '../components/calendar.utils';
 import DateTimeField from '../components/DateTimeField';
 import { ACTIVITY_CATALOG } from '../constants/activity-catalog';
 import { getRoutineById, updateRoutine } from '../data/firebase-routines-repository';
@@ -199,24 +200,36 @@ export default function BiofeedbackRoutineDetailScreen({ routineId }: Props) {
     }
 
     Alert.alert(
-      'למחוק את התרגיל?',
-      'התרגיל יוסר מהרוטינה. תרגולים שכבר תוכננו או בוצעו לא יימחקו.',
+      'להסיר את התרגיל מהמשך הרוטינה?',
+      'התרגיל יוסר מהמשך הרוטינה. תרגולים שכבר תוכננו או בוצעו לא יימחקו.',
       [
         {
           text: 'ביטול',
           style: 'cancel',
         },
         {
-          text: 'מחק',
+          text: 'הסר מהמשך',
           style: 'destructive',
           onPress: () => {
-            const nextItems = routine.items.filter((currentItem) => currentItem.id !== item.id);
+            const todayDateKey = toDateKey(new Date());
+            const nextItems = routine.items.map((currentItem) =>
+              currentItem.id === item.id
+                ? {
+                    ...currentItem,
+                    removedFromDateKey: todayDateKey,
+                  }
+                : currentItem,
+            );
             void updateRoutineItems(nextItems, item.id);
           },
         },
       ],
     );
   }
+
+  const activeRoutineItems = routine
+    ? routine.items.filter((item) => item.removedFromDateKey === null)
+    : [];
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -261,14 +274,14 @@ export default function BiofeedbackRoutineDetailScreen({ routineId }: Props) {
               <Text style={styles.addButtonText}>הוסף תרגיל</Text>
             </Pressable>
 
-            {routine.items.length === 0 ? (
+            {activeRoutineItems.length === 0 ? (
               <View style={styles.stateCard}>
                 <Text style={styles.emptyTitle}>אין עדיין תרגילים ברוטינה</Text>
                 <Text style={styles.stateText}>כאן יופיעו התרגילים שיתווספו לרוטינה.</Text>
               </View>
             ) : (
               <View style={styles.itemsList}>
-                {groupRoutineItemsByDay(routine.items).map((group) => (
+                {groupRoutineItemsByDay(activeRoutineItems).map((group) => (
                   <View key={group.dayOffset} style={styles.dayGroup}>
                     <Text style={styles.dayGroupTitle}>יום {group.dayOffset + 1}</Text>
 
@@ -312,7 +325,7 @@ export default function BiofeedbackRoutineDetailScreen({ routineId }: Props) {
                               onPress={() => handleDeleteItemPress(item)}
                               disabled={updatingItemId !== null}
                             >
-                              <Text style={styles.deleteItemButtonText}>מחק</Text>
+                              <Text style={styles.deleteItemButtonText}>הסר</Text>
                             </Pressable>
                           </View>
                         </View>

@@ -320,7 +320,11 @@ export default function BiofeedbackDashboardScreen() {
                   ) : null}
                 </View>
 
-                <Text style={styles.todayPlanRoutineName}>{plannedItem.routineName}</Text>
+                <View style={styles.todayPlanRoutineBadge}>
+                  <Text style={styles.todayPlanRoutineBadgeText}>
+                    {plannedItem.routineName}
+                  </Text>
+                </View>
               </Pressable>
             ))
           )}
@@ -436,10 +440,18 @@ const styles = StyleSheet.create({
     color: '#243447',
     textAlign: 'right',
   },
-  todayPlanRoutineName: {
-    fontSize: 14,
-    color: '#4f6f57',
-    textAlign: 'right',
+  todayPlanRoutineBadge: {
+    alignSelf: 'flex-end',
+    borderRadius: 6,
+    backgroundColor: '#dff3e4',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  todayPlanRoutineBadgeText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#1b5e20',
+    textAlign: 'center',
   },
   measurementBadge: {
     borderRadius: 6,

@@ -262,7 +262,9 @@ export default function BiofeedbackDayEntriesScreen({ dateKey }: Props) {
                   </View>
                 </View>
 
-                <Text style={styles.plannedRoutineName}>{plannedItem.routineName}</Text>
+                <View style={styles.plannedRoutineBadge}>
+                  <Text style={styles.plannedRoutineBadgeText}>{plannedItem.routineName}</Text>
+                </View>
               </Pressable>
             ))
           )}
@@ -437,10 +439,18 @@ const styles = StyleSheet.create({
     backgroundColor: '#f7fcf8',
     marginBottom: 12,
   },
-  plannedRoutineName: {
-    fontSize: 14,
-    color: '#4f6f57',
-    textAlign: 'right',
+  plannedRoutineBadge: {
+    alignSelf: 'flex-end',
+    borderRadius: 6,
+    backgroundColor: '#dff3e4',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  plannedRoutineBadgeText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#1b5e20',
+    textAlign: 'center',
   },
   card: {
     borderWidth: 1,

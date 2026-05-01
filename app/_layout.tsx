@@ -23,7 +23,10 @@ export default function RootLayout() {
         <Stack.Screen name="routines/[routineId]/add-item" options={{ title: 'הוספת תרגיל' }} />
         <Stack.Screen name="entries/new" options={{ title: 'הוספת מדידה' }} />
         <Stack.Screen name="entries/[entryId]" options={{ title: 'פרטי מדידה' }} />
-        <Stack.Screen name="day/[dateKey]" options={{ title: 'רשומות יום' }} />
+        <Stack.Screen
+          name="day/[dateKey]"
+          options={{ title: 'רשומות יום', headerBackVisible: false }}
+        />
         <Stack.Screen name="export" options={{ title: 'ייצוא נתונים' }} />
         <Stack.Screen name="custom-activities/manage" options={{ title: 'ניהול התרגולים שלי' }} />
       </Stack>
