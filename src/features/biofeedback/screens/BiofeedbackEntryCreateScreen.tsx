@@ -52,6 +52,7 @@ import type { PlannedPractice } from '../types/planned-practice.types';
 type Props = {
   initialDateKey?: string;
   plannedPracticeId?: string;
+  fromDay?: string;
 };
 
 type MapperSaveInput = ReturnType<typeof toCreateBiofeedbackEntryInput> & {
@@ -108,6 +109,7 @@ function formatOptionalNumber(value: number | null | undefined): string {
 export default function BiofeedbackEntryCreateScreen({
   initialDateKey,
   plannedPracticeId,
+  fromDay,
 }: Props) {
   useEffect(() => {
     void testFirebaseConnection();
@@ -859,13 +861,18 @@ export default function BiofeedbackEntryCreateScreen({
     await saveEntryWithHabitDateKey(values.measurementDate);
   }
 
-  function navigateToDashboard() {
+  function navigateToReturnTarget() {
+    if (fromDay) {
+      router.replace(`/day/${fromDay}`);
+      return;
+    }
+
     router.replace('/dashboard');
   }
 
   function handleBackToDashboard() {
     if (!shouldWarnBeforeLeaving) {
-      navigateToDashboard();
+      navigateToReturnTarget();
       return;
     }
 
@@ -879,7 +886,7 @@ export default function BiofeedbackEntryCreateScreen({
         },
         {
           text: 'חזרה למסך הראשי',
-          onPress: navigateToDashboard,
+          onPress: navigateToReturnTarget,
         },
       ],
     );

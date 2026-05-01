@@ -170,7 +170,9 @@ export default function BiofeedbackDayEntriesScreen({ dateKey }: Props) {
         item: plannedItem.item,
       });
 
-      router.push(`/entries/new?dateKey=${dateKey}&plannedPracticeId=${plannedPractice.id}`);
+      router.push(
+        `/entries/new?dateKey=${dateKey}&plannedPracticeId=${plannedPractice.id}&fromDay=${dateKey}`,
+      );
     } catch (error) {
       console.log('DAY PLANNED ROUTINE START FAILED:', error);
     } finally {
@@ -184,7 +186,7 @@ export default function BiofeedbackDayEntriesScreen({ dateKey }: Props) {
         <View style={styles.headerRow}>
   <Pressable
     style={styles.addButton}
-    onPress={() => router.push(`/entries/new?dateKey=${dateKey}`)}
+    onPress={() => router.push(`/entries/new?dateKey=${dateKey}&fromDay=${dateKey}`)}
   >
     <Text style={styles.addButtonText}>＋</Text>
   </Pressable>
