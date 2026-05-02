@@ -7,10 +7,18 @@ import { toDateKey } from '../components/calendar.utils';
 import DateTimeField from '../components/DateTimeField';
 import { createRoutine } from '../data/firebase-routines-repository';
 
+const CYCLE_LENGTH_PRESETS = [
+  { label: 'כל יום', value: 1 },
+  { label: 'שבוע', value: 7 },
+  { label: '10 ימים', value: 10 },
+  { label: 'שבועיים', value: 14 },
+];
+
 export default function BiofeedbackRoutineCreateScreen() {
   const todayDateKey = useMemo(() => toDateKey(new Date()), []);
   const [name, setName] = useState('');
   const [startDateKey, setStartDateKey] = useState(todayDateKey);
+  const [cycleLengthDays, setCycleLengthDays] = useState(1);
   const [isSaving, setIsSaving] = useState(false);
 
   async function handleSave() {
@@ -31,7 +39,7 @@ export default function BiofeedbackRoutineCreateScreen() {
       await createRoutine({
         name: trimmedName,
         startDateKey,
-        cycleLengthDays: 1,
+        cycleLengthDays,
         items: [],
       });
 
@@ -68,6 +76,32 @@ export default function BiofeedbackRoutineCreateScreen() {
             onChangeValue={setStartDateKey}
           />
 
+          <Text style={styles.label}>אורך מחזור</Text>
+          <View style={styles.presetButtons}>
+            {CYCLE_LENGTH_PRESETS.map((preset) => {
+              const isSelected = cycleLengthDays === preset.value;
+
+              return (
+                <Pressable
+                  key={preset.value}
+                  style={[
+                    styles.presetButton,
+                    isSelected ? styles.presetButtonSelected : null,
+                  ]}
+                  onPress={() => setCycleLengthDays(preset.value)}
+                >
+                  <Text
+                    style={[
+                      styles.presetButtonText,
+                      isSelected ? styles.presetButtonTextSelected : null,
+                    ]}
+                  >
+                    {preset.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
         </View>
 
         <Pressable
@@ -125,6 +159,34 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     fontSize: 16,
     textAlign: 'right',
+  },
+  presetButtons: {
+    flexDirection: 'row-reverse',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  presetButton: {
+    minHeight: 38,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#bfd4ee',
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  presetButtonSelected: {
+    borderColor: '#1e4f8a',
+    backgroundColor: '#e3f2fd',
+  },
+  presetButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#46607a',
+  },
+  presetButtonTextSelected: {
+    color: '#0d47a1',
   },
   saveButton: {
     height: 48,
