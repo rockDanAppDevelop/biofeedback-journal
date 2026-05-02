@@ -17,6 +17,10 @@ function formatItemCount(count: number): string {
   return `${count} תרגילים`;
 }
 
+function getActiveRoutineItemCount(routine: Routine): number {
+  return routine.items.filter((item) => item.removedFromDateKey === null).length;
+}
+
 export default function BiofeedbackPlanningScreen() {
   const [routines, setRoutines] = useState<Routine[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -123,7 +127,9 @@ export default function BiofeedbackPlanningScreen() {
                   onPress={() => router.push(`/routines/${routine.id}`)}
                 >
                   <Text style={styles.routineName}>{routine.name}</Text>
-                  <Text style={styles.routineMeta}>{formatItemCount(routine.items.length)}</Text>
+                  <Text style={styles.routineMeta}>
+                    {formatItemCount(getActiveRoutineItemCount(routine))}
+                  </Text>
                   <Text style={styles.routineMeta}>
                     {formatCycleLength(routine.cycleLengthDays)}
                   </Text>

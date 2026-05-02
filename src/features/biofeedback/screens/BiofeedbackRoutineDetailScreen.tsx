@@ -176,7 +176,8 @@ export default function BiofeedbackRoutineDetailScreen({ routineId }: Props) {
       return;
     }
 
-    const nextDayOffset = Math.max(0, item.dayOffset + delta);
+    const maxDayOffset = Math.max(0, routine.cycleLengthDays - 1);
+    const nextDayOffset = Math.min(maxDayOffset, Math.max(0, item.dayOffset + delta));
 
     if (nextDayOffset === item.dayOffset) {
       return;
@@ -283,7 +284,9 @@ export default function BiofeedbackRoutineDetailScreen({ routineId }: Props) {
               <View style={styles.itemsList}>
                 {groupRoutineItemsByDay(activeRoutineItems).map((group) => (
                   <View key={group.dayOffset} style={styles.dayGroup}>
-                    <Text style={styles.dayGroupTitle}>יום {group.dayOffset + 1}</Text>
+                    {routine.cycleLengthDays > 1 ? (
+                      <Text style={styles.dayGroupTitle}>יום {group.dayOffset + 1}</Text>
+                    ) : null}
 
                     {group.items.map((item, index) => (
                       <View key={item.id} style={styles.itemRow}>
@@ -291,31 +294,41 @@ export default function BiofeedbackRoutineDetailScreen({ routineId }: Props) {
                         <View style={styles.itemContent}>
                           <Text style={styles.itemName}>{getRoutineItemDisplayName(item)}</Text>
                           <View style={styles.itemActions}>
-                            <Pressable
-                              style={[
-                                styles.itemActionButton,
-                                item.dayOffset <= 0 || updatingItemId !== null
-                                  ? styles.itemActionButtonDisabled
-                                  : null,
-                              ]}
-                              onPress={() => handleChangeItemDay(item, -1)}
-                              disabled={item.dayOffset <= 0 || updatingItemId !== null}
-                            >
-                              <Text style={styles.itemActionButtonText}>-</Text>
-                            </Pressable>
+                            {routine.cycleLengthDays > 1 ? (
+                              <>
+                                <Pressable
+                                  style={[
+                                    styles.itemActionButton,
+                                    item.dayOffset <= 0 || updatingItemId !== null
+                                      ? styles.itemActionButtonDisabled
+                                      : null,
+                                  ]}
+                                  onPress={() => handleChangeItemDay(item, -1)}
+                                  disabled={item.dayOffset <= 0 || updatingItemId !== null}
+                                >
+                                  <Text style={styles.itemActionButtonText}>-</Text>
+                                </Pressable>
 
-                            <Text style={styles.itemDayText}>יום {item.dayOffset + 1}</Text>
+                                <Text style={styles.itemDayText}>יום {item.dayOffset + 1}</Text>
 
-                            <Pressable
-                              style={[
-                                styles.itemActionButton,
-                                updatingItemId !== null ? styles.itemActionButtonDisabled : null,
-                              ]}
-                              onPress={() => handleChangeItemDay(item, 1)}
-                              disabled={updatingItemId !== null}
-                            >
-                              <Text style={styles.itemActionButtonText}>+</Text>
-                            </Pressable>
+                                <Pressable
+                                  style={[
+                                    styles.itemActionButton,
+                                    item.dayOffset >= routine.cycleLengthDays - 1 ||
+                                    updatingItemId !== null
+                                      ? styles.itemActionButtonDisabled
+                                      : null,
+                                  ]}
+                                  onPress={() => handleChangeItemDay(item, 1)}
+                                  disabled={
+                                    item.dayOffset >= routine.cycleLengthDays - 1 ||
+                                    updatingItemId !== null
+                                  }
+                                >
+                                  <Text style={styles.itemActionButtonText}>+</Text>
+                                </Pressable>
+                              </>
+                            ) : null}
 
                             <Pressable
                               style={[
