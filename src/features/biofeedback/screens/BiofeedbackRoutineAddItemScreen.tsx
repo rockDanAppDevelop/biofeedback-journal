@@ -1,6 +1,6 @@
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import {
@@ -12,7 +12,10 @@ import {
   getRoutineById,
   updateRoutine,
 } from '../data/firebase-routines-repository';
-import { listActiveCustomActivitiesFromFirestore } from '../data/firebase-custom-activities-repository';
+import {
+  addCustomActivityToFirestore,
+  listActiveCustomActivitiesFromFirestore,
+} from '../data/firebase-custom-activities-repository';
 import { toDateKey } from '../components/calendar.utils';
 import type { Routine, RoutineItem } from '../types/routine.types';
 import type { UserCustomActivity } from '../types/user-custom-activity.types';
@@ -35,6 +38,8 @@ const BUILT_IN_CATEGORY_DISPLAY_ORDER: Exclude<ActivityCategoryId, 'custom'>[] =
   'guided',
   'monitoring',
 ];
+
+const NEW_CUSTOM_ACTIVITY_ID = '__new_custom_activity__';
 
 function createRoutineItemId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
@@ -63,6 +68,10 @@ export default function BiofeedbackRoutineAddItemScreen({ routineId }: Props) {
   const [selectedCategoryId, setSelectedCategoryId] = useState<ActivityCategoryId | ''>('');
   const [selectedCatalogItemId, setSelectedCatalogItemId] = useState('');
   const [selectedCustomActivityId, setSelectedCustomActivityId] = useState('');
+  const [newCustomExerciseName, setNewCustomExerciseName] = useState('');
+  const [newCustomMeasurementType, setNewCustomMeasurementType] =
+    useState<RoutineItem['measurementType'] | ''>('');
+  const [newCustomDurationMinutes, setNewCustomDurationMinutes] = useState('8');
   const [routineDayNumber, setRoutineDayNumber] = useState(1);
 
   useFocusEffect(
@@ -149,15 +158,61 @@ export default function BiofeedbackRoutineAddItemScreen({ routineId }: Props) {
       selectedCustomActivityId !== ''
         ? customActivities.find((activity) => activity.id === selectedCustomActivityId) ?? null
         : null;
+    const isCreatingNewCustomRoutineItem =
+      selectedCategoryId === 'custom' && selectedCustomActivityId === NEW_CUSTOM_ACTIVITY_ID;
 
-    if (!selectedCatalogItem && !selectedCustomActivity) {
+    if (!selectedCatalogItem && !selectedCustomActivity && !isCreatingNewCustomRoutineItem) {
       Alert.alert('בחר תרגיל', 'יש לבחור תרגיל לרוטינה.');
       return;
     }
 
-    const nextSortOrder = routine.items.length;
-    const baseItem = selectedCatalogItem
-      ? {
+    const trimmedNewCustomExerciseName = newCustomExerciseName.trim();
+    const parsedNewCustomDurationMinutes = Number(newCustomDurationMinutes.trim());
+
+    if (isCreatingNewCustomRoutineItem) {
+      if (!trimmedNewCustomExerciseName) {
+        Alert.alert('שם תרגיל חסר', 'יש להזין שם לתרגיל המותאם.');
+        return;
+      }
+
+      if (!newCustomMeasurementType) {
+        Alert.alert('סוג מדידה חסר', 'יש לבחור סוג מדידה לתרגיל המותאם.');
+        return;
+      }
+
+      if (
+        !Number.isInteger(parsedNewCustomDurationMinutes) ||
+        parsedNewCustomDurationMinutes <= 0
+      ) {
+        Alert.alert('משך לא תקין', 'יש להזין משך בדקות כמספר שלם גדול מ-0.');
+        return;
+      }
+    }
+
+    try {
+      setIsSaving(true);
+
+      let savedCustomActivity: UserCustomActivity | null = null;
+
+      if (isCreatingNewCustomRoutineItem) {
+        savedCustomActivity = await addCustomActivityToFirestore({
+          label: trimmedNewCustomExerciseName,
+          measurementType: newCustomMeasurementType as RoutineItem['measurementType'],
+        });
+      }
+
+      if (isCreatingNewCustomRoutineItem && !savedCustomActivity) {
+        throw new Error('Custom activity was not created');
+      }
+
+      const nextSortOrder = routine.items.length;
+      let baseItem: Omit<
+        RoutineItem,
+        'id' | 'dayOffset' | 'sortOrder' | 'effectiveFromDateKey' | 'removedFromDateKey' | 'durationMinutes'
+      >;
+
+      if (selectedCatalogItem) {
+        baseItem = {
           activityType: selectedCatalogItem.activityType,
           measurementType: selectedCatalogItem.measurementType,
           catalogItemId: selectedCatalogItem.id,
@@ -168,29 +223,40 @@ export default function BiofeedbackRoutineAddItemScreen({ routineId }: Props) {
               ? selectedCatalogItem.monitoringType
               : null,
           exerciseParameters: buildExerciseParameters(selectedCatalogItem),
-        }
-      : {
-          activityType: 'training' as const,
-          measurementType: selectedCustomActivity!.measurementType,
+        };
+      } else if (isCreatingNewCustomRoutineItem) {
+        baseItem = {
+          activityType: 'training',
+          measurementType: savedCustomActivity!.measurementType,
           catalogItemId: null,
-          userCustomActivityId: selectedCustomActivity!.id,
-          customExerciseName: selectedCustomActivity!.label,
+          userCustomActivityId: savedCustomActivity!.id,
+          customExerciseName: savedCustomActivity!.label,
           monitoringType: null,
           exerciseParameters: null,
         };
+      } else if (selectedCustomActivity) {
+        baseItem = {
+          activityType: 'training',
+          measurementType: selectedCustomActivity.measurementType,
+          catalogItemId: null,
+          userCustomActivityId: selectedCustomActivity.id,
+          customExerciseName: selectedCustomActivity.label,
+          monitoringType: null,
+          exerciseParameters: null,
+        };
+      } else {
+        throw new Error('No routine item source selected');
+      }
 
-    const nextItem: RoutineItem = {
-      id: createRoutineItemId(),
-      dayOffset: routineDayNumber - 1,
-      sortOrder: nextSortOrder,
-      effectiveFromDateKey: toDateKey(new Date()),
-      removedFromDateKey: null,
-      durationMinutes: null,
-      ...baseItem,
-    };
-
-    try {
-      setIsSaving(true);
+      const nextItem: RoutineItem = {
+        id: createRoutineItemId(),
+        dayOffset: routineDayNumber - 1,
+        sortOrder: nextSortOrder,
+        effectiveFromDateKey: toDateKey(new Date()),
+        removedFromDateKey: null,
+        durationMinutes: isCreatingNewCustomRoutineItem ? parsedNewCustomDurationMinutes : null,
+        ...baseItem,
+      };
 
       await updateRoutine(routine.id, {
         items: [...routine.items, nextItem],
@@ -343,6 +409,79 @@ export default function BiofeedbackRoutineAddItemScreen({ routineId }: Props) {
               {selectedCategoryId === 'custom' ? (
                 <>
                   <Text style={styles.label}>תרגול מותאם אישית</Text>
+                  <Pressable
+                    style={[
+                      styles.exerciseOptionButton,
+                      selectedCustomActivityId === NEW_CUSTOM_ACTIVITY_ID
+                        ? styles.exerciseOptionButtonSelected
+                        : null,
+                    ]}
+                    onPress={() => setSelectedCustomActivityId(NEW_CUSTOM_ACTIVITY_ID)}
+                  >
+                    <Text
+                      style={[
+                        styles.exerciseOptionButtonText,
+                        selectedCustomActivityId === NEW_CUSTOM_ACTIVITY_ID
+                          ? styles.exerciseOptionButtonTextSelected
+                          : null,
+                      ]}
+                    >
+                      תרגיל מותאם חדש
+                    </Text>
+                  </Pressable>
+
+                  {selectedCustomActivityId === NEW_CUSTOM_ACTIVITY_ID ? (
+                    <View style={styles.newCustomForm}>
+                      <Text style={styles.label}>שם תרגיל</Text>
+                      <TextInput
+                        value={newCustomExerciseName}
+                        onChangeText={setNewCustomExerciseName}
+                        style={styles.input}
+                        placeholder="לדוגמה: נשימת ערב"
+                      />
+
+                      <Text style={styles.label}>סוג מדידה</Text>
+                      <View style={styles.measurementTypeOptions}>
+                        {([
+                          { id: 'hrv', label: 'HRV' },
+                          { id: 'rlx', label: 'RLX' },
+                          { id: 'none', label: 'ללא' },
+                        ] as const).map((option) => {
+                          const isSelected = newCustomMeasurementType === option.id;
+
+                          return (
+                            <Pressable
+                              key={option.id}
+                              style={[
+                                styles.measurementTypeButton,
+                                isSelected ? styles.measurementTypeButtonSelected : null,
+                              ]}
+                              onPress={() => setNewCustomMeasurementType(option.id)}
+                            >
+                              <Text
+                                style={[
+                                  styles.measurementTypeButtonText,
+                                  isSelected ? styles.measurementTypeButtonTextSelected : null,
+                                ]}
+                              >
+                                {option.label}
+                              </Text>
+                            </Pressable>
+                          );
+                        })}
+                      </View>
+
+                      <Text style={styles.label}>משך בדקות</Text>
+                      <TextInput
+                        value={newCustomDurationMinutes}
+                        onChangeText={setNewCustomDurationMinutes}
+                        style={styles.input}
+                        keyboardType="number-pad"
+                        placeholder="8"
+                      />
+                    </View>
+                  ) : null}
+
                   {customActivities.length === 0 ? (
                     <Text style={styles.helperText}>אין עדיין תרגולים מותאמים אישית.</Text>
                   ) : (
@@ -435,6 +574,17 @@ const styles = StyleSheet.create({
     color: '#222222',
     textAlign: 'right',
     marginBottom: 6,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#cfcfcf',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: '#ffffff',
+    marginBottom: 12,
+    fontSize: 16,
+    textAlign: 'right',
   },
   dayStepper: {
     flexDirection: 'row-reverse',
@@ -557,6 +707,43 @@ const styles = StyleSheet.create({
     textAlign: 'right',
   },
   exerciseOptionButtonTextSelected: {
+    color: '#0d47a1',
+    fontWeight: '700',
+  },
+  newCustomForm: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#d7e3f4',
+    backgroundColor: '#f8fbff',
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    marginBottom: 12,
+  },
+  measurementTypeOptions: {
+    flexDirection: 'row-reverse',
+    gap: 8,
+    marginBottom: 12,
+  },
+  measurementTypeButton: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: '#cfcfcf',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
+  },
+  measurementTypeButtonSelected: {
+    borderColor: '#1e88e5',
+    backgroundColor: '#e3f2fd',
+  },
+  measurementTypeButtonText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#222222',
+  },
+  measurementTypeButtonTextSelected: {
     color: '#0d47a1',
     fontWeight: '700',
   },
