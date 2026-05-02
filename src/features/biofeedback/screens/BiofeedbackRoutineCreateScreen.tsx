@@ -14,11 +14,15 @@ const CYCLE_LENGTH_PRESETS = [
   { label: 'שבועיים', value: 14 },
 ];
 
+type CycleLengthMode = 'preset' | 'custom';
+
 export default function BiofeedbackRoutineCreateScreen() {
   const todayDateKey = useMemo(() => toDateKey(new Date()), []);
   const [name, setName] = useState('');
   const [startDateKey, setStartDateKey] = useState(todayDateKey);
+  const [cycleLengthMode, setCycleLengthMode] = useState<CycleLengthMode>('preset');
   const [cycleLengthDays, setCycleLengthDays] = useState(1);
+  const [customCycleLengthDays, setCustomCycleLengthDays] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
   async function handleSave() {
@@ -33,13 +37,27 @@ export default function BiofeedbackRoutineCreateScreen() {
       return;
     }
 
+    const finalCycleLengthDays =
+      cycleLengthMode === 'custom'
+        ? Number(customCycleLengthDays.trim())
+        : cycleLengthDays;
+
+    if (
+      !Number.isInteger(finalCycleLengthDays) ||
+      finalCycleLengthDays < 1 ||
+      finalCycleLengthDays > 365
+    ) {
+      Alert.alert('אורך מחזור לא תקין', 'יש להזין מספר ימים שלם בין 1 ל-365.');
+      return;
+    }
+
     try {
       setIsSaving(true);
 
       await createRoutine({
         name: trimmedName,
         startDateKey,
-        cycleLengthDays,
+        cycleLengthDays: finalCycleLengthDays,
         items: [],
       });
 
@@ -79,7 +97,8 @@ export default function BiofeedbackRoutineCreateScreen() {
           <Text style={styles.label}>אורך מחזור</Text>
           <View style={styles.presetButtons}>
             {CYCLE_LENGTH_PRESETS.map((preset) => {
-              const isSelected = cycleLengthDays === preset.value;
+              const isSelected =
+                cycleLengthMode === 'preset' && cycleLengthDays === preset.value;
 
               return (
                 <Pressable
@@ -88,7 +107,10 @@ export default function BiofeedbackRoutineCreateScreen() {
                     styles.presetButton,
                     isSelected ? styles.presetButtonSelected : null,
                   ]}
-                  onPress={() => setCycleLengthDays(preset.value)}
+                  onPress={() => {
+                    setCycleLengthMode('preset');
+                    setCycleLengthDays(preset.value);
+                  }}
                 >
                   <Text
                     style={[
@@ -101,7 +123,37 @@ export default function BiofeedbackRoutineCreateScreen() {
                 </Pressable>
               );
             })}
+
+            <Pressable
+              style={[
+                styles.presetButton,
+                cycleLengthMode === 'custom' ? styles.presetButtonSelected : null,
+              ]}
+              onPress={() => setCycleLengthMode('custom')}
+            >
+              <Text
+                style={[
+                  styles.presetButtonText,
+                  cycleLengthMode === 'custom' ? styles.presetButtonTextSelected : null,
+                ]}
+              >
+                מותאם אישית
+              </Text>
+            </Pressable>
           </View>
+
+          {cycleLengthMode === 'custom' ? (
+            <>
+              <Text style={styles.label}>מספר ימים במחזור</Text>
+              <TextInput
+                value={customCycleLengthDays}
+                onChangeText={setCustomCycleLengthDays}
+                style={styles.input}
+                placeholder="לדוגמה: 21"
+                keyboardType="number-pad"
+              />
+            </>
+          ) : null}
         </View>
 
         <Pressable
