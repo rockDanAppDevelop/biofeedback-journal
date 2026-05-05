@@ -21,8 +21,8 @@ export default function RootLayout() {
         <Stack.Screen name="weekly-summary" options={{ headerShown: false }} />
         <Stack.Screen name="routines/new" options={{ headerShown: false }} />
         <Stack.Screen name="routines/[routineId]" options={{ headerShown: false }} />
-        <Stack.Screen name="routines/[routineId]/add-item" options={{ title: 'הוספת תרגיל' }} />
-        <Stack.Screen name="entries/new" options={{ title: 'הוספת מדידה' }} />
+        <Stack.Screen name="routines/[routineId]/add-item" options={{ headerShown: false }} />
+        <Stack.Screen name="entries/new" options={{ headerShown: false }} />
         <Stack.Screen name="entries/[entryId]" options={{ title: 'פרטי מדידה' }} />
         <Stack.Screen
           name="day/[dateKey]"

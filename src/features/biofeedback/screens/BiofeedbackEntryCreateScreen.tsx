@@ -1,6 +1,6 @@
 // src\features\biofeedback\screens\BiofeedbackEntryCreateScreen.tsx
 
-import { Stack, router, useFocusEffect } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import {
@@ -16,6 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { toDateKey } from '../components/calendar.utils';
 import DateTimeField from '../components/DateTimeField';
+import BiofeedbackHeader from '../components/BiofeedbackHeader';
 
 import { createDefaultBiofeedbackEntryFormValues } from '../forms/biofeedback-entry-form.defaults';
 import { toCreateBiofeedbackEntryInput } from '../forms/biofeedback-entry-form.mapper';
@@ -909,27 +910,13 @@ export default function BiofeedbackEntryCreateScreen({
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <Stack.Screen
-        options={{
-          headerBackVisible: false,
-          headerLeft: () => (
-            <Pressable
-              onPress={handleBackToDashboard}
-              hitSlop={8}
-              style={styles.headerBackButton}
-            >
-              <MaterialCommunityIcons
-                name="arrow-left"
-                size={24}
-                color="#1e4f8a"
-              />
-            </Pressable>
-          ),
-        }}
-      />
       <View style={styles.screen}>
         <ScrollView contentContainerStyle={styles.content}>
-          <Text style={styles.title}>הוספת מדידת ביופידבק</Text>
+          <BiofeedbackHeader
+            variant="screen"
+            title="הוספת מדידה"
+            onBackPress={handleBackToDashboard}
+          />
 
           {plannedPracticeSummary && isExerciseLocked ? (
             <View style={styles.plannedPracticeSummaryCard}>
@@ -1495,14 +1482,6 @@ const styles = StyleSheet.create({
   content: {
     padding: 16,
     paddingBottom: 120,
-  },
-  headerBackButton: {
-    padding: 4,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: '700',
-    marginBottom: 20,
   },
   plannedPracticeSummaryCard: {
     marginBottom: 16,
