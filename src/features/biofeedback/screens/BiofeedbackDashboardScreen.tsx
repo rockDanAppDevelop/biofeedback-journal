@@ -43,6 +43,24 @@ function formatStreakDays(count: number): string {
   return `${count} ${dayLabel}`;
 }
 
+function getDashboardGreeting(date = new Date()): string {
+  const hour = date.getHours();
+
+  if (hour >= 5 && hour < 12) {
+    return 'בוקר טוב 🌱';
+  }
+
+  if (hour >= 12 && hour < 17) {
+    return 'צהריים טובים ☀️';
+  }
+
+  if (hour >= 17 && hour < 21) {
+    return 'ערב טוב 🌙';
+  }
+
+  return 'לילה טוב ✨';
+}
+
 type PlannedRoutineItem = {
   id: string;
   routineId: string;
@@ -198,6 +216,7 @@ export default function BiofeedbackDashboardScreen() {
   }
 
   const monthTitle = useMemo(() => getMonthTitle(referenceDate), [referenceDate]);
+  const dashboardGreeting = useMemo(() => getDashboardGreeting(), []);
   const streakInsight = useMemo(
     () => getStreakInsight(entryDateKeys, toDateKey(new Date())),
     [entryDateKeys],
@@ -222,7 +241,10 @@ export default function BiofeedbackDashboardScreen() {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-        <UserMenu />
+        <View style={styles.dashboardHeader}>
+          <UserMenu variant="inline" />
+          <Text style={styles.dashboardGreeting}>{dashboardGreeting}</Text>
+        </View>
 
         <Text style={styles.monthTitle}>{monthTitle}</Text>
 
@@ -495,6 +517,21 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingBottom: 110,
+  },
+  dashboardHeader: {
+    minHeight: 44,
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  dashboardGreeting: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#243447',
+    textAlign: 'left',
+    marginRight: 12,
   },
   monthTitle: {
     fontSize: 24,

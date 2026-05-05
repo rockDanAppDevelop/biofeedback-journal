@@ -72,6 +72,10 @@ export function UserMenu({ variant = 'absolute' }: UserMenuProps) {
 const styles = StyleSheet.create({
   backdrop: {
     ...StyleSheet.absoluteFillObject,
+    top: -1000,
+    right: -1000,
+    bottom: -1000,
+    left: -1000,
     zIndex: 9,
   },
   anchorAbsolute: {
@@ -100,7 +104,10 @@ const styles = StyleSheet.create({
     fontSize: 18,
   },
   menu: {
-    marginTop: 8,
+    position: 'absolute',
+    top: 48,
+    right: 0,
+    zIndex: 20,
     minWidth: 220,
     backgroundColor: '#ffffff',
     borderRadius: 12,
