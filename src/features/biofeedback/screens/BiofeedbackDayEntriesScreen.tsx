@@ -233,6 +233,12 @@ export default function BiofeedbackDayEntriesScreen({ dateKey }: Props) {
           {plannedRoutineItems.length === 0 ? (
             <View style={styles.emptyState}>
               <Text style={styles.emptyText}>אין תרגולים מתוכננים ליום הזה</Text>
+              <Pressable
+                onPress={() => router.push('/entries/new')}
+                style={styles.emptyPlanButton}
+              >
+                <Text style={styles.emptyPlanButtonText}>הוסף מדידה</Text>
+              </Pressable>
             </View>
           ) : (
             plannedRoutineItems.map((plannedItem) => (
@@ -423,6 +429,17 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 16,
     color: '#666666',
+  },
+  emptyPlanButton: {
+    marginTop: 10,
+    paddingVertical: 10,
+    borderRadius: 10,
+    backgroundColor: '#e8f0fe',
+  },
+  emptyPlanButtonText: {
+    textAlign: 'center',
+    fontWeight: '600',
+    color: '#1e4f8a',
   },
   section: {
     marginBottom: 18,
