@@ -251,6 +251,12 @@ export default function BiofeedbackDashboardScreen() {
           {plannedRoutineItems.length === 0 ? (
             <View style={styles.todayPlanEmptyCard}>
               <Text style={styles.todayPlanEmptyText}>אין תרגולים מתוכננים להיום</Text>
+              <Pressable
+                onPress={() => router.push('/entries/new')}
+                style={styles.todayPlanEmptyButton}
+              >
+                <Text style={styles.todayPlanEmptyButtonText}>הוסף מדידה</Text>
+              </Pressable>
             </View>
           ) : (
             plannedRoutineItems.map((plannedItem) => (
@@ -363,6 +369,17 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#666666',
     textAlign: 'right',
+  },
+  todayPlanEmptyButton: {
+    marginTop: 10,
+    paddingVertical: 10,
+    borderRadius: 10,
+    backgroundColor: '#e8f0fe',
+  },
+  todayPlanEmptyButtonText: {
+    textAlign: 'center',
+    fontWeight: '600',
+    color: '#1e4f8a',
   },
   todayPlanCard: {
     borderWidth: 1,

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { router } from 'expo-router';
 import Constants from 'expo-constants';
 import { signOut } from 'firebase/auth';
 import { auth } from '../../../lib/firebase';
@@ -10,6 +11,13 @@ import { getGoogleSigninOrNull } from '../api/google-sign-in-adapter';
 type UserMenuProps = {
   variant?: 'absolute' | 'inline';
 };
+
+const navigationItems = [
+  { label: 'סיכום שבועי', route: '/weekly-summary' },
+  { label: 'ייצוא נתונים', route: '/export' },
+  { label: 'רוטינות', route: '/planning' },
+  { label: 'ניהול התרגולים שלי', route: '/custom-activities/manage' },
+] as const;
 
 export function UserMenu({ variant = 'absolute' }: UserMenuProps) {
   const [open, setOpen] = useState(false);
@@ -26,6 +34,11 @@ export function UserMenu({ variant = 'absolute' }: UserMenuProps) {
 
   const handleCloseMenu = () => {
     setOpen(false);
+  };
+
+  const handleNavigate = (route: (typeof navigationItems)[number]['route']) => {
+    setOpen(false);
+    router.replace(route);
   };
 
   const handleLogout = async () => {
@@ -57,6 +70,20 @@ export function UserMenu({ variant = 'absolute' }: UserMenuProps) {
           <View style={styles.menu}>
             <Text style={styles.menuTitle}>מחובר כעת</Text>
             <Text style={styles.emailText}>{user.email ?? 'ללא אימייל'}</Text>
+
+            <View style={styles.menuDivider} />
+            <View style={styles.navSection}>
+              {navigationItems.map((item) => (
+                <Pressable
+                  key={item.route}
+                  onPress={() => handleNavigate(item.route)}
+                  style={styles.menuItem}
+                >
+                  <Text style={styles.menuItemText}>{item.label}</Text>
+                </Pressable>
+              ))}
+            </View>
+
             {appVersion ? <Text style={styles.versionText}>v{appVersion}</Text> : null}
 
             <Pressable onPress={handleLogout} style={styles.logoutButton}>
@@ -126,6 +153,27 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#111827',
     marginBottom: 12,
+  },
+  menuDivider: {
+    height: 1,
+    backgroundColor: '#e5e7eb',
+    marginBottom: 8,
+  },
+  navSection: {
+    gap: 4,
+    marginBottom: 12,
+  },
+  menuItem: {
+    minHeight: 40,
+    borderRadius: 10,
+    justifyContent: 'center',
+    paddingHorizontal: 10,
+  },
+  menuItemText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#243447',
+    textAlign: 'right',
   },
   versionText: {
     fontSize: 11,

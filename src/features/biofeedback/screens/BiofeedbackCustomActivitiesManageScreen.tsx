@@ -17,6 +17,7 @@ import {
   updateCustomActivityInFirestore,
 } from '../data/firebase-custom-activities-repository';
 import type { UserCustomActivity } from '../types/user-custom-activity.types';
+import BiofeedbackHeader from '../components/BiofeedbackHeader';
 
 const MEASUREMENT_TYPE_LABELS: Record<UserCustomActivity['measurementType'], string> = {
   hrv: 'HRV',
@@ -297,7 +298,7 @@ export default function BiofeedbackCustomActivitiesManageScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.title}>ניהול התרגולים שלי</Text>
+        <BiofeedbackHeader variant="screen" title="ניהול התרגולים שלי" />
 
         {isLoading ? <Text style={styles.loadingText}>טוען תרגולים...</Text> : null}
 
@@ -331,10 +332,6 @@ const styles = StyleSheet.create({
   content: {
     padding: 16,
     gap: 16,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: '700',
   },
   loadingText: {
     fontSize: 14,

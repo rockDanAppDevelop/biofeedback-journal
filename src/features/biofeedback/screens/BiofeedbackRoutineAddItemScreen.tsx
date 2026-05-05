@@ -19,6 +19,7 @@ import {
 import { toDateKey } from '../components/calendar.utils';
 import type { Routine, RoutineItem } from '../types/routine.types';
 import type { UserCustomActivity } from '../types/user-custom-activity.types';
+import BiofeedbackHeader from '../components/BiofeedbackHeader';
 
 type Props = {
   routineId: string;
@@ -73,6 +74,14 @@ export default function BiofeedbackRoutineAddItemScreen({ routineId }: Props) {
     useState<RoutineItem['measurementType'] | ''>('');
   const [newCustomDurationMinutes, setNewCustomDurationMinutes] = useState('8');
   const [routineDayNumber, setRoutineDayNumber] = useState(1);
+  const hasUnsavedChanges =
+    selectedCategoryId !== '' ||
+    selectedCatalogItemId !== '' ||
+    selectedCustomActivityId !== '' ||
+    newCustomExerciseName.trim() !== '' ||
+    newCustomMeasurementType !== '' ||
+    newCustomDurationMinutes.trim() !== '8' ||
+    routineDayNumber !== 1;
 
   useFocusEffect(
     useCallback(() => {
@@ -143,6 +152,33 @@ export default function BiofeedbackRoutineAddItemScreen({ routineId }: Props) {
     setSelectedCategoryId(categoryId);
     setSelectedCatalogItemId('');
     setSelectedCustomActivityId('');
+  }
+
+  function handleBackPress() {
+    if (isSaving) {
+      return;
+    }
+
+    if (!hasUnsavedChanges) {
+      router.back();
+      return;
+    }
+
+    Alert.alert(
+      'לצאת בלי לשמור?',
+      'התרגיל לא יתווסף לרוטינה.',
+      [
+        {
+          text: 'להישאר',
+          style: 'cancel',
+        },
+        {
+          text: 'לצאת בלי לשמור',
+          style: 'destructive',
+          onPress: () => router.back(),
+        },
+      ],
+    );
   }
 
   async function handleSave() {
@@ -277,6 +313,12 @@ export default function BiofeedbackRoutineAddItemScreen({ routineId }: Props) {
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <BiofeedbackHeader
+          variant="screen"
+          title="הוספת תרגיל"
+          onBackPress={handleBackPress}
+        />
+
         {isLoading ? (
           <View style={styles.stateCard}>
             <ActivityIndicator size="small" color="#1e4f8a" />
@@ -288,7 +330,6 @@ export default function BiofeedbackRoutineAddItemScreen({ routineId }: Props) {
           </View>
         ) : routine ? (
           <>
-            <Text style={styles.title}>הוספת תרגיל</Text>
             <Text style={styles.subtitle}>{routine.name}</Text>
 
             <View style={styles.section}>
@@ -538,12 +579,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 12,
     paddingBottom: 24,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#243447',
-    textAlign: 'right',
   },
   subtitle: {
     fontSize: 15,
