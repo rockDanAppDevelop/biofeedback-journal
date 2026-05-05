@@ -35,11 +35,24 @@ export default function BiofeedbackHeader({
 
   if (variant === 'screen') {
     return (
-      <View style={styles.dashboardHeader}>
-        <Pressable style={styles.backButton} onPress={() => router.back()}>
-          <Text style={styles.backButtonText}>‹</Text>
-        </Pressable>
-        <Text style={styles.screenTitle}>{title}</Text>
+      <View style={styles.screenHeader}>
+        <View style={styles.screenHeaderSide}>
+          <UserMenu variant="inline" />
+        </View>
+
+        <Text
+          style={styles.screenTitle}
+          numberOfLines={1}
+          ellipsizeMode="tail"
+        >
+          {title}
+        </Text>
+
+        <View style={styles.screenHeaderSide}>
+          <Pressable style={styles.backButton} onPress={() => router.back()}>
+            <Text style={styles.backButtonText}>‹</Text>
+          </Pressable>
+        </View>
       </View>
     );
   }
@@ -68,6 +81,20 @@ const styles = StyleSheet.create({
     textAlign: 'left',
     marginRight: 12,
   },
+  screenHeader: {
+    minHeight: 44,
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  screenHeaderSide: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 30,
+  },
   backButton: {
     width: 40,
     height: 40,
@@ -86,10 +113,10 @@ const styles = StyleSheet.create({
   },
   screenTitle: {
     flex: 1,
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '700',
     color: '#243447',
-    textAlign: 'right',
-    marginRight: 12,
+    textAlign: 'center',
+    marginHorizontal: 8,
   },
 });
