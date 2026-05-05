@@ -34,7 +34,16 @@ export default function BiofeedbackHeader({
   onBackPress,
 }: BiofeedbackHeaderProps) {
   const dashboardGreeting = useMemo(() => getDashboardGreeting(), []);
-  const handleBackPress = onBackPress ?? (() => router.back());
+  const handleBackPress =
+    onBackPress ??
+    (() => {
+      if (router.canGoBack()) {
+        router.back();
+        return;
+      }
+
+      router.replace('/dashboard');
+    });
 
   if (variant === 'screen') {
     return (
