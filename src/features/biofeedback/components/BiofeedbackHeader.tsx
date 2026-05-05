@@ -1,7 +1,13 @@
+import { router } from 'expo-router';
 import { useMemo } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { UserMenu } from '../../auth/components/UserMenu';
+
+type BiofeedbackHeaderProps = {
+  variant?: 'home' | 'screen';
+  title?: string;
+};
 
 function getDashboardGreeting(date = new Date()): string {
   const hour = date.getHours();
@@ -21,8 +27,22 @@ function getDashboardGreeting(date = new Date()): string {
   return 'לילה טוב ✨';
 }
 
-export default function BiofeedbackHeader() {
+export default function BiofeedbackHeader({
+  variant = 'home',
+  title = '',
+}: BiofeedbackHeaderProps) {
   const dashboardGreeting = useMemo(() => getDashboardGreeting(), []);
+
+  if (variant === 'screen') {
+    return (
+      <View style={styles.dashboardHeader}>
+        <Pressable style={styles.backButton} onPress={() => router.back()}>
+          <Text style={styles.backButtonText}>‹</Text>
+        </Pressable>
+        <Text style={styles.screenTitle}>{title}</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.dashboardHeader}>
@@ -46,6 +66,30 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#243447',
     textAlign: 'left',
+    marginRight: 12,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#f3f6fb',
+    borderWidth: 1,
+    borderColor: '#d7e3f4',
+  },
+  backButtonText: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#1e4f8a',
+    lineHeight: 26,
+  },
+  screenTitle: {
+    flex: 1,
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#243447',
+    textAlign: 'right',
     marginRight: 12,
   },
 });
