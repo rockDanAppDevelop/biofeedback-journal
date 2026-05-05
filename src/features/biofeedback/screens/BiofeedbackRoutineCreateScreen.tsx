@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { toDateKey } from '../components/calendar.utils';
 import DateTimeField from '../components/DateTimeField';
 import { createRoutine } from '../data/firebase-routines-repository';
+import BiofeedbackHeader from '../components/BiofeedbackHeader';
 
 const CYCLE_LENGTH_PRESETS = [
   { label: 'כל יום', value: 1 },
@@ -24,6 +25,39 @@ export default function BiofeedbackRoutineCreateScreen() {
   const [cycleLengthDays, setCycleLengthDays] = useState(1);
   const [customCycleLengthDays, setCustomCycleLengthDays] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const hasUnsavedChanges =
+    name.trim() !== '' ||
+    startDateKey !== todayDateKey ||
+    cycleLengthMode !== 'preset' ||
+    cycleLengthDays !== 1 ||
+    customCycleLengthDays.trim() !== '';
+
+  function handleBackPress() {
+    if (isSaving) {
+      return;
+    }
+
+    if (!hasUnsavedChanges) {
+      router.back();
+      return;
+    }
+
+    Alert.alert(
+      'לצאת בלי לשמור?',
+      'השינויים ברוטינה החדשה לא יישמרו.',
+      [
+        {
+          text: 'להישאר',
+          style: 'cancel',
+        },
+        {
+          text: 'לצאת בלי לשמור',
+          style: 'destructive',
+          onPress: () => router.back(),
+        },
+      ],
+    );
+  }
 
   async function handleSave() {
     if (isSaving) {
@@ -76,7 +110,11 @@ export default function BiofeedbackRoutineCreateScreen() {
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <Text style={styles.title}>רוטינה חדשה</Text>
+        <BiofeedbackHeader
+          variant="screen"
+          title="רוטינה חדשה"
+          onBackPress={handleBackPress}
+        />
 
         <View style={styles.section}>
           <Text style={styles.label}>שם רוטינה</Text>
@@ -177,13 +215,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 12,
     paddingBottom: 24,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#243447',
-    textAlign: 'right',
-    marginBottom: 18,
   },
   section: {
     borderRadius: 12,
