@@ -29,7 +29,9 @@ import { listActiveCustomActivitiesFromFirestore } from '../data/firebase-custom
 
 import { toDateKey } from '../components/calendar.utils';
 import DateTimeField from '../components/DateTimeField';
+import BiofeedbackHeader from '../components/BiofeedbackHeader';
 import type { BiofeedbackEntry, TimeOfDay } from '../types/biofeedback-entry.types';
+import type { BiofeedbackEntryFormValues } from '../types/biofeedback-entry-form.types';
 import type { UserCustomActivity } from '../types/user-custom-activity.types';
 import {
   ACTIVITY_CATALOG,
@@ -156,6 +158,7 @@ function mapFirebaseEntryToBiofeedbackEntry(entry: {
 
 export default function BiofeedbackEntryDetailScreen({ entryId, fromDay }: Props) {
   const [values, setValues] = useState(createDefaultBiofeedbackEntryFormValues());
+  const [initialValues, setInitialValues] = useState<BiofeedbackEntryFormValues | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isReplacingExercise, setIsReplacingExercise] = useState(false);
   const [customActivities, setCustomActivities] = useState<UserCustomActivity[]>([]);
@@ -188,6 +191,9 @@ export default function BiofeedbackEntryDetailScreen({ entryId, fromDay }: Props
     () => validateBiofeedbackEntryForm(values, { todayDateKey }),
     [todayDateKey, values],
   );
+  const hasUnsavedChanges =
+    initialValues !== null &&
+    JSON.stringify(values) !== JSON.stringify(initialValues);
 
   useEffect(() => {
     loadEntry();
@@ -225,8 +231,42 @@ export default function BiofeedbackEntryDetailScreen({ entryId, fromDay }: Props
     }
 
     const mappedEntry = mapFirebaseEntryToBiofeedbackEntry(entry);
-    setValues(createBiofeedbackEntryFormValuesFromEntry(mappedEntry));
+    const nextValues = createBiofeedbackEntryFormValuesFromEntry(mappedEntry);
+    setValues(nextValues);
+    setInitialValues(nextValues);
     setIsLoading(false);
+  }
+
+  function navigateBackFromEdit() {
+    if (fromDay) {
+      router.back();
+      return;
+    }
+
+    router.replace('/');
+  }
+
+  function handleBackPress() {
+    if (!hasUnsavedChanges) {
+      navigateBackFromEdit();
+      return;
+    }
+
+    Alert.alert(
+      'לצאת בלי לשמור?',
+      'השינויים במדידה לא יישמרו.',
+      [
+        {
+          text: 'להישאר',
+          style: 'cancel',
+        },
+        {
+          text: 'לצאת בלי לשמור',
+          style: 'destructive',
+          onPress: navigateBackFromEdit,
+        },
+      ],
+    );
   }
 
   async function loadCustomActivities() {
@@ -363,8 +403,15 @@ export default function BiofeedbackEntryDetailScreen({ entryId, fromDay }: Props
   if (isLoading) {
     return (
       <SafeAreaView style={styles.safeArea}>
-        <View style={styles.loadingContainer}>
-          <Text>טוען...</Text>
+        <View style={styles.loadingScreen}>
+          <BiofeedbackHeader
+            variant="screen"
+            title="עריכת מדידה"
+            onBackPress={handleBackPress}
+          />
+          <View style={styles.loadingContainer}>
+            <Text>טוען...</Text>
+          </View>
         </View>
       </SafeAreaView>
     );
@@ -373,7 +420,11 @@ export default function BiofeedbackEntryDetailScreen({ entryId, fromDay }: Props
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.title}>עריכת מדידה</Text>
+        <BiofeedbackHeader
+          variant="screen"
+          title="עריכת מדידה"
+          onBackPress={handleBackPress}
+        />
 
         <View style={styles.exerciseSummaryCard}>
           <Text style={styles.exerciseSummaryLabel}>התרגיל הנוכחי</Text>
@@ -767,6 +818,10 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#ffffff',
   },
+  loadingScreen: {
+    flex: 1,
+    padding: 16,
+  },
   loadingContainer: {
     flex: 1,
     alignItems: 'center',
@@ -775,11 +830,6 @@ const styles = StyleSheet.create({
   content: {
     padding: 16,
     paddingBottom: 40,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: '700',
-    marginBottom: 20,
   },
   exerciseSummaryCard: {
     marginBottom: 16,

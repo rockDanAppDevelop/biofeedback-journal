@@ -23,7 +23,7 @@ export default function RootLayout() {
         <Stack.Screen name="routines/[routineId]" options={{ headerShown: false }} />
         <Stack.Screen name="routines/[routineId]/add-item" options={{ headerShown: false }} />
         <Stack.Screen name="entries/new" options={{ headerShown: false }} />
-        <Stack.Screen name="entries/[entryId]" options={{ title: 'פרטי מדידה' }} />
+        <Stack.Screen name="entries/[entryId]" options={{ headerShown: false }} />
         <Stack.Screen
           name="day/[dateKey]"
           options={{ headerShown: false }}
