@@ -18,6 +18,7 @@ export default function RootLayout() {
         <Stack.Screen name="index" options={{ headerShown: false }} />
         <Stack.Screen name="dashboard" options={{ headerShown: false }} />
         <Stack.Screen name="planning" options={{ headerShown: false }} />
+        <Stack.Screen name="weekly-summary" options={{ headerShown: false }} />
         <Stack.Screen name="routines/new" options={{ title: 'רוטינה חדשה' }} />
         <Stack.Screen name="routines/[routineId]" options={{ title: 'פרטי רוטינה' }} />
         <Stack.Screen name="routines/[routineId]/add-item" options={{ title: 'הוספת תרגיל' }} />

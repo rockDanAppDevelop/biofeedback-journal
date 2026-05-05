@@ -9,6 +9,7 @@ import { toDateKey } from '../components/calendar.utils';
 import { listAllBiofeedbackEntriesFromFirestore } from '../data/firebase-biofeedback-read-repository';
 import { getWeeklySummary } from '../lib/weekly-summary';
 import { BiofeedbackEntry } from '../types/biofeedback-entry.types';
+import BiofeedbackHeader from '../components/BiofeedbackHeader';
 
 function formatDateKeyForRange(dateKey: string): string {
   const [year, month, day] = dateKey.split('-');
@@ -155,6 +156,8 @@ export default function BiofeedbackWeeklySummaryScreen() {
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <BiofeedbackHeader variant="screen" title="סיכום שבועי" />
+
         <View ref={summaryRef} collapsable={false} style={styles.summaryCaptureArea}>
           <Text style={styles.title}>סיכום שבועי</Text>
           <Text style={styles.subtitle}>{weekRangeText}</Text>
