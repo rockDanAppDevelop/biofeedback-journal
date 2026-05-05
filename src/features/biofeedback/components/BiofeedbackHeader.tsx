@@ -7,6 +7,7 @@ import { UserMenu } from '../../auth/components/UserMenu';
 type BiofeedbackHeaderProps = {
   variant?: 'home' | 'screen';
   title?: string;
+  onBackPress?: () => void;
 };
 
 function getDashboardGreeting(date = new Date()): string {
@@ -30,8 +31,10 @@ function getDashboardGreeting(date = new Date()): string {
 export default function BiofeedbackHeader({
   variant = 'home',
   title = '',
+  onBackPress,
 }: BiofeedbackHeaderProps) {
   const dashboardGreeting = useMemo(() => getDashboardGreeting(), []);
+  const handleBackPress = onBackPress ?? (() => router.back());
 
   if (variant === 'screen') {
     return (
@@ -49,7 +52,7 @@ export default function BiofeedbackHeader({
         </Text>
 
         <View style={styles.screenHeaderSide}>
-          <Pressable style={styles.backButton} onPress={() => router.back()}>
+          <Pressable style={styles.backButton} onPress={handleBackPress}>
             <Text style={styles.backButtonText}>‹</Text>
           </Pressable>
         </View>
