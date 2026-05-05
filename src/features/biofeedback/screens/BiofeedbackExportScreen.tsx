@@ -11,6 +11,7 @@ import {
   exportMonthBiofeedbackEntriesAsJson,
 } from '../data/biofeedback-entry.export';
 import { listAllBiofeedbackEntriesFromFirestore } from '../data/firebase-biofeedback-read-repository';
+import BiofeedbackHeader from '../components/BiofeedbackHeader';
 
 type MonthOption = {
   label: string;
@@ -101,7 +102,7 @@ export default function BiofeedbackExportScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
-        <Text style={styles.title}>ייצוא נתונים</Text>
+        <BiofeedbackHeader variant="screen" title="ייצוא נתונים" />
         <Text style={styles.subtitle}>בחר איך לייצא את הנתונים שלך</Text>
 
         <Pressable style={styles.primaryButton} onPress={handleExportAll}>
@@ -166,11 +167,6 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 16,
     backgroundColor: '#ffffff',
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: '700',
-    marginBottom: 4,
   },
   subtitle: {
     fontSize: 16,
