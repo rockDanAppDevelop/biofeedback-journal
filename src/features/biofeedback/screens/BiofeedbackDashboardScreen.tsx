@@ -5,6 +5,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import BiofeedbackHeader from '../components/BiofeedbackHeader';
 import FloatingAddButton from '../components/FloatingAddButton';
 import MonthGrid from '../components/MonthGrid';
 import { toDateKey } from '../components/calendar.utils';
@@ -22,7 +23,6 @@ import type { RoutineItem } from '../types/routine.types';
 import { collection, getDocs } from 'firebase/firestore';
 import { testFirebaseConnection } from '../../../lib/testFirebase';
 import { auth, db } from '../../../lib/firebase';
-import { UserMenu } from '../../auth/components/UserMenu';
 import { getCurrentUserProfile } from '../../auth/data/get-current-user-profile';
 import { syncDailyReminderForToday } from '../../notifications/lib/daily-reminder';
 
@@ -41,24 +41,6 @@ function formatStreakDays(count: number): string {
   const dayLabel = count === 1 ? 'יום' : 'ימים';
 
   return `${count} ${dayLabel}`;
-}
-
-function getDashboardGreeting(date = new Date()): string {
-  const hour = date.getHours();
-
-  if (hour >= 5 && hour < 12) {
-    return 'בוקר טוב 🌱';
-  }
-
-  if (hour >= 12 && hour < 17) {
-    return 'צהריים טובים ☀️';
-  }
-
-  if (hour >= 17 && hour < 21) {
-    return 'ערב טוב 🌙';
-  }
-
-  return 'לילה טוב ✨';
 }
 
 type PlannedRoutineItem = {
@@ -216,7 +198,6 @@ export default function BiofeedbackDashboardScreen() {
   }
 
   const monthTitle = useMemo(() => getMonthTitle(referenceDate), [referenceDate]);
-  const dashboardGreeting = useMemo(() => getDashboardGreeting(), []);
   const streakInsight = useMemo(
     () => getStreakInsight(entryDateKeys, toDateKey(new Date())),
     [entryDateKeys],
@@ -241,10 +222,7 @@ export default function BiofeedbackDashboardScreen() {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-        <View style={styles.dashboardHeader}>
-          <UserMenu variant="inline" />
-          <Text style={styles.dashboardGreeting}>{dashboardGreeting}</Text>
-        </View>
+        <BiofeedbackHeader />
 
         <Text style={styles.monthTitle}>{monthTitle}</Text>
 
@@ -517,21 +495,6 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingBottom: 110,
-  },
-  dashboardHeader: {
-    minHeight: 44,
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 12,
-  },
-  dashboardGreeting: {
-    flex: 1,
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#243447',
-    textAlign: 'left',
-    marginRight: 12,
   },
   monthTitle: {
     fontSize: 24,
