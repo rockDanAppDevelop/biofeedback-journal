@@ -8,6 +8,7 @@ import {
   listActiveRoutines,
 } from '../data/firebase-routines-repository';
 import type { Routine } from '../types/routine.types';
+import BiofeedbackHeader from '../components/BiofeedbackHeader';
 
 function formatCycleLength(cycleLengthDays: number): string {
   return `מחזור כל ${cycleLengthDays} ימים`;
@@ -97,8 +98,9 @@ export default function BiofeedbackPlanningScreen() {
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <BiofeedbackHeader variant="screen" title="תכנון תרגולים" />
+
         <View style={styles.headerRow}>
-          <Text style={styles.title}>תכנון תרגולים</Text>
           <Pressable style={styles.createButton} onPress={handleCreateRoutinePress}>
             <Text style={styles.createButtonText}>רוטינה חדשה</Text>
           </Pressable>
@@ -163,13 +165,8 @@ const styles = StyleSheet.create({
   },
   headerRow: {
     gap: 12,
+    marginTop: 8,
     marginBottom: 18,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#243447',
-    textAlign: 'right',
   },
   createButton: {
     height: 44,
