@@ -7,7 +7,11 @@ import { signOut } from 'firebase/auth';
 import { auth } from '../../../lib/firebase';
 import { getGoogleSigninOrNull } from '../api/google-sign-in-adapter';
 
-export function UserMenu() {
+type UserMenuProps = {
+  variant?: 'absolute' | 'inline';
+};
+
+export function UserMenu({ variant = 'absolute' }: UserMenuProps) {
   const [open, setOpen] = useState(false);
   const user = auth.currentUser;
   const appVersion = Constants.expoConfig?.version ?? '';
@@ -44,7 +48,7 @@ export function UserMenu() {
     <>
       {open ? <Pressable style={styles.backdrop} onPress={handleCloseMenu} /> : null}
 
-      <View style={styles.anchor}>
+      <View style={variant === 'inline' ? styles.anchorInline : styles.anchorAbsolute}>
         <Pressable onPress={handleToggleMenu} style={styles.avatarButton}>
           <Text style={styles.avatarText}>👤</Text>
         </Pressable>
@@ -70,10 +74,15 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     zIndex: 9,
   },
-  anchor: {
+  anchorAbsolute: {
     position: 'absolute',
     top: 10,
     right: 16,
+    zIndex: 10,
+    alignItems: 'flex-end',
+  },
+  anchorInline: {
+    position: 'relative',
     zIndex: 10,
     alignItems: 'flex-end',
   },
