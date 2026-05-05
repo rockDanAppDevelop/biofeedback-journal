@@ -5,6 +5,7 @@ import { useCallback, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import BiofeedbackHeader from '../components/BiofeedbackHeader';
 import { toDateKey } from '../components/calendar.utils';
 import { BiofeedbackEntry } from '../types/biofeedback-entry.types';
 import { listBiofeedbackEntriesByDateKeyFromFirestore } from '../data/firebase-biofeedback-read-repository';
@@ -183,6 +184,8 @@ export default function BiofeedbackDayEntriesScreen({ dateKey }: Props) {
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
+        <BiofeedbackHeader />
+
         <View style={styles.headerRow}>
   <Pressable
     style={styles.addButton}
