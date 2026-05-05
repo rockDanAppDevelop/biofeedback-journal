@@ -9,6 +9,7 @@ import { ACTIVITY_CATALOG } from '../constants/activity-catalog';
 import { getRoutineById, updateRoutine } from '../data/firebase-routines-repository';
 import { scheduleRoutineForDate } from '../lib/schedule-routine';
 import type { Routine, RoutineItem } from '../types/routine.types';
+import BiofeedbackHeader from '../components/BiofeedbackHeader';
 
 type Props = {
   routineId: string;
@@ -235,6 +236,8 @@ export default function BiofeedbackRoutineDetailScreen({ routineId }: Props) {
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <BiofeedbackHeader variant="screen" title="פרטי רוטינה" />
+
         {isLoading ? (
           <View style={styles.stateCard}>
             <ActivityIndicator size="small" color="#1e4f8a" />
