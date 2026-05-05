@@ -240,38 +240,10 @@ export default function BiofeedbackDashboardScreen() {
           </Pressable>
         </View>
 
-        <Pressable
-          style={styles.exportButton}
-          onPress={() => router.push('/export')}
-        >
-          <Text style={styles.exportButtonText}>ייצוא נתונים</Text>
-        </Pressable>
-
-        <Pressable
-          style={styles.secondaryActionButton}
-          onPress={() => router.push('/weekly-summary')}
-        >
-          <Text style={styles.secondaryActionButtonText}>סיכום שבועי</Text>
-        </Pressable>
-
-        <Pressable
-          style={styles.secondaryActionButton}
-          onPress={() => router.push('/planning')}
-        >
-          <Text style={styles.secondaryActionButtonText}>תכנון</Text>
-        </Pressable>
-
         <View style={styles.dailyStatusCard}>
           <Text style={styles.dailyStatusLabel}>היום שלך</Text>
           <Text style={styles.dailyStatusMessage}>{streakInsightText}</Text>
         </View>
-
-        <MonthGrid
-          referenceDate={referenceDate}
-          entryDateKeys={entryDateKeys}
-          onDayPress={handleDayPress}
-          firstSeenDateKey={firstSeenDateKey}
-        />
 
         <View style={styles.todayPlanSection}>
           <Text style={styles.todayPlanTitle}>התכנון להיום</Text>
@@ -330,6 +302,13 @@ export default function BiofeedbackDashboardScreen() {
           )}
         </View>
 
+        <MonthGrid
+          referenceDate={referenceDate}
+          entryDateKeys={entryDateKeys}
+          onDayPress={handleDayPress}
+          firstSeenDateKey={firstSeenDateKey}
+        />
+
         </ScrollView>
         <FloatingAddButton />
       </View>
@@ -338,36 +317,6 @@ export default function BiofeedbackDashboardScreen() {
 }
 
 const styles = StyleSheet.create({
-  exportButton: {
-    height: 44,
-    borderRadius: 12,
-    backgroundColor: '#f3f6fb',
-    borderWidth: 1,
-    borderColor: '#d7e3f4',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
-  },
-  exportButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1e4f8a',
-  },
-  secondaryActionButton: {
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: '#ffffff',
-    borderWidth: 1,
-    borderColor: '#d7e3f4',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
-  },
-  secondaryActionButtonText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#355f93',
-  },
   dailyStatusCard: {
     backgroundColor: '#eef4fb',
     borderWidth: 1,
