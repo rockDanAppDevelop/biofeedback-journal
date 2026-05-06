@@ -1,9 +1,32 @@
 // app\_layout.tsx
 
 import { Stack } from 'expo-router';
+import { Platform, StyleSheet, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useEffect } from 'react';
 import { configureGoogleSignInIfSupported } from '../src/features/auth/api/google-sign-in-adapter';
+
+function AppStack() {
+  return (
+    <Stack>
+      <Stack.Screen name="index" options={{ headerShown: false }} />
+      <Stack.Screen name="dashboard" options={{ headerShown: false }} />
+      <Stack.Screen name="planning" options={{ headerShown: false }} />
+      <Stack.Screen name="weekly-summary" options={{ headerShown: false }} />
+      <Stack.Screen name="routines/new" options={{ headerShown: false }} />
+      <Stack.Screen name="routines/[routineId]" options={{ headerShown: false }} />
+      <Stack.Screen name="routines/[routineId]/add-item" options={{ headerShown: false }} />
+      <Stack.Screen name="entries/new" options={{ headerShown: false }} />
+      <Stack.Screen name="entries/[entryId]" options={{ headerShown: false }} />
+      <Stack.Screen
+        name="day/[dateKey]"
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen name="export" options={{ headerShown: false }} />
+      <Stack.Screen name="custom-activities/manage" options={{ headerShown: false }} />
+    </Stack>
+  );
+}
 
 export default function RootLayout() {
   useEffect(() => {
@@ -14,23 +37,29 @@ export default function RootLayout() {
 
   return (
     <SafeAreaProvider>
-      <Stack>
-        <Stack.Screen name="index" options={{ headerShown: false }} />
-        <Stack.Screen name="dashboard" options={{ headerShown: false }} />
-        <Stack.Screen name="planning" options={{ headerShown: false }} />
-        <Stack.Screen name="weekly-summary" options={{ headerShown: false }} />
-        <Stack.Screen name="routines/new" options={{ headerShown: false }} />
-        <Stack.Screen name="routines/[routineId]" options={{ headerShown: false }} />
-        <Stack.Screen name="routines/[routineId]/add-item" options={{ headerShown: false }} />
-        <Stack.Screen name="entries/new" options={{ headerShown: false }} />
-        <Stack.Screen name="entries/[entryId]" options={{ headerShown: false }} />
-        <Stack.Screen
-          name="day/[dateKey]"
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen name="export" options={{ headerShown: false }} />
-        <Stack.Screen name="custom-activities/manage" options={{ headerShown: false }} />
-      </Stack>
+      {Platform.OS === 'web' ? (
+        <View style={styles.webShell}>
+          <View style={styles.webAppContainer}>
+            <AppStack />
+          </View>
+        </View>
+      ) : (
+        <AppStack />
+      )}
     </SafeAreaProvider>
   );
 }
+
+const styles = StyleSheet.create({
+  webShell: {
+    flex: 1,
+    backgroundColor: '#eef2f7',
+  },
+  webAppContainer: {
+    width: '100%',
+    maxWidth: 520,
+    alignSelf: 'center',
+    flex: 1,
+    backgroundColor: '#ffffff',
+  },
+});
