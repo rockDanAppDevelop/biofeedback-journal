@@ -22,6 +22,14 @@ service cloud.firestore {
       match /customActivities/{activityId} {
         allow read, create, update, delete: if isOwner(userId);
       }
+
+      match /routines/{routineId} {
+        allow read, create, update, delete: if isOwner(userId);
+      }
+
+      match /plannedPractices/{practiceId} {
+        allow read, create, update, delete: if isOwner(userId);
+      }
     }
   }
 }
