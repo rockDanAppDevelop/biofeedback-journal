@@ -1,11 +1,25 @@
 //src\features\auth\api\sign-in-with-google.ts
 
-import { GoogleAuthProvider, signInWithCredential } from 'firebase/auth';
+import { Platform } from 'react-native';
+import {
+  GoogleAuthProvider,
+  signInWithCredential,
+  signInWithPopup,
+} from 'firebase/auth';
 import { auth } from '../../../lib/firebase';
 import { ensureUserProfile } from '../data/ensure-user-profile';
 import { getGoogleSigninOrNull } from './google-sign-in-adapter';
 
 export async function signInWithGoogle() {
+  if (Platform.OS === 'web') {
+    const provider = new GoogleAuthProvider();
+    const userCredential = await signInWithPopup(auth, provider);
+
+    await ensureUserProfile();
+
+    return userCredential;
+  }
+
   const googleSignin = await getGoogleSigninOrNull();
 
   if (!googleSignin) {

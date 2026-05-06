@@ -1,4 +1,5 @@
 import Constants from 'expo-constants';
+import { Platform } from 'react-native';
 
 type GoogleSigninModule = typeof import('@react-native-google-signin/google-signin');
 type GoogleSigninClient = GoogleSigninModule['GoogleSignin'];
@@ -12,7 +13,7 @@ export function isGoogleSignInSupported(): boolean {
 }
 
 export async function getGoogleSigninOrNull(): Promise<GoogleSigninClient | null> {
-  if (isExpoGo()) {
+  if (Platform.OS === 'web' || isExpoGo()) {
     return null;
   }
 
