@@ -5,6 +5,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import {
   Alert,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -874,6 +875,18 @@ export default function BiofeedbackEntryCreateScreen({
   function handleBackToDashboard() {
     if (!shouldWarnBeforeLeaving) {
       navigateToReturnTarget();
+      return;
+    }
+
+    if (Platform.OS === 'web') {
+      const shouldLeave = window.confirm(
+        'כדאי להשלים מדידה היום. לחזור למסך הראשי?',
+      );
+
+      if (shouldLeave) {
+        navigateToReturnTarget();
+      }
+
       return;
     }
 
