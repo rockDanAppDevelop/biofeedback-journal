@@ -1,6 +1,6 @@
 //src\features\auth\components\UserMenu.tsx
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Alert,
   Platform,
@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import Constants from 'expo-constants';
-import { signOut } from 'firebase/auth';
+import { onAuthStateChanged, signOut, type User } from 'firebase/auth';
 import { auth } from '../../../lib/firebase';
 import { getGoogleSigninOrNull } from '../api/google-sign-in-adapter';
 
@@ -38,8 +38,16 @@ const webBackdropStyle = {
 
 export function UserMenu({ variant = 'absolute' }: UserMenuProps) {
   const [open, setOpen] = useState(false);
-  const user = auth.currentUser;
+  const [user, setUser] = useState<User | null | undefined>(undefined);
   const appVersion = Constants.expoConfig?.version ?? '';
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (nextUser) => {
+      setUser(nextUser);
+    });
+
+    return unsubscribe;
+  }, []);
 
   if (!user) {
     return null;
