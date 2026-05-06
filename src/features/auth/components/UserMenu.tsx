@@ -1,7 +1,15 @@
 //src\features\auth\components\UserMenu.tsx
 
 import { useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import {
+  Alert,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+  type ViewStyle,
+} from 'react-native';
 import { router } from 'expo-router';
 import Constants from 'expo-constants';
 import { signOut } from 'firebase/auth';
@@ -18,6 +26,15 @@ const navigationItems = [
   { label: 'רוטינות', route: '/planning' },
   { label: 'ניהול התרגולים שלי', route: '/custom-activities/manage' },
 ] as const;
+
+const webBackdropStyle = {
+  position: 'fixed',
+  top: 0,
+  right: 0,
+  bottom: 0,
+  left: 0,
+  zIndex: 9998,
+} as unknown as ViewStyle;
 
 export function UserMenu({ variant = 'absolute' }: UserMenuProps) {
   const [open, setOpen] = useState(false);
@@ -59,17 +76,35 @@ export function UserMenu({ variant = 'absolute' }: UserMenuProps) {
 
   return (
     <>
-      {open ? <Pressable style={styles.backdrop} onPress={handleCloseMenu} /> : null}
+      {open ? (
+        <Pressable
+          style={[styles.backdrop, Platform.OS === 'web' ? webBackdropStyle : null]}
+          onPress={handleCloseMenu}
+        />
+      ) : null}
 
-      <View style={variant === 'inline' ? styles.anchorInline : styles.anchorAbsolute}>
+      <View
+        style={[
+          variant === 'inline' ? styles.anchorInline : styles.anchorAbsolute,
+          Platform.OS === 'web' ? styles.anchorWeb : null,
+        ]}
+      >
         <Pressable onPress={handleToggleMenu} style={styles.avatarButton}>
           <Text style={styles.avatarText}>👤</Text>
         </Pressable>
 
         {open ? (
-          <View style={styles.menu}>
+          <View style={[styles.menu, Platform.OS === 'web' ? styles.menuWeb : null]}>
             <Text style={styles.menuTitle}>מחובר כעת</Text>
-            <Text style={styles.emailText}>{user.email ?? 'ללא אימייל'}</Text>
+            <Text
+              style={[
+                styles.emailText,
+                Platform.OS === 'web' ? styles.emailTextWeb : null,
+              ]}
+              numberOfLines={Platform.OS === 'web' ? 1 : undefined}
+            >
+              {user.email ?? 'ללא אימייל'}
+            </Text>
 
             <View style={styles.menuDivider} />
             <View style={styles.navSection}>
@@ -112,6 +147,9 @@ const styles = StyleSheet.create({
     zIndex: 10,
     alignItems: 'flex-end',
   },
+  anchorWeb: {
+    zIndex: 9999,
+  },
   anchorInline: {
     position: 'relative',
     zIndex: 10,
@@ -143,6 +181,22 @@ const styles = StyleSheet.create({
     borderColor: '#e3e7ee',
     elevation: 4,
   },
+  menuWeb: {
+    zIndex: 10000,
+    top: 50,
+    right: 0,
+    width: 280,
+    minWidth: 280,
+    maxWidth: 320,
+    backgroundColor: '#ffffff',
+    borderColor: '#cbd5e1',
+    borderRadius: 14,
+    padding: 14,
+    shadowColor: '#0f172a',
+    shadowOpacity: 0.18,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 10 },
+  },
   menuTitle: {
     fontSize: 12,
     fontWeight: '600',
@@ -153,6 +207,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#111827',
     marginBottom: 12,
+  },
+  emailTextWeb: {
+    flexShrink: 1,
   },
   menuDivider: {
     height: 1,
