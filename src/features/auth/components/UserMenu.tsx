@@ -3,12 +3,12 @@
 import { useEffect, useState } from 'react';
 import {
   Alert,
+  Modal,
   Platform,
   Pressable,
   StyleSheet,
   Text,
   View,
-  type ViewStyle,
 } from 'react-native';
 import { router } from 'expo-router';
 import Constants from 'expo-constants';
@@ -26,15 +26,6 @@ const navigationItems = [
   { label: 'רוטינות', route: '/planning' },
   { label: 'ניהול התרגולים שלי', route: '/custom-activities/manage' },
 ] as const;
-
-const webBackdropStyle = {
-  position: 'fixed',
-  top: 0,
-  right: 0,
-  bottom: 0,
-  left: 0,
-  zIndex: 9998,
-} as unknown as ViewStyle;
 
 export function UserMenu({ variant = 'absolute' }: UserMenuProps) {
   const [open, setOpen] = useState(false);
@@ -82,59 +73,64 @@ export function UserMenu({ variant = 'absolute' }: UserMenuProps) {
     }
   };
 
+  const menuContent = (
+    <>
+      <Text style={styles.menuTitle}>מחובר כעת</Text>
+      <Text
+        style={styles.emailText}
+        numberOfLines={Platform.OS === 'web' ? 1 : undefined}
+      >
+        {user.email ?? 'ללא אימייל'}
+      </Text>
+
+      <View style={styles.menuDivider} />
+      <View style={styles.navSection}>
+        {navigationItems.map((item) => (
+          <Pressable
+            key={item.route}
+            onPress={() => handleNavigate(item.route)}
+            style={styles.menuItem}
+          >
+            <Text style={styles.menuItemText}>{item.label}</Text>
+          </Pressable>
+        ))}
+      </View>
+
+      {appVersion ? <Text style={styles.versionText}>v{appVersion}</Text> : null}
+
+      <Pressable onPress={handleLogout} style={styles.logoutButton}>
+        <Text style={styles.logoutText}>התנתקות</Text>
+      </Pressable>
+    </>
+  );
+
   return (
     <>
-      {open ? (
-        <Pressable
-          style={[styles.backdrop, Platform.OS === 'web' ? webBackdropStyle : null]}
-          onPress={handleCloseMenu}
-        />
+      {open && Platform.OS !== 'web' ? (
+        <Pressable style={styles.backdrop} onPress={handleCloseMenu} />
       ) : null}
 
-      <View
-        style={[
-          variant === 'inline' ? styles.anchorInline : styles.anchorAbsolute,
-          Platform.OS === 'web' ? styles.anchorWeb : null,
-        ]}
-      >
+      <View style={variant === 'inline' ? styles.anchorInline : styles.anchorAbsolute}>
         <Pressable onPress={handleToggleMenu} style={styles.avatarButton}>
           <Text style={styles.avatarText}>👤</Text>
         </Pressable>
 
-        {open ? (
-          <View style={[styles.menu, Platform.OS === 'web' ? styles.menuWeb : null]}>
-            <Text style={styles.menuTitle}>מחובר כעת</Text>
-            <Text
-              style={[
-                styles.emailText,
-                Platform.OS === 'web' ? styles.emailTextWeb : null,
-              ]}
-              numberOfLines={Platform.OS === 'web' ? 1 : undefined}
-            >
-              {user.email ?? 'ללא אימייל'}
-            </Text>
-
-            <View style={styles.menuDivider} />
-            <View style={styles.navSection}>
-              {navigationItems.map((item) => (
-                <Pressable
-                  key={item.route}
-                  onPress={() => handleNavigate(item.route)}
-                  style={styles.menuItem}
-                >
-                  <Text style={styles.menuItemText}>{item.label}</Text>
-                </Pressable>
-              ))}
-            </View>
-
-            {appVersion ? <Text style={styles.versionText}>v{appVersion}</Text> : null}
-
-            <Pressable onPress={handleLogout} style={styles.logoutButton}>
-              <Text style={styles.logoutText}>התנתקות</Text>
-            </Pressable>
-          </View>
+        {open && Platform.OS !== 'web' ? (
+          <View style={styles.menu}>{menuContent}</View>
         ) : null}
       </View>
+
+      {Platform.OS === 'web' ? (
+        <Modal transparent visible={open} onRequestClose={handleCloseMenu}>
+          <View style={styles.webModalRoot}>
+            <Pressable
+              style={styles.webModalBackdrop}
+              onPress={handleCloseMenu}
+            />
+            <View style={styles.webModalMenu}>{menuContent}</View>
+          </View>
+        </Modal>
+      ) : null}
     </>
   );
 }
@@ -154,9 +150,6 @@ const styles = StyleSheet.create({
     right: 16,
     zIndex: 10,
     alignItems: 'flex-end',
-  },
-  anchorWeb: {
-    zIndex: 9999,
   },
   anchorInline: {
     position: 'relative',
@@ -189,22 +182,6 @@ const styles = StyleSheet.create({
     borderColor: '#e3e7ee',
     elevation: 4,
   },
-  menuWeb: {
-    zIndex: 10000,
-    top: 50,
-    right: 0,
-    width: 280,
-    minWidth: 280,
-    maxWidth: 320,
-    backgroundColor: '#ffffff',
-    borderColor: '#cbd5e1',
-    borderRadius: 14,
-    padding: 14,
-    shadowColor: '#0f172a',
-    shadowOpacity: 0.18,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 10 },
-  },
   menuTitle: {
     fontSize: 12,
     fontWeight: '600',
@@ -215,9 +192,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#111827',
     marginBottom: 12,
-  },
-  emailTextWeb: {
-    flexShrink: 1,
   },
   menuDivider: {
     height: 1,
@@ -259,5 +233,30 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#be123c',
+  },
+  webModalRoot: {
+    flex: 1,
+    backgroundColor: 'transparent',
+  },
+  webModalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  webModalMenu: {
+    position: 'absolute',
+    top: 64,
+    right: 16,
+    width: 280,
+    minWidth: 280,
+    maxWidth: 320,
+    backgroundColor: '#ffffff',
+    borderRadius: 14,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#cbd5e1',
+    shadowColor: '#0f172a',
+    shadowOpacity: 0.18,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 8,
   },
 });
