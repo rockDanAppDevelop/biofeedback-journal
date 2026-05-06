@@ -140,6 +140,10 @@ function getNextReminderDate(hasEntryForToday: boolean, now: Date): Date {
 export async function syncDailyReminderForToday(
   hasEntryForToday: boolean,
 ): Promise<void> {
+  if (Platform.OS === 'web') {
+    return;
+  }
+
   if (isExpoGo()) {
     return;
   }
