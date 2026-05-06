@@ -11,3 +11,4 @@ export {
 } from './lib/feature-access.defaults';
 export { canAccessFeature } from './lib/can-access-feature';
 export { FEATURE_ACCESS_CATALOG } from './constants/feature-access.catalog';
+export { FeatureGate } from './components/FeatureGate';
