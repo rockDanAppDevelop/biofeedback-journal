@@ -160,7 +160,7 @@ export default function BiofeedbackRoutineAddItemScreen({ routineId }: Props) {
     }
 
     if (!hasUnsavedChanges) {
-      router.back();
+      router.replace(`/routines/${routineId}`);
       return;
     }
 
@@ -175,7 +175,7 @@ export default function BiofeedbackRoutineAddItemScreen({ routineId }: Props) {
         {
           text: 'לצאת בלי לשמור',
           style: 'destructive',
-          onPress: () => router.back(),
+          onPress: () => router.replace(`/routines/${routineId}`),
         },
       ],
     );
