@@ -816,7 +816,7 @@ export default function BiofeedbackEntryCreateScreen({
         await syncDailyReminderForToday(true);
       }
 
-      router.replace('/');
+      navigateToReturnTarget();
     } catch (error) {
       console.error('SAVE ENTRY FAILED:', error);
       Alert.alert(
