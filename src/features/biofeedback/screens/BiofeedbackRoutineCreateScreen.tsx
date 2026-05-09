@@ -88,14 +88,14 @@ export default function BiofeedbackRoutineCreateScreen() {
     try {
       setIsSaving(true);
 
-      await createRoutine({
+      const routine = await createRoutine({
         name: trimmedName,
         startDateKey,
         cycleLengthDays: finalCycleLengthDays,
         items: [],
       });
 
-      router.replace('/planning');
+      router.replace(`/routines/${routine.id}`);
     } catch (error) {
       console.log('ROUTINE CREATE FAILED:', error);
       Alert.alert(
