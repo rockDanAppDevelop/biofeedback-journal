@@ -298,7 +298,11 @@ export default function BiofeedbackRoutineAddItemScreen({ routineId }: Props) {
         items: [...routine.items, nextItem],
       });
 
-      router.replace(`/routines/${routine.id}`);
+      if (router.canGoBack()) {
+        router.back();
+      } else {
+        router.replace(`/routines/${routine.id}`);
+      }
     } catch (error) {
       console.log('ROUTINE ADD ITEM SAVE FAILED:', error);
       Alert.alert(
