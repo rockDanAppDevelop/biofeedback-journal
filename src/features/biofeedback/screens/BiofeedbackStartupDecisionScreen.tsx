@@ -12,7 +12,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { toDateKey } from '../components/calendar.utils';
 import { hasBiofeedbackEntryForDateKeyFromFirestore } from '../data/firebase-biofeedback-read-repository';
 import { hasPlannedItemsForDate } from '../lib/routine-plan-status';
-import { syncDailyReminderForToday } from '../../notifications/lib/daily-reminder';
+import {
+  syncDailyReminderForToday,
+  syncPlannedItemsMorningReminder,
+} from '../../notifications/lib/daily-reminder';
 
 type StartupState = 'loading' | 'error';
 
@@ -33,6 +36,7 @@ export default function BiofeedbackStartupDecisionScreen() {
       await syncDailyReminderForToday(hasEntryToday);
 
       const hasPlannedItemsToday = await hasPlannedItemsForDate(todayDateKey);
+      await syncPlannedItemsMorningReminder();
 
       router.replace(hasPlannedItemsToday ? `/day/${todayDateKey}` : '/dashboard');
     } catch (error) {

@@ -48,7 +48,10 @@ import {
   type ActivityCategoryId,
   type ActivityParameterFieldId,
 } from '../constants/activity-catalog';
-import { syncDailyReminderForToday } from '../../notifications/lib/daily-reminder';
+import {
+  syncDailyReminderForToday,
+  syncPlannedItemsMorningReminder,
+} from '../../notifications/lib/daily-reminder';
 import type { PlannedPractice } from '../types/planned-practice.types';
 
 type Props = {
@@ -815,6 +818,8 @@ export default function BiofeedbackEntryCreateScreen({
       if (habitDateKey === toDateKey(new Date())) {
         await syncDailyReminderForToday(true);
       }
+
+      await syncPlannedItemsMorningReminder();
 
       navigateToReturnTarget();
     } catch (error) {
