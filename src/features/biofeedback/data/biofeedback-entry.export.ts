@@ -2,6 +2,7 @@
 
 import { File, Paths } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
+import { Platform } from 'react-native';
 
 import { listAllBiofeedbackEntriesFromFirestore } from './firebase-biofeedback-read-repository';
 import { BiofeedbackEntry } from '../types/biofeedback-entry.types';
@@ -12,10 +13,8 @@ function createExportFileName(suffix: string) {
   const year = now.getFullYear();
   const month = String(now.getMonth() + 1).padStart(2, '0');
   const day = String(now.getDate()).padStart(2, '0');
-  const hours = String(now.getHours()).padStart(2, '0');
-  const minutes = String(now.getMinutes()).padStart(2, '0');
 
-  return `biofeedback-${suffix}-${year}-${month}-${day}-${hours}-${minutes}.json`;
+  return `biofeedback-journal-export-${suffix}-${year}-${month}-${day}.json`;
 }
 
 async function shareEntriesAsJson(entries: BiofeedbackEntry[], suffix: string): Promise<void> {
@@ -26,8 +25,25 @@ async function shareEntriesAsJson(entries: BiofeedbackEntry[], suffix: string): 
   };
 
   const json = JSON.stringify(payload, null, 2);
+  const fileName = createExportFileName(suffix);
 
-  const file = new File(Paths.cache, createExportFileName(suffix));
+  if (Platform.OS === 'web') {
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+
+    anchor.href = url;
+    anchor.download = fileName;
+    anchor.style.display = 'none';
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+
+    URL.revokeObjectURL(url);
+    return;
+  }
+
+  const file = new File(Paths.cache, fileName);
   file.write(json);
 
   const canShare = await Sharing.isAvailableAsync();
