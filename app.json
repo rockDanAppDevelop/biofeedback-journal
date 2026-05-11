@@ -3,7 +3,7 @@
     "name": "biofeedback-journal",
     "slug": "biofeedback-journal",
     "scheme": "biofeedbackjournal",
-    "version": "0.10.3",
+    "version": "0.10.4",
     "orientation": "portrait",
     "icon": "./assets/appIcon.png",
     "userInterfaceStyle": "light",
@@ -15,7 +15,7 @@
     },
     "ios": {
       "supportsTablet": true,
-      "buildNumber": "5"
+      "buildNumber": "7"
     },
     "android": {
       "adaptiveIcon": {
@@ -25,7 +25,7 @@
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "package": "com.anonymous.biofeedbackjournal",
-      "versionCode": 5
+      "versionCode": 7
     },
     "web": {
       "favicon": "./assets/appFavicon.png"
