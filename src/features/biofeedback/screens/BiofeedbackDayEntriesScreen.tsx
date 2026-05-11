@@ -4,8 +4,10 @@ import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { collection, getDocs } from 'firebase/firestore';
 
 import BiofeedbackHeader from '../components/BiofeedbackHeader';
+import StreakInsightCard from '../components/StreakInsightCard';
 import { toDateKey } from '../components/calendar.utils';
 import { BiofeedbackEntry } from '../types/biofeedback-entry.types';
 import { listBiofeedbackEntriesByDateKeyFromFirestore } from '../data/firebase-biofeedback-read-repository';
@@ -15,7 +17,7 @@ import {
   listActiveRoutines,
 } from '../data/firebase-routines-repository';
 import { testFirebaseConnection } from '../../../lib/testFirebase';
-import { auth } from '../../../lib/firebase';
+import { auth, db } from '../../../lib/firebase';
 import { mapFirebaseBiofeedbackEntryToDomain } from '../data/biofeedback-entry.mapper';
 import type { RoutineItem } from '../types/routine.types';
 import { ACTIVITY_CATALOG } from '../constants/activity-catalog';
@@ -85,6 +87,7 @@ function getEntryDisplayName(entry: BiofeedbackEntry): string {
 
 export default function BiofeedbackDayEntriesScreen({ dateKey }: Props) {
   const [entries, setEntries] = useState<BiofeedbackEntry[]>([]);
+  const [entryDateKeys, setEntryDateKeys] = useState<string[]>([]);
   const [plannedRoutineItems, setPlannedRoutineItems] = useState<PlannedRoutineItem[]>([]);
   const [startingPlannedItemId, setStartingPlannedItemId] = useState<string | null>(null);
   const previousDateKey = addDaysToDateKey(dateKey, -1);
@@ -107,6 +110,21 @@ export default function BiofeedbackDayEntriesScreen({ dateKey }: Props) {
         );
         setEntries(mapped);
         const entryIds = new Set(mapped.map((entry) => entry.id));
+        const user = auth.currentUser;
+
+        if (user) {
+          const entriesCollection = collection(db, 'users', user.uid, 'entries');
+          const snapshot = await getDocs(entriesCollection);
+          const uniqueDateKeys = Array.from(
+            new Set(
+              snapshot.docs
+                .map((docSnapshot) => docSnapshot.data().dateKey)
+                .filter((value): value is string => typeof value === 'string' && value.length > 0),
+            ),
+          );
+
+          setEntryDateKeys(uniqueDateKeys);
+        }
 
         const routines = await listActiveRoutines();
         const plannedPractices = await listPlannedPracticesByDateKey(dateKey);
@@ -136,6 +154,7 @@ export default function BiofeedbackDayEntriesScreen({ dateKey }: Props) {
         setPlannedRoutineItems(nextPlannedRoutineItems);
       } catch (e) {
         console.log('FIREBASE LOAD FAILED:', e);
+        setEntryDateKeys([]);
         setPlannedRoutineItems([]);
       }
     }
@@ -226,6 +245,8 @@ export default function BiofeedbackDayEntriesScreen({ dateKey }: Props) {
             <Text style={styles.dateNavigationButtonText}>יום הבא</Text>
           </Pressable>
         </View>
+
+        <StreakInsightCard entryDateKeys={entryDateKeys} todayDateKey={todayDateKey} />
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>תרגולים מתוכננים</Text>

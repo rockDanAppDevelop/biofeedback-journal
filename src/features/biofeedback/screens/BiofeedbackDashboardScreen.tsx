@@ -8,6 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import BiofeedbackHeader from '../components/BiofeedbackHeader';
 import FloatingAddButton from '../components/FloatingAddButton';
 import MonthGrid from '../components/MonthGrid';
+import StreakInsightCard from '../components/StreakInsightCard';
 import { toDateKey } from '../components/calendar.utils';
 import { ACTIVITY_CATALOG } from '../constants/activity-catalog';
 import {
@@ -17,7 +18,6 @@ import {
 import { listPlannedPracticesByDateKey } from '../data/firebase-planned-practices-repository';
 import { listBiofeedbackEntriesByDateKeyFromFirestore } from '../data/firebase-biofeedback-read-repository';
 import { findOrCreatePlannedPracticeForRoutineItem } from '../lib/find-or-create-planned-practice';
-import { getStreakInsight } from '../lib/streak-insight';
 import type { RoutineItem } from '../types/routine.types';
 
 import { collection, getDocs } from 'firebase/firestore';
@@ -35,12 +35,6 @@ function getMonthTitle(date: Date): string {
 
 function addMonths(date: Date, amount: number): Date {
   return new Date(date.getFullYear(), date.getMonth() + amount, 1);
-}
-
-function formatStreakDays(count: number): string {
-  const dayLabel = count === 1 ? 'יום' : 'ימים';
-
-  return `${count} ${dayLabel}`;
 }
 
 type PlannedRoutineItem = {
@@ -198,22 +192,6 @@ export default function BiofeedbackDashboardScreen() {
   }
 
   const monthTitle = useMemo(() => getMonthTitle(referenceDate), [referenceDate]);
-  const streakInsight = useMemo(
-    () => getStreakInsight(entryDateKeys, toDateKey(new Date())),
-    [entryDateKeys],
-  );
-  const streakInsightText = useMemo(() => {
-    switch (streakInsight.kind) {
-      case 'active':
-        return `🔥 ${formatStreakDays(streakInsight.streakCount)} ברצף`;
-      case 'keep-going':
-        return `🔥 ${formatStreakDays(streakInsight.streakCount)} ברצף · בוא נשמור על הרצף`;
-      case 'restart':
-        return `🔄 הרצף האחרון: ${formatStreakDays(streakInsight.lastStreakCount)} · מתחילים מחדש היום`;
-      case 'empty':
-        return '✨ היום הוא התחלה טובה לתרגול קטן';
-    }
-  }, [streakInsight]);
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -240,10 +218,7 @@ export default function BiofeedbackDashboardScreen() {
           </Pressable>
         </View>
 
-        <View style={styles.dailyStatusCard}>
-          <Text style={styles.dailyStatusLabel}>היום שלך</Text>
-          <Text style={styles.dailyStatusMessage}>{streakInsightText}</Text>
-        </View>
+        <StreakInsightCard entryDateKeys={entryDateKeys} todayDateKey={toDateKey(new Date())} />
 
         <View style={styles.todayPlanSection}>
           <Text style={styles.todayPlanTitle}>התכנון להיום</Text>
@@ -323,30 +298,6 @@ export default function BiofeedbackDashboardScreen() {
 }
 
 const styles = StyleSheet.create({
-  dailyStatusCard: {
-    backgroundColor: '#eef4fb',
-    borderWidth: 1,
-    borderColor: '#cfdceb',
-    borderRadius: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    marginTop: 6,
-    marginBottom: 16,
-  },
-  dailyStatusLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#6b7280',
-    textAlign: 'right',
-    marginBottom: 4,
-  },
-  dailyStatusMessage: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: '#243447',
-    textAlign: 'right',
-    lineHeight: 24,
-  },
   todayPlanSection: {
     marginTop: 6,
     marginBottom: 18,
