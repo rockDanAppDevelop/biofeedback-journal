@@ -30,6 +30,12 @@ type RoutineTemplateJson = {
   items: RoutineTemplateItemJson[];
 };
 
+export type RoutineTemplatePreview = {
+  name: string;
+  cycleLengthDays: number;
+  items: RoutineTemplateItemJson[];
+};
+
 const TEMPLATE_TYPE = 'biofeedback-routine-template';
 const TEMPLATE_SCHEMA_VERSION = 1;
 const MAX_TEMPLATE_ITEMS = 200;
@@ -267,7 +273,8 @@ function parseRoutineTemplateJson(jsonText: string): RoutineTemplateJson {
 }
 
 function createRoutineInputFromTemplate(
-  template: RoutineTemplateJson,
+  template: RoutineTemplatePreview,
+  name: string,
   startDateKey: string,
 ): CreateRoutineInput {
   const items: CreateRoutineItemInput[] = template.items.map((item) => ({
@@ -284,7 +291,7 @@ function createRoutineInputFromTemplate(
   }));
 
   return {
-    name: template.name,
+    name,
     startDateKey,
     cycleLengthDays: template.cycleLengthDays,
     items,
@@ -331,17 +338,43 @@ export async function importRoutineTemplateFromJson(
   startDateKey: string,
 ): Promise<Routine> {
   const template = parseRoutineTemplateJson(jsonText);
-  const input = createRoutineInputFromTemplate(template, startDateKey);
+  const input = createRoutineInputFromTemplate(template, template.name, startDateKey);
 
   return createRoutine(input);
 }
 
-export async function importRoutineTemplateFromFile(startDateKey: string): Promise<Routine> {
+export function parseRoutineTemplatePreviewFromJson(jsonText: string): RoutineTemplatePreview {
+  const template = parseRoutineTemplateJson(jsonText);
+
+  return {
+    name: template.name,
+    cycleLengthDays: template.cycleLengthDays,
+    items: template.items,
+  };
+}
+
+export async function createRoutineFromTemplatePreview(
+  template: RoutineTemplatePreview,
+  name: string,
+  startDateKey: string,
+): Promise<Routine> {
+  const trimmedName = name.trim();
+
+  if (!trimmedName) {
+    throw new Error('שם הרוטינה נדרש');
+  }
+
+  const input = createRoutineInputFromTemplate(template, trimmedName, startDateKey);
+
+  return createRoutine(input);
+}
+
+export async function readRoutineTemplateFromFile(): Promise<RoutineTemplatePreview> {
   if (Platform.OS !== 'web') {
     throw new Error('ייבוא תבנית זמין כרגע בווב');
   }
 
-  return new Promise<Routine>((resolve, reject) => {
+  return new Promise<RoutineTemplatePreview>((resolve, reject) => {
     const input = document.createElement('input');
 
     input.type = 'file';
@@ -366,7 +399,11 @@ export async function importRoutineTemplateFromFile(startDateKey: string): Promi
       reader.onload = () => {
         const text = typeof reader.result === 'string' ? reader.result : '';
 
-        importRoutineTemplateFromJson(text, startDateKey).then(resolve).catch(reject);
+        try {
+          resolve(parseRoutineTemplatePreviewFromJson(text));
+        } catch (error) {
+          reject(error);
+        }
       };
 
       reader.readAsText(file);
