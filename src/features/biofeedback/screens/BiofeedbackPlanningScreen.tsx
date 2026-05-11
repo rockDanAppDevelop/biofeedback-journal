@@ -1,12 +1,14 @@
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { toDateKey } from '../components/calendar.utils';
 import {
   archiveRoutine,
   listActiveRoutines,
 } from '../data/firebase-routines-repository';
+import { importRoutineTemplateFromFile } from '../data/routine-template.io';
 import type { Routine } from '../types/routine.types';
 import BiofeedbackHeader from '../components/BiofeedbackHeader';
 
@@ -25,6 +27,7 @@ function getActiveRoutineItemCount(routine: Routine): number {
 export default function BiofeedbackPlanningScreen() {
   const [routines, setRoutines] = useState<Routine[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isImportingTemplate, setIsImportingTemplate] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
   const loadRoutines = useCallback(async (shouldApply: () => boolean = () => true) => {
@@ -69,6 +72,32 @@ export default function BiofeedbackPlanningScreen() {
     router.push('/routines/new');
   }
 
+  async function handleImportTemplatePress() {
+    if (isImportingTemplate) {
+      return;
+    }
+
+    if (Platform.OS !== 'web') {
+      Alert.alert('ייבוא תבנית', 'ייבוא תבנית זמין כרגע בווב');
+      return;
+    }
+
+    try {
+      setIsImportingTemplate(true);
+
+      const routine = await importRoutineTemplateFromFile(toDateKey(new Date()));
+      router.push(`/routines/${routine.id}`);
+    } catch (error) {
+      console.log('ROUTINE TEMPLATE IMPORT FAILED:', error);
+      Alert.alert(
+        'ייבוא התבנית נכשל',
+        error instanceof Error ? error.message : 'לא הצלחנו לייבא את התבנית כרגע.',
+      );
+    } finally {
+      setIsImportingTemplate(false);
+    }
+  }
+
   function handleArchiveRoutinePress(routine: Routine) {
     Alert.alert(
       'למחוק את הרוטינה?',
@@ -103,6 +132,19 @@ export default function BiofeedbackPlanningScreen() {
         <View style={styles.headerRow}>
           <Pressable style={styles.createButton} onPress={handleCreateRoutinePress}>
             <Text style={styles.createButtonText}>רוטינה חדשה</Text>
+          </Pressable>
+
+          <Pressable
+            style={[
+              styles.importButton,
+              isImportingTemplate ? styles.importButtonDisabled : null,
+            ]}
+            onPress={handleImportTemplatePress}
+            disabled={isImportingTemplate}
+          >
+            <Text style={styles.importButtonText}>
+              {isImportingTemplate ? 'מייבא...' : 'ייבוא תבנית'}
+            </Text>
           </Pressable>
         </View>
 
@@ -179,6 +221,23 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#ffffff',
+  },
+  importButton: {
+    height: 44,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#d7e3f4',
+    backgroundColor: '#f3f6fb',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  importButtonDisabled: {
+    opacity: 0.6,
+  },
+  importButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1e4f8a',
   },
   stateCard: {
     minHeight: 160,

@@ -7,6 +7,7 @@ import { toDateKey } from '../components/calendar.utils';
 import DateTimeField from '../components/DateTimeField';
 import { ACTIVITY_CATALOG } from '../constants/activity-catalog';
 import { getRoutineById, updateRoutine } from '../data/firebase-routines-repository';
+import { exportRoutineTemplateAsJson } from '../data/routine-template.io';
 import { scheduleRoutineForDate } from '../lib/schedule-routine';
 import type { Routine, RoutineItem } from '../types/routine.types';
 import BiofeedbackHeader from '../components/BiofeedbackHeader';
@@ -63,6 +64,7 @@ export default function BiofeedbackRoutineDetailScreen({ routineId }: Props) {
   const [updatingItemId, setUpdatingItemId] = useState<string | null>(null);
   const [selectedDateKey, setSelectedDateKey] = useState('');
   const [isScheduling, setIsScheduling] = useState(false);
+  const [isExportingTemplate, setIsExportingTemplate] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -149,6 +151,22 @@ export default function BiofeedbackRoutineDetailScreen({ routineId }: Props) {
       Alert.alert('השיבוץ נכשל', 'לא הצלחנו לשבץ את הרוטינה כרגע.');
     } finally {
       setIsScheduling(false);
+    }
+  }
+
+  async function handleExportTemplatePress() {
+    if (!routine || isExportingTemplate) {
+      return;
+    }
+
+    try {
+      setIsExportingTemplate(true);
+      await exportRoutineTemplateAsJson(routine);
+    } catch (error) {
+      console.log('ROUTINE TEMPLATE EXPORT FAILED:', error);
+      Alert.alert('ייצוא התבנית נכשל', 'לא הצלחנו לייצא את הרוטינה כתבנית כרגע.');
+    } finally {
+      setIsExportingTemplate(false);
     }
   }
 
@@ -251,6 +269,19 @@ export default function BiofeedbackRoutineDetailScreen({ routineId }: Props) {
           <>
             <Text style={styles.title}>{routine.name}</Text>
             <Text style={styles.subtitle}>{formatCycleLength(routine.cycleLengthDays)}</Text>
+
+            <Pressable
+              style={[
+                styles.exportTemplateButton,
+                isExportingTemplate ? styles.exportTemplateButtonDisabled : null,
+              ]}
+              onPress={handleExportTemplatePress}
+              disabled={isExportingTemplate}
+            >
+              <Text style={styles.exportTemplateButtonText}>
+                {isExportingTemplate ? 'מייצא...' : 'ייצוא כתבנית'}
+              </Text>
+            </Pressable>
 
             <View style={styles.scheduleBox}>
               <DateTimeField
@@ -393,6 +424,24 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#ffffff',
+  },
+  exportTemplateButton: {
+    height: 42,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#d7e3f4',
+    backgroundColor: '#f3f6fb',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
+  exportTemplateButtonDisabled: {
+    opacity: 0.6,
+  },
+  exportTemplateButtonText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#1e4f8a',
   },
   scheduleBox: {
     borderRadius: 12,
