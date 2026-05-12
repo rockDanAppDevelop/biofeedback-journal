@@ -3,26 +3,25 @@ import { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import BiofeedbackHeader from '../components/BiofeedbackHeader';
 import {
   ACTIVITY_CATALOG,
   type ActivityCatalogItem,
   type ActivityCategoryId,
 } from '../constants/activity-catalog';
 import {
-  getRoutineById,
-  updateRoutine,
-} from '../data/firebase-routines-repository';
-import {
   addCustomActivityToFirestore,
   listActiveCustomActivitiesFromFirestore,
 } from '../data/firebase-custom-activities-repository';
-import { toDateKey } from '../components/calendar.utils';
-import type { Routine, RoutineItem } from '../types/routine.types';
+import {
+  getRoutineTemplateById,
+  updateRoutineTemplate,
+} from '../data/firebase-routine-templates-repository';
+import type { RoutineTemplate, RoutineTemplateItem } from '../types/routine-template.types';
 import type { UserCustomActivity } from '../types/user-custom-activity.types';
-import BiofeedbackHeader from '../components/BiofeedbackHeader';
 
 type Props = {
-  routineId: string;
+  templateId: string;
 };
 
 const CATEGORY_LABELS: Record<ActivityCategoryId, string> = {
@@ -42,16 +41,16 @@ const BUILT_IN_CATEGORY_DISPLAY_ORDER: Exclude<ActivityCategoryId, 'custom'>[] =
 
 const NEW_CUSTOM_ACTIVITY_ID = '__new_custom_activity__';
 
-function createRoutineItemId(): string {
+function createTemplateItemId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
-function buildExerciseParameters(item: ActivityCatalogItem): RoutineItem['exerciseParameters'] {
+function buildExerciseParameters(item: ActivityCatalogItem): RoutineTemplateItem['exerciseParameters'] {
   if (item.activityType !== 'training' || !item.parameterSchema) {
     return null;
   }
 
-  return item.parameterSchema.reduce<NonNullable<RoutineItem['exerciseParameters']>>(
+  return item.parameterSchema.reduce<NonNullable<RoutineTemplateItem['exerciseParameters']>>(
     (parameters, field) => ({
       ...parameters,
       [field.id]: field.defaultValue,
@@ -60,8 +59,15 @@ function buildExerciseParameters(item: ActivityCatalogItem): RoutineItem['exerci
   );
 }
 
-export default function BiofeedbackRoutineAddItemScreen({ routineId }: Props) {
-  const [routine, setRoutine] = useState<Routine | null>(null);
+function normalizeTemplateItems(items: RoutineTemplateItem[]): RoutineTemplateItem[] {
+  return items.map((item, index) => ({
+    ...item,
+    sortOrder: index,
+  }));
+}
+
+export default function BiofeedbackRoutineTemplateAddItemScreen({ templateId }: Props) {
+  const [template, setTemplate] = useState<RoutineTemplate | null>(null);
   const [customActivities, setCustomActivities] = useState<UserCustomActivity[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -71,9 +77,9 @@ export default function BiofeedbackRoutineAddItemScreen({ routineId }: Props) {
   const [selectedCustomActivityId, setSelectedCustomActivityId] = useState('');
   const [newCustomExerciseName, setNewCustomExerciseName] = useState('');
   const [newCustomMeasurementType, setNewCustomMeasurementType] =
-    useState<RoutineItem['measurementType'] | ''>('');
+    useState<RoutineTemplateItem['measurementType'] | ''>('');
   const [newCustomDurationMinutes, setNewCustomDurationMinutes] = useState('8');
-  const [routineDayNumber, setRoutineDayNumber] = useState(1);
+  const [templateDayNumber, setTemplateDayNumber] = useState(1);
   const hasUnsavedChanges =
     selectedCategoryId !== '' ||
     selectedCatalogItemId !== '' ||
@@ -81,16 +87,16 @@ export default function BiofeedbackRoutineAddItemScreen({ routineId }: Props) {
     newCustomExerciseName.trim() !== '' ||
     newCustomMeasurementType !== '' ||
     newCustomDurationMinutes.trim() !== '8' ||
-    routineDayNumber !== 1;
+    templateDayNumber !== 1;
 
   useFocusEffect(
     useCallback(() => {
       let isActive = true;
 
       async function loadData() {
-        if (!routineId) {
-          setRoutine(null);
-          setErrorMessage('לא נמצאה רוטינה.');
+        if (!templateId || templateId === 'new') {
+          setTemplate(null);
+          setErrorMessage('יש לשמור את התבנית לפני הוספת תרגילים.');
           setIsLoading(false);
           return;
         }
@@ -99,8 +105,8 @@ export default function BiofeedbackRoutineAddItemScreen({ routineId }: Props) {
           setIsLoading(true);
           setErrorMessage('');
 
-          const [nextRoutine, nextCustomActivities] = await Promise.all([
-            getRoutineById(routineId),
+          const [nextTemplate, nextCustomActivities] = await Promise.all([
+            getRoutineTemplateById(templateId),
             listActiveCustomActivitiesFromFirestore(),
           ]);
 
@@ -108,21 +114,21 @@ export default function BiofeedbackRoutineAddItemScreen({ routineId }: Props) {
             return;
           }
 
-          if (!nextRoutine) {
-            setRoutine(null);
-            setErrorMessage('לא נמצאה רוטינה.');
+          if (!nextTemplate) {
+            setTemplate(null);
+            setErrorMessage('לא נמצאה תבנית.');
             return;
           }
 
-          setRoutine(nextRoutine);
+          setTemplate(nextTemplate);
           setCustomActivities(nextCustomActivities);
         } catch (error) {
           if (!isActive) {
             return;
           }
 
-          console.log('ROUTINE ADD ITEM LOAD FAILED:', error);
-          setErrorMessage('לא הצלחנו לטעון את נתוני הרוטינה כרגע.');
+          console.log('ROUTINE TEMPLATE ADD ITEM LOAD FAILED:', error);
+          setErrorMessage('לא הצלחנו לטעון את נתוני התבנית כרגע.');
         } finally {
           if (isActive) {
             setIsLoading(false);
@@ -135,7 +141,7 @@ export default function BiofeedbackRoutineAddItemScreen({ routineId }: Props) {
       return () => {
         isActive = false;
       };
-    }, [routineId]),
+    }, [templateId]),
   );
 
   const visibleCatalogItems = useMemo(() => {
@@ -154,13 +160,13 @@ export default function BiofeedbackRoutineAddItemScreen({ routineId }: Props) {
     setSelectedCustomActivityId('');
   }
 
-  function navigateBackToRoutine() {
+  function navigateBackToTemplate() {
     if (router.canGoBack()) {
       router.back();
       return;
     }
 
-    router.replace(`/routines/${routineId}`);
+    router.replace(`/routine-templates/${templateId}`);
   }
 
   function handleBackPress() {
@@ -169,29 +175,22 @@ export default function BiofeedbackRoutineAddItemScreen({ routineId }: Props) {
     }
 
     if (!hasUnsavedChanges) {
-      navigateBackToRoutine();
+      navigateBackToTemplate();
       return;
     }
 
-    Alert.alert(
-      'לצאת בלי לשמור?',
-      'התרגיל לא יתווסף לרוטינה.',
-      [
-        {
-          text: 'להישאר',
-          style: 'cancel',
-        },
-        {
-          text: 'לצאת בלי לשמור',
-          style: 'destructive',
-          onPress: navigateBackToRoutine,
-        },
-      ],
-    );
+    Alert.alert('לצאת בלי לשמור?', 'התרגיל לא יתווסף לתבנית.', [
+      { text: 'להישאר', style: 'cancel' },
+      {
+        text: 'לצאת בלי לשמור',
+        style: 'destructive',
+        onPress: navigateBackToTemplate,
+      },
+    ]);
   }
 
   async function handleSave() {
-    if (isSaving || !routine) {
+    if (isSaving || !template) {
       return;
     }
 
@@ -203,18 +202,18 @@ export default function BiofeedbackRoutineAddItemScreen({ routineId }: Props) {
       selectedCustomActivityId !== ''
         ? customActivities.find((activity) => activity.id === selectedCustomActivityId) ?? null
         : null;
-    const isCreatingNewCustomRoutineItem =
+    const isCreatingNewCustomTemplateItem =
       selectedCategoryId === 'custom' && selectedCustomActivityId === NEW_CUSTOM_ACTIVITY_ID;
 
-    if (!selectedCatalogItem && !selectedCustomActivity && !isCreatingNewCustomRoutineItem) {
-      Alert.alert('בחר תרגיל', 'יש לבחור תרגיל לרוטינה.');
+    if (!selectedCatalogItem && !selectedCustomActivity && !isCreatingNewCustomTemplateItem) {
+      Alert.alert('בחר תרגיל', 'יש לבחור תרגיל לתבנית.');
       return;
     }
 
     const trimmedNewCustomExerciseName = newCustomExerciseName.trim();
     const parsedNewCustomDurationMinutes = Number(newCustomDurationMinutes.trim());
 
-    if (isCreatingNewCustomRoutineItem) {
+    if (isCreatingNewCustomTemplateItem) {
       if (!trimmedNewCustomExerciseName) {
         Alert.alert('שם תרגיל חסר', 'יש להזין שם לתרגיל המותאם.');
         return;
@@ -239,22 +238,19 @@ export default function BiofeedbackRoutineAddItemScreen({ routineId }: Props) {
 
       let savedCustomActivity: UserCustomActivity | null = null;
 
-      if (isCreatingNewCustomRoutineItem) {
+      if (isCreatingNewCustomTemplateItem) {
         savedCustomActivity = await addCustomActivityToFirestore({
           label: trimmedNewCustomExerciseName,
-          measurementType: newCustomMeasurementType as RoutineItem['measurementType'],
+          measurementType: newCustomMeasurementType as RoutineTemplateItem['measurementType'],
         });
       }
 
-      if (isCreatingNewCustomRoutineItem && !savedCustomActivity) {
+      if (isCreatingNewCustomTemplateItem && !savedCustomActivity) {
         throw new Error('Custom activity was not created');
       }
 
-      const nextSortOrder = routine.items.length;
-      let baseItem: Omit<
-        RoutineItem,
-        'id' | 'dayOffset' | 'sortOrder' | 'effectiveFromDateKey' | 'removedFromDateKey' | 'durationMinutes'
-      >;
+      const nextSortOrder = template.items.length;
+      let baseItem: Omit<RoutineTemplateItem, 'id' | 'dayOffset' | 'sortOrder' | 'durationMinutes'>;
 
       if (selectedCatalogItem) {
         baseItem = {
@@ -269,7 +265,7 @@ export default function BiofeedbackRoutineAddItemScreen({ routineId }: Props) {
               : null,
           exerciseParameters: buildExerciseParameters(selectedCatalogItem),
         };
-      } else if (isCreatingNewCustomRoutineItem) {
+      } else if (isCreatingNewCustomTemplateItem) {
         baseItem = {
           activityType: 'training',
           measurementType: savedCustomActivity!.measurementType,
@@ -290,30 +286,24 @@ export default function BiofeedbackRoutineAddItemScreen({ routineId }: Props) {
           exerciseParameters: null,
         };
       } else {
-        throw new Error('No routine item source selected');
+        throw new Error('No template item source selected');
       }
 
-      const nextItem: RoutineItem = {
-        id: createRoutineItemId(),
-        dayOffset: routineDayNumber - 1,
+      const nextItem: RoutineTemplateItem = {
+        id: createTemplateItemId(),
+        dayOffset: templateDayNumber - 1,
         sortOrder: nextSortOrder,
-        effectiveFromDateKey: toDateKey(new Date()),
-        removedFromDateKey: null,
-        durationMinutes: isCreatingNewCustomRoutineItem ? parsedNewCustomDurationMinutes : null,
+        durationMinutes: isCreatingNewCustomTemplateItem ? parsedNewCustomDurationMinutes : null,
         ...baseItem,
       };
 
-      await updateRoutine(routine.id, {
-        items: [...routine.items, nextItem],
+      await updateRoutineTemplate(template.id, {
+        items: normalizeTemplateItems([...template.items, nextItem]),
       });
 
-      if (router.canGoBack()) {
-        router.back();
-      } else {
-        router.replace(`/routines/${routine.id}`);
-      }
+      navigateBackToTemplate();
     } catch (error) {
-      console.log('ROUTINE ADD ITEM SAVE FAILED:', error);
+      console.log('ROUTINE TEMPLATE ADD ITEM SAVE FAILED:', error);
       Alert.alert(
         'שמירת התרגיל נכשלה',
         error instanceof Error ? error.message : 'לא הצלחנו לשמור את התרגיל כרגע.',
@@ -335,37 +325,47 @@ export default function BiofeedbackRoutineAddItemScreen({ routineId }: Props) {
         {isLoading ? (
           <View style={styles.stateCard}>
             <ActivityIndicator size="small" color="#1e4f8a" />
-            <Text style={styles.stateText}>טוען נתוני רוטינה...</Text>
+            <Text style={styles.stateText}>טוען נתוני תבנית...</Text>
           </View>
         ) : errorMessage ? (
           <View style={styles.stateCard}>
             <Text style={styles.stateText}>{errorMessage}</Text>
           </View>
-        ) : routine ? (
+        ) : template ? (
           <>
-            <Text style={styles.subtitle}>{routine.name}</Text>
+            <Text style={styles.subtitle}>{template.name}</Text>
 
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>פרטי תרגיל</Text>
 
-              <Text style={styles.label}>יום ברוטינה</Text>
+              <Text style={styles.label}>יום בתבנית</Text>
               <View style={styles.dayStepper}>
                 <Pressable
                   style={[
                     styles.dayStepperButton,
-                    routineDayNumber <= 1 ? styles.dayStepperButtonDisabled : null,
+                    templateDayNumber <= 1 ? styles.dayStepperButtonDisabled : null,
                   ]}
-                  onPress={() => setRoutineDayNumber((current) => Math.max(1, current - 1))}
-                  disabled={routineDayNumber <= 1}
+                  onPress={() => setTemplateDayNumber((current) => Math.max(1, current - 1))}
+                  disabled={templateDayNumber <= 1}
                 >
                   <Text style={styles.dayStepperButtonText}>-</Text>
                 </Pressable>
 
-                <Text style={styles.dayStepperValue}>{routineDayNumber}</Text>
+                <Text style={styles.dayStepperValue}>{templateDayNumber}</Text>
 
                 <Pressable
-                  style={styles.dayStepperButton}
-                  onPress={() => setRoutineDayNumber((current) => current + 1)}
+                  style={[
+                    styles.dayStepperButton,
+                    templateDayNumber >= template.cycleLengthDays
+                      ? styles.dayStepperButtonDisabled
+                      : null,
+                  ]}
+                  onPress={() =>
+                    setTemplateDayNumber((current) =>
+                      Math.min(template.cycleLengthDays, current + 1),
+                    )
+                  }
+                  disabled={templateDayNumber >= template.cycleLengthDays}
                 >
                   <Text style={styles.dayStepperButtonText}>+</Text>
                 </Pressable>

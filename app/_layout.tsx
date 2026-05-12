@@ -16,6 +16,8 @@ function AppStack() {
       <Stack.Screen name="routines/new" options={{ headerShown: false }} />
       <Stack.Screen name="routines/[routineId]" options={{ headerShown: false }} />
       <Stack.Screen name="routines/[routineId]/add-item" options={{ headerShown: false }} />
+      <Stack.Screen name="routine-templates/[templateId]" options={{ headerShown: false }} />
+      <Stack.Screen name="routine-templates/[templateId]/add-item" options={{ headerShown: false }} />
       <Stack.Screen name="entries/new" options={{ headerShown: false }} />
       <Stack.Screen name="entries/[entryId]" options={{ headerShown: false }} />
       <Stack.Screen

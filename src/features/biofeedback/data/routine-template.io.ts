@@ -7,6 +7,7 @@ import {
   type CreateRoutineInput,
   type CreateRoutineItemInput,
 } from './firebase-routines-repository';
+import type { RoutineTemplate as StoredRoutineTemplate } from '../types/routine-template.types';
 import type { Routine, RoutineItem } from '../types/routine.types';
 
 type RoutineTemplateItemJson = {
@@ -186,6 +187,29 @@ function createTemplateFromRoutine(routine: Routine): RoutineTemplateJson {
   };
 }
 
+function createTemplateFromStoredRoutineTemplate(
+  template: StoredRoutineTemplate,
+): RoutineTemplateJson {
+  return {
+    type: TEMPLATE_TYPE,
+    schemaVersion: TEMPLATE_SCHEMA_VERSION,
+    exportedAt: new Date().toISOString(),
+    name: template.name,
+    cycleLengthDays: template.cycleLengthDays,
+    items: template.items.map((item) => ({
+      dayOffset: item.dayOffset,
+      sortOrder: item.sortOrder,
+      activityType: item.activityType,
+      measurementType: item.measurementType,
+      catalogItemId: item.catalogItemId,
+      customExerciseName: item.customExerciseName,
+      monitoringType: item.monitoringType,
+      durationMinutes: item.durationMinutes,
+      exerciseParameters: item.exerciseParameters,
+    })),
+  };
+}
+
 function parseTemplateItem(
   value: unknown,
   cycleLengthDays: number,
@@ -302,6 +326,43 @@ export async function exportRoutineTemplateAsJson(routine: Routine): Promise<voi
   const template = createTemplateFromRoutine(routine);
   const json = JSON.stringify(template, null, 2);
   const fileName = createRoutineTemplateFileName(routine.name);
+
+  if (Platform.OS === 'web') {
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+
+    anchor.href = url;
+    anchor.download = fileName;
+    anchor.style.display = 'none';
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+
+    URL.revokeObjectURL(url);
+    return;
+  }
+
+  const file = new File(Paths.cache, fileName);
+  file.write(json);
+
+  const canShare = await Sharing.isAvailableAsync();
+  if (!canShare) {
+    throw new Error('Sharing is not available on this device');
+  }
+
+  await Sharing.shareAsync(file.uri, {
+    mimeType: 'application/json',
+    dialogTitle: 'ייצוא תבנית רוטינה',
+  });
+}
+
+export async function exportStoredRoutineTemplateAsJson(
+  routineTemplate: StoredRoutineTemplate,
+): Promise<void> {
+  const template = createTemplateFromStoredRoutineTemplate(routineTemplate);
+  const json = JSON.stringify(template, null, 2);
+  const fileName = createRoutineTemplateFileName(routineTemplate.name);
 
   if (Platform.OS === 'web') {
     const blob = new Blob([json], { type: 'application/json' });

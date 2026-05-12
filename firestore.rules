@@ -27,6 +27,11 @@ service cloud.firestore {
         allow read, create, update, delete: if isOwner(userId);
       }
 
+      match /routineTemplates/{templateId} {
+        allow read, create, update: if isOwner(userId);
+        allow delete: if false;
+      }
+
       match /plannedPractices/{practiceId} {
         allow read, create, update, delete: if isOwner(userId);
       }

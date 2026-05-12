@@ -19,10 +19,15 @@ import {
   listActiveRoutines,
 } from '../data/firebase-routines-repository';
 import {
+  archiveRoutineTemplate,
+  listRoutineTemplates,
+} from '../data/firebase-routine-templates-repository';
+import {
   createRoutineFromTemplatePreview,
   readRoutineTemplateFromFile,
   type RoutineTemplatePreview,
 } from '../data/routine-template.io';
+import type { RoutineTemplate } from '../types/routine-template.types';
 import type { Routine } from '../types/routine.types';
 import BiofeedbackHeader from '../components/BiofeedbackHeader';
 
@@ -40,6 +45,7 @@ function getActiveRoutineItemCount(routine: Routine): number {
 
 export default function BiofeedbackPlanningScreen() {
   const [routines, setRoutines] = useState<Routine[]>([]);
+  const [routineTemplates, setRoutineTemplates] = useState<RoutineTemplate[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isImportingTemplate, setIsImportingTemplate] = useState(false);
   const [pendingTemplate, setPendingTemplate] = useState<RoutineTemplatePreview | null>(null);
@@ -52,13 +58,17 @@ export default function BiofeedbackPlanningScreen() {
       setIsLoading(true);
       setErrorMessage('');
 
-      const nextRoutines = await listActiveRoutines();
+      const [nextRoutines, nextRoutineTemplates] = await Promise.all([
+        listActiveRoutines(),
+        listRoutineTemplates(),
+      ]);
 
       if (!shouldApply()) {
         return;
       }
 
       setRoutines(nextRoutines);
+      setRoutineTemplates(nextRoutineTemplates);
     } catch (error) {
       if (!shouldApply()) {
         return;
@@ -87,6 +97,14 @@ export default function BiofeedbackPlanningScreen() {
 
   function handleCreateRoutinePress() {
     router.push('/routines/new');
+  }
+
+  function handleCreateRoutineTemplatePress() {
+    router.push('/routine-templates/new');
+  }
+
+  function handleBackPress() {
+    router.replace('/dashboard');
   }
 
   async function handleImportTemplatePress() {
@@ -186,14 +204,48 @@ export default function BiofeedbackPlanningScreen() {
     );
   }
 
+  function handleArchiveRoutineTemplatePress(template: RoutineTemplate) {
+    Alert.alert(
+      'לארכב את התבנית?',
+      'התבנית לא תופיע יותר ברשימת הרוטינות לייצוא.',
+      [
+        {
+          text: 'ביטול',
+          style: 'cancel',
+        },
+        {
+          text: 'ארכב',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await archiveRoutineTemplate(template.id);
+              await loadRoutines();
+            } catch (error) {
+              console.log('ROUTINE TEMPLATE ARCHIVE FAILED:', error);
+              Alert.alert('ארכוב התבנית נכשל', 'לא הצלחנו לארכב את התבנית כרגע.');
+            }
+          },
+        },
+      ],
+    );
+  }
+
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <BiofeedbackHeader variant="screen" title="תכנון תרגולים" />
+        <BiofeedbackHeader
+          variant="screen"
+          title="תכנון תרגולים"
+          onBackPress={handleBackPress}
+        />
 
         <View style={styles.headerRow}>
           <Pressable style={styles.createButton} onPress={handleCreateRoutinePress}>
             <Text style={styles.createButtonText}>רוטינה חדשה</Text>
+          </Pressable>
+
+          <Pressable style={styles.templateButton} onPress={handleCreateRoutineTemplatePress}>
+            <Text style={styles.templateButtonText}>תבנית לשליחה</Text>
           </Pressable>
 
           <Pressable
@@ -262,12 +314,50 @@ export default function BiofeedbackPlanningScreen() {
           <View style={styles.stateCard}>
             <Text style={styles.stateText}>{errorMessage}</Text>
           </View>
-        ) : routines.length === 0 ? (
+        ) : (
+          <>
+            <View style={styles.templatesSection}>
+              <Text style={styles.sectionTitle}>רוטינות לייצוא</Text>
+
+              {routineTemplates.length === 0 ? (
+                <Text style={styles.emptyInlineText}>אין עדיין תבניות לשליחה.</Text>
+              ) : (
+                <View style={styles.routinesList}>
+                  {routineTemplates.map((template) => (
+                    <View key={template.id} style={styles.routineCard}>
+                      <Pressable
+                        style={styles.routineCardContent}
+                        onPress={() => router.push(`/routine-templates/${template.id}`)}
+                      >
+                        <Text style={styles.routineName}>{template.name}</Text>
+                        <Text style={styles.routineMeta}>
+                          {formatItemCount(template.items.length)}
+                        </Text>
+                        <Text style={styles.routineMeta}>
+                          {formatCycleLength(template.cycleLengthDays)}
+                        </Text>
+                      </Pressable>
+
+                      <Pressable
+                        style={styles.archiveRoutineButton}
+                        onPress={() => handleArchiveRoutineTemplatePress(template)}
+                      >
+                        <Text style={styles.archiveRoutineButtonText}>ארכב</Text>
+                      </Pressable>
+                    </View>
+                  ))}
+                </View>
+              )}
+            </View>
+
+            <Text style={styles.sectionTitle}>רוטינות פעילות</Text>
+
+            {routines.length === 0 ? (
           <View style={styles.stateCard}>
             <Text style={styles.emptyTitle}>אין עדיין רוטינות</Text>
             <Text style={styles.stateText}>כאן יופיעו רוטינות התרגול הקבועות שלך.</Text>
           </View>
-        ) : (
+            ) : (
           <View style={styles.routinesList}>
             {routines.map((routine) => (
               <View key={routine.id} style={styles.routineCard}>
@@ -294,6 +384,8 @@ export default function BiofeedbackPlanningScreen() {
               </View>
             ))}
           </View>
+            )}
+          </>
         )}
       </ScrollView>
     </SafeAreaView>
@@ -326,6 +418,20 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#ffffff',
+  },
+  templateButton: {
+    height: 44,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#d7e3f4',
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  templateButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1e4f8a',
   },
   importButton: {
     height: 44,
@@ -430,6 +536,22 @@ const styles = StyleSheet.create({
     paddingVertical: 24,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  templatesSection: {
+    marginBottom: 20,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#243447',
+    textAlign: 'right',
+    marginBottom: 10,
+  },
+  emptyInlineText: {
+    fontSize: 15,
+    color: '#6b7280',
+    textAlign: 'right',
+    marginBottom: 8,
   },
   stateText: {
     fontSize: 15,
