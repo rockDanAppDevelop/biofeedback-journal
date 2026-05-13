@@ -140,6 +140,7 @@ export default function BiofeedbackEntryCreateScreen({
   const [favoriteCatalogActivityIds, setFavoriteCatalogActivityIds] = useState<string[]>([]);
   const [isLoadingCustomActivities, setIsLoadingCustomActivities] = useState(false);
   const [hasLoadedCustomActivities, setHasLoadedCustomActivities] = useState(false);
+  const [showAllCatalogActivities, setShowAllCatalogActivities] = useState(false);
   const [showAllCustomActivities, setShowAllCustomActivities] = useState(false);
   const [isCreatingNewCustomActivity, setIsCreatingNewCustomActivity] = useState(false);
   const [plannedPractice, setPlannedPractice] = useState<PlannedPractice | null>(null);
@@ -351,14 +352,34 @@ export default function BiofeedbackEntryCreateScreen({
     [favoriteCatalogActivityIds],
   );
 
+  const catalogItemsWithFavoriteState = useMemo(
+    () =>
+      visibleCatalogItems.map((item, index) => ({
+        item,
+        isFavorite: favoriteCatalogActivityIdsSet.has(item.id),
+        originalIndex: index,
+      })),
+    [favoriteCatalogActivityIdsSet, visibleCatalogItems],
+  );
+
+  const favoriteVisibleCatalogItems = useMemo(
+    () => catalogItemsWithFavoriteState.filter(({ isFavorite }) => isFavorite),
+    [catalogItemsWithFavoriteState],
+  );
+
+  const canFilterCatalogFavorites = visibleCatalogItems.length > 3;
+
+  const shouldShowFavoriteCatalogItemsOnly =
+    canFilterCatalogFavorites &&
+    favoriteVisibleCatalogItems.length > 0 &&
+    !showAllCatalogActivities;
+
   const displayedCatalogItems = useMemo(
     () =>
-      visibleCatalogItems
-        .map((item, index) => ({
-          item,
-          isFavorite: favoriteCatalogActivityIdsSet.has(item.id),
-          originalIndex: index,
-        }))
+      [...(shouldShowFavoriteCatalogItemsOnly
+        ? favoriteVisibleCatalogItems
+        : catalogItemsWithFavoriteState
+      )]
         .sort((a, b) => {
           if (a.isFavorite !== b.isFavorite) {
             return a.isFavorite ? -1 : 1;
@@ -366,8 +387,16 @@ export default function BiofeedbackEntryCreateScreen({
 
           return a.originalIndex - b.originalIndex;
         }),
-    [favoriteCatalogActivityIdsSet, visibleCatalogItems],
+    [
+      catalogItemsWithFavoriteState,
+      favoriteVisibleCatalogItems,
+      shouldShowFavoriteCatalogItemsOnly,
+    ],
   );
+
+  const shouldShowAllCatalogActivitiesToggle =
+    canFilterCatalogFavorites &&
+    favoriteVisibleCatalogItems.length > 0;
 
   const sortedCustomActivities = useMemo(
     () =>
@@ -518,6 +547,7 @@ export default function BiofeedbackEntryCreateScreen({
       monitoringType: '',
     }));
     setIsCreatingNewCustomActivity(false);
+    setShowAllCatalogActivities(false);
     setShowAllCustomActivities(false);
     setShowExtraHrvFields(false);
     setShowExtraRlxFields(false);
@@ -1043,6 +1073,17 @@ export default function BiofeedbackEntryCreateScreen({
             {values.selectedCategoryId !== '' && !isCustomTraining ? (
               <>
                 <Text style={styles.label}>פעילות</Text>
+
+                {shouldShowAllCatalogActivitiesToggle ? (
+                  <Pressable
+                    onPress={() => setShowAllCatalogActivities((current) => !current)}
+                    style={styles.secondarySectionToggle}
+                  >
+                    <Text style={styles.secondarySectionToggleText}>
+                      {showAllCatalogActivities ? 'הצג מועדפים בלבד' : 'הצג הכל'}
+                    </Text>
+                  </Pressable>
+                ) : null}
 
                 <View style={styles.exerciseOptionsContainer}>
                   {displayedCatalogItems.map(({ item, isFavorite }) => {

@@ -164,14 +164,16 @@ export default function BiofeedbackRoutineAddItemScreen({ routineId }: Props) {
     [favoriteCatalogActivityIdsSet, visibleCatalogItems],
   );
 
-  const displayedCatalogItems =
-    favoriteVisibleCatalogItems.length > 0 && !showAllCatalogActivities
-      ? favoriteVisibleCatalogItems
-      : visibleCatalogItems;
+  const canFilterCatalogFavorites = visibleCatalogItems.length > 3;
+
+  const shouldShowFavoriteCatalogItemsOnly =
+    canFilterCatalogFavorites &&
+    favoriteVisibleCatalogItems.length > 0 &&
+    !showAllCatalogActivities;
 
   const shouldShowAllCatalogActivitiesToggle =
-    favoriteVisibleCatalogItems.length > 0 &&
-    favoriteVisibleCatalogItems.length < visibleCatalogItems.length;
+    canFilterCatalogFavorites &&
+    favoriteVisibleCatalogItems.length > 0;
 
   const sortedCustomActivities = useMemo(
     () =>
@@ -487,7 +489,10 @@ export default function BiofeedbackRoutineAddItemScreen({ routineId }: Props) {
                     </Pressable>
                   ) : null}
                   <View style={styles.exerciseOptionsContainer}>
-                    {displayedCatalogItems.map((item) => {
+                    {(shouldShowFavoriteCatalogItemsOnly
+                      ? favoriteVisibleCatalogItems
+                      : visibleCatalogItems
+                    ).map((item) => {
                       const isSelected = selectedCatalogItemId === item.id;
 
                       return (
