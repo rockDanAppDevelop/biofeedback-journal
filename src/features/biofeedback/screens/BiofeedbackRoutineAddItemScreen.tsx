@@ -16,6 +16,7 @@ import {
   addCustomActivityToFirestore,
   listActiveCustomActivitiesFromFirestore,
 } from '../data/firebase-custom-activities-repository';
+import { listFavoriteCatalogActivityIdsFromFirestore } from '../data/firebase-catalog-favorites-repository';
 import { toDateKey } from '../components/calendar.utils';
 import type { Routine, RoutineItem } from '../types/routine.types';
 import type { UserCustomActivity } from '../types/user-custom-activity.types';
@@ -63,12 +64,15 @@ function buildExerciseParameters(item: ActivityCatalogItem): RoutineItem['exerci
 export default function BiofeedbackRoutineAddItemScreen({ routineId }: Props) {
   const [routine, setRoutine] = useState<Routine | null>(null);
   const [customActivities, setCustomActivities] = useState<UserCustomActivity[]>([]);
+  const [favoriteCatalogActivityIds, setFavoriteCatalogActivityIds] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [selectedCategoryId, setSelectedCategoryId] = useState<ActivityCategoryId | ''>('');
   const [selectedCatalogItemId, setSelectedCatalogItemId] = useState('');
   const [selectedCustomActivityId, setSelectedCustomActivityId] = useState('');
+  const [showAllCatalogActivities, setShowAllCatalogActivities] = useState(false);
+  const [showAllCustomActivities, setShowAllCustomActivities] = useState(false);
   const [newCustomExerciseName, setNewCustomExerciseName] = useState('');
   const [newCustomMeasurementType, setNewCustomMeasurementType] =
     useState<RoutineItem['measurementType'] | ''>('');
@@ -99,9 +103,10 @@ export default function BiofeedbackRoutineAddItemScreen({ routineId }: Props) {
           setIsLoading(true);
           setErrorMessage('');
 
-          const [nextRoutine, nextCustomActivities] = await Promise.all([
+          const [nextRoutine, nextCustomActivities, nextFavoriteCatalogActivityIds] = await Promise.all([
             getRoutineById(routineId),
             listActiveCustomActivitiesFromFirestore(),
+            listFavoriteCatalogActivityIdsFromFirestore(),
           ]);
 
           if (!isActive) {
@@ -116,6 +121,7 @@ export default function BiofeedbackRoutineAddItemScreen({ routineId }: Props) {
 
           setRoutine(nextRoutine);
           setCustomActivities(nextCustomActivities);
+          setFavoriteCatalogActivityIds(nextFavoriteCatalogActivityIds);
         } catch (error) {
           if (!isActive) {
             return;
@@ -148,10 +154,57 @@ export default function BiofeedbackRoutineAddItemScreen({ routineId }: Props) {
     );
   }, [selectedCategoryId]);
 
+  const favoriteCatalogActivityIdsSet = useMemo(
+    () => new Set(favoriteCatalogActivityIds),
+    [favoriteCatalogActivityIds],
+  );
+
+  const favoriteVisibleCatalogItems = useMemo(
+    () => visibleCatalogItems.filter((item) => favoriteCatalogActivityIdsSet.has(item.id)),
+    [favoriteCatalogActivityIdsSet, visibleCatalogItems],
+  );
+
+  const displayedCatalogItems =
+    favoriteVisibleCatalogItems.length > 0 && !showAllCatalogActivities
+      ? favoriteVisibleCatalogItems
+      : visibleCatalogItems;
+
+  const shouldShowAllCatalogActivitiesToggle =
+    favoriteVisibleCatalogItems.length > 0 &&
+    favoriteVisibleCatalogItems.length < visibleCatalogItems.length;
+
+  const sortedCustomActivities = useMemo(
+    () =>
+      [...customActivities].sort((a, b) => {
+        if (a.isFavorite !== b.isFavorite) {
+          return a.isFavorite ? -1 : 1;
+        }
+
+        return b.createdAt.localeCompare(a.createdAt);
+      }),
+    [customActivities],
+  );
+
+  const favoriteCustomActivities = useMemo(
+    () => sortedCustomActivities.filter((activity) => activity.isFavorite),
+    [sortedCustomActivities],
+  );
+
+  const displayedCustomActivities =
+    favoriteCustomActivities.length > 0 && !showAllCustomActivities
+      ? favoriteCustomActivities
+      : sortedCustomActivities;
+
+  const shouldShowAllCustomActivitiesToggle =
+    favoriteCustomActivities.length > 0 &&
+    favoriteCustomActivities.length < sortedCustomActivities.length;
+
   function handleCategorySelect(categoryId: ActivityCategoryId) {
     setSelectedCategoryId(categoryId);
     setSelectedCatalogItemId('');
     setSelectedCustomActivityId('');
+    setShowAllCatalogActivities(false);
+    setShowAllCustomActivities(false);
   }
 
   function handleBackPress() {
@@ -423,8 +476,18 @@ export default function BiofeedbackRoutineAddItemScreen({ routineId }: Props) {
               {selectedCategoryId !== '' && selectedCategoryId !== 'custom' ? (
                 <>
                   <Text style={styles.label}>תרגיל</Text>
+                  {shouldShowAllCatalogActivitiesToggle ? (
+                    <Pressable
+                      onPress={() => setShowAllCatalogActivities((current) => !current)}
+                      style={styles.secondarySectionToggle}
+                    >
+                      <Text style={styles.secondarySectionToggleText}>
+                        {showAllCatalogActivities ? 'הצג מועדפים בלבד' : 'הצג הכל'}
+                      </Text>
+                    </Pressable>
+                  ) : null}
                   <View style={styles.exerciseOptionsContainer}>
-                    {visibleCatalogItems.map((item) => {
+                    {displayedCatalogItems.map((item) => {
                       const isSelected = selectedCatalogItemId === item.id;
 
                       return (
@@ -530,31 +593,43 @@ export default function BiofeedbackRoutineAddItemScreen({ routineId }: Props) {
                   {customActivities.length === 0 ? (
                     <Text style={styles.helperText}>אין עדיין תרגולים מותאמים אישית.</Text>
                   ) : (
-                    <View style={styles.exerciseOptionsContainer}>
-                      {customActivities.map((activity) => {
-                        const isSelected = selectedCustomActivityId === activity.id;
+                    <>
+                      {shouldShowAllCustomActivitiesToggle ? (
+                        <Pressable
+                          onPress={() => setShowAllCustomActivities((current) => !current)}
+                          style={styles.secondarySectionToggle}
+                        >
+                          <Text style={styles.secondarySectionToggleText}>
+                            {showAllCustomActivities ? 'הצג מועדפים בלבד' : 'הצג הכל'}
+                          </Text>
+                        </Pressable>
+                      ) : null}
+                      <View style={styles.exerciseOptionsContainer}>
+                        {displayedCustomActivities.map((activity) => {
+                          const isSelected = selectedCustomActivityId === activity.id;
 
-                        return (
-                          <Pressable
-                            key={activity.id}
-                            style={[
-                              styles.exerciseOptionButton,
-                              isSelected ? styles.exerciseOptionButtonSelected : null,
-                            ]}
-                            onPress={() => setSelectedCustomActivityId(activity.id)}
-                          >
-                            <Text
+                          return (
+                            <Pressable
+                              key={activity.id}
                               style={[
-                                styles.exerciseOptionButtonText,
-                                isSelected ? styles.exerciseOptionButtonTextSelected : null,
+                                styles.exerciseOptionButton,
+                                isSelected ? styles.exerciseOptionButtonSelected : null,
                               ]}
+                              onPress={() => setSelectedCustomActivityId(activity.id)}
                             >
-                              {activity.label}
-                            </Text>
-                          </Pressable>
-                        );
-                      })}
-                    </View>
+                              <Text
+                                style={[
+                                  styles.exerciseOptionButtonText,
+                                  isSelected ? styles.exerciseOptionButtonTextSelected : null,
+                                ]}
+                              >
+                                {activity.label}
+                              </Text>
+                            </Pressable>
+                          );
+                        })}
+                      </View>
+                    </>
                   )}
                 </>
               ) : null}
@@ -791,6 +866,21 @@ const styles = StyleSheet.create({
     color: '#6b7280',
     textAlign: 'right',
     marginBottom: 12,
+  },
+  secondarySectionToggle: {
+    marginBottom: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#d6e4f5',
+    backgroundColor: '#f8fbff',
+  },
+  secondarySectionToggleText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1e4f8a',
+    textAlign: 'center',
   },
   saveButton: {
     height: 48,
