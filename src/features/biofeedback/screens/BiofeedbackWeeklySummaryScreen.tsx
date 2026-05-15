@@ -99,7 +99,7 @@ export default function BiofeedbackWeeklySummaryScreen() {
     () => getWeeklySummary(entries, todayDateKey),
     [entries, todayDateKey],
   );
-  const hasWeeklyEntries = summary.totalEntries > 0;
+  const hasWeeklyEntries = summary.totalEntries > 0 || summary.morningMonitoringCount > 0;
   const weekRangeText =
     `${formatDateKeyForRange(summary.weekStartDateKey)} - ` +
     formatDateKeyForRange(summary.weekEndDateKey);
@@ -198,6 +198,12 @@ export default function BiofeedbackWeeklySummaryScreen() {
               <SummaryCard title="ימים מתורגלים" value={`${summary.daysWithEntries} / 7`} />
               <SummaryCard title="מספר תרגולים" value={String(summary.totalEntries)} />
               <SummaryCard title="דקות תרגול" value={String(summary.totalDurationMinutes)} />
+              {summary.morningMonitoringCount > 0 ? (
+                <SummaryCard
+                  title="ניטור בוקר"
+                  value={`${summary.morningMonitoringCount} פעמים השבוע`}
+                />
+              ) : null}
               {summary.totalRlxSessions > 0 ? (
                 <SummaryCard
                   title="שיפור בתרגולי RLX"

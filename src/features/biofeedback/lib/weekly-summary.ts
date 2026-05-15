@@ -1,5 +1,5 @@
 import { BiofeedbackEntry } from '../types/biofeedback-entry.types';
-import { isPracticeEntry } from './entry-kind';
+import { isMonitoringEntry, isPracticeEntry } from './entry-kind';
 
 export type WeeklySummary = {
   weekStartDateKey: string;
@@ -11,6 +11,7 @@ export type WeeklySummary = {
   rlxImprovedCount: number;
   totalMinutesImproved: number;
   averageRelaxationPercent: number | null;
+  morningMonitoringCount: number;
 };
 
 function addDaysToDateKey(dateKey: string, days: number): string {
@@ -64,6 +65,16 @@ export function getWeeklySummary(
 
     return actualDateKey >= weekStartDateKey && actualDateKey <= weekEndDateKey;
   });
+  const morningMonitoringEntries = entries.filter((entry) => {
+    const actualDateKey = getDateKeyFromMeasuredAt(entry.measuredAt);
+
+    return (
+      actualDateKey >= weekStartDateKey &&
+      actualDateKey <= weekEndDateKey &&
+      isMonitoringEntry(entry) &&
+      entry.activity?.monitoringType === 'morning'
+    );
+  });
 
   const daysWithEntries = new Set(habitWeekEntries.map((entry) => entry.dateKey)).size;
   const totalDurationMinutes = actualWeekEntries.reduce(
@@ -96,5 +107,6 @@ export function getWeeklySummary(
     ),
     averageRelaxationPercent:
       hrvEntries.length > 0 ? totalRelaxationPercent / hrvEntries.length : null,
+    morningMonitoringCount: morningMonitoringEntries.length,
   };
 }
