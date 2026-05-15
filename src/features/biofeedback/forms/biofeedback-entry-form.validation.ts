@@ -72,7 +72,28 @@ export function validateBiofeedbackEntryForm(
     errors.monitoringType = 'בחר סוג ניטור';
   }
 
-  if (!Number.isFinite(values.durationMinutes) || values.durationMinutes <= 0) {
+  const isMorningMonitoring =
+    values.selectedCategoryId === 'monitoring' && values.monitoringType === 'morning';
+  const monitoringScore =
+    values.monitoringScore.trim() === '' ? null : Number(values.monitoringScore.trim());
+  const monitoringDurationMinutes =
+    values.monitoringDurationMinutes.trim() === ''
+      ? null
+      : Number(values.monitoringDurationMinutes.trim());
+
+  if (isMorningMonitoring) {
+    if (monitoringScore === null || !Number.isFinite(monitoringScore)) {
+      errors.monitoringScore = 'יש להזין ציון ניטור בין 0 ל-100';
+    } else if (monitoringScore < 0 || monitoringScore > 100) {
+      errors.monitoringScore = 'ציון ניטור חייב להיות בין 0 ל-100';
+    }
+
+    if (monitoringDurationMinutes === null || !Number.isFinite(monitoringDurationMinutes)) {
+      errors.monitoringDurationMinutes = 'יש להזין משך ניטור בין 1 ל-3 דקות';
+    } else if (monitoringDurationMinutes < 1 || monitoringDurationMinutes > 3) {
+      errors.monitoringDurationMinutes = 'משך ניטור חייב להיות בין 1 ל-3 דקות';
+    }
+  } else if (!Number.isFinite(values.durationMinutes) || values.durationMinutes <= 0) {
     errors.durationMinutes = 'משך בדקות חייב להיות גדול מ-0';
   }
 

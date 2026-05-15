@@ -2,7 +2,11 @@
 
 import { collection, getDocs, limit, orderBy, query, where } from 'firebase/firestore';
 import { auth, db } from '../../../lib/firebase';
-import type { BiofeedbackEntry } from '../types/biofeedback-entry.types';
+import type {
+  BiofeedbackEntry,
+  EntryActivity,
+  MonitoringResult,
+} from '../types/biofeedback-entry.types';
 import { mapFirebaseBiofeedbackEntryToDomain } from './biofeedback-entry.mapper';
 
 export type FirebaseBiofeedbackEntry = {
@@ -13,6 +17,8 @@ export type FirebaseBiofeedbackEntry = {
   measuredAt: string;
   exerciseName: string;
   measurementType: 'hrv' | 'rlx' | null;
+  activity?: EntryActivity;
+  monitoringResult?: MonitoringResult | null;
   durationMinutes: number;
   hrvStressPercent: string;
   hrvMidRangePercent: string;
@@ -53,6 +59,8 @@ export async function listBiofeedbackEntriesByDateKeyFromFirestore(
         measuredAt: data.measuredAt,
         exerciseName: data.exerciseName,
         measurementType: data.measurementType ?? null,
+        activity: data.activity ?? undefined,
+        monitoringResult: data.monitoringResult ?? null,
         durationMinutes: data.durationMinutes,
         hrvStressPercent: data.hrvStressPercent,
         hrvMidRangePercent: data.hrvMidRangePercent,
@@ -94,6 +102,8 @@ export async function listAllBiofeedbackEntriesFromFirestore(): Promise<Biofeedb
         measuredAt: data.measuredAt,
         exerciseName: data.exerciseName,
         measurementType: data.measurementType ?? null,
+        activity: data.activity ?? undefined,
+        monitoringResult: data.monitoringResult ?? null,
         durationMinutes: data.durationMinutes,
         hrvStressPercent: data.hrvStressPercent ?? '',
         hrvMidRangePercent: data.hrvMidRangePercent ?? '',

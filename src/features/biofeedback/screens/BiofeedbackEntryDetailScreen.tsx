@@ -121,6 +121,7 @@ function mapFirebaseEntryToBiofeedbackEntry(entry: {
     } | null;
     monitoringType: 'morning' | 'short' | null;
   };
+  monitoringResult?: BiofeedbackEntry['monitoringResult'];
   durationMinutes: number;
   hrvStressPercent: string;
   hrvMidRangePercent: string;
@@ -137,10 +138,16 @@ function mapFirebaseEntryToBiofeedbackEntry(entry: {
     measuredAt: entry.measuredAt,
     dateKey: entry.dateKey,
     timeOfDay: mapTimeToTimeOfDay(entry.measurementTime),
-    activity: entry.activity,
+    activity: entry.activity
+      ? {
+          ...entry.activity,
+          measurementType: entry.activity.measurementType ?? 'none',
+        }
+      : undefined,
     exerciseName: entry.exerciseName,
     measurementType: entry.measurementType ?? null,
     durationMinutes: entry.durationMinutes,
+    monitoringResult: entry.monitoringResult ?? null,
     hrvDistribution: {
       stressPercent: toOptionalNumber(entry.hrvStressPercent),
       midRangePercent: toOptionalNumber(entry.hrvMidRangePercent),
@@ -300,6 +307,8 @@ export default function BiofeedbackEntryDetailScreen({ entryId, fromDay }: Props
       customExerciseName: '',
       customMeasurementType: '',
       monitoringType: '',
+      monitoringScore: '',
+      monitoringDurationMinutes: '3',
     } as const;
   }
 
@@ -320,6 +329,8 @@ export default function BiofeedbackEntryDetailScreen({ entryId, fromDay }: Props
       exerciseName: item.label,
       monitoringType:
         item.activityType === 'monitoring' ? item.monitoringType : '',
+      monitoringDurationMinutes:
+        item.activityType === 'monitoring' ? '3' : current.monitoringDurationMinutes,
     }));
   }
 
@@ -333,6 +344,8 @@ export default function BiofeedbackEntryDetailScreen({ entryId, fromDay }: Props
       customExerciseName: activity.label,
       customMeasurementType: activity.measurementType,
       monitoringType: '',
+      monitoringScore: '',
+      monitoringDurationMinutes: '3',
       breathingInhale: '',
       breathingHoldAfterInhale: '',
       breathingExhale: '',
@@ -357,9 +370,10 @@ export default function BiofeedbackEntryDetailScreen({ entryId, fromDay }: Props
         dateKey: values.measurementDate,
         measuredAt: input.measuredAt,
         exerciseName: values.exerciseName.trim(),
-        measurementType: input.activity?.measurementType ?? null,
+        measurementType: input.measurementType ?? null,
         activity: input.activity,
-        durationMinutes: Number(values.durationMinutes),
+        monitoringResult: input.monitoringResult ?? null,
+        durationMinutes: input.durationMinutes ?? Number(values.durationMinutes),
         hrvStressPercent: values.hrvStressPercent.trim(),
         hrvMidRangePercent: values.hrvMidRangePercent.trim(),
         hrvRelaxationPercent: values.hrvRelaxationPercent.trim(),

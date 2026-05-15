@@ -310,6 +310,10 @@ export default function BiofeedbackEntryCreateScreen({
               ? nextPlannedPractice.measurementType
               : '',
           monitoringType: nextPlannedPractice.monitoringType ?? '',
+          monitoringDurationMinutes:
+            nextPlannedPractice.monitoringType === 'morning'
+              ? String(nextPlannedPractice.durationMinutes ?? 3)
+              : current.monitoringDurationMinutes,
           durationMinutes: nextPlannedPractice.durationMinutes ?? current.durationMinutes,
           breathingInhale: formatOptionalNumber(nextPlannedPractice.exerciseParameters?.inhale),
           breathingHoldAfterInhale: formatOptionalNumber(
@@ -433,9 +437,12 @@ export default function BiofeedbackEntryCreateScreen({
   const isMonitoring =
     values.selectedCategoryId === 'monitoring' ||
     selectedCatalogItem?.activityType === 'monitoring';
+  const isMorningMonitoring = isMonitoring && values.monitoringType === 'morning';
 
   const isCustomTraining = values.selectedCategoryId === 'custom';
-  const isParameterizedTraining = selectedCatalogItem?.exerciseType === 'parameterized';
+  const isParameterizedTraining =
+    selectedCatalogItem?.activityType === 'training' &&
+    selectedCatalogItem.exerciseType === 'parameterized';
 
   const finalMeasurementTypeForUI =
     isMonitoring
@@ -545,6 +552,8 @@ export default function BiofeedbackEntryCreateScreen({
       breathingExhale: '',
       breathingHoldAfterExhale: '',
       monitoringType: '',
+      monitoringScore: '',
+      monitoringDurationMinutes: '3',
     }));
     setIsCreatingNewCustomActivity(false);
     setShowAllCatalogActivities(false);
@@ -566,6 +575,8 @@ export default function BiofeedbackEntryCreateScreen({
       customMeasurementType: '',
       monitoringType:
         item.activityType === 'monitoring' ? item.monitoringType : '',
+      monitoringDurationMinutes:
+        item.activityType === 'monitoring' ? '3' : current.monitoringDurationMinutes,
     }));
     setIsCreatingNewCustomActivity(false);
 
@@ -766,7 +777,7 @@ export default function BiofeedbackEntryCreateScreen({
         } else {
           const savedCustomActivity = await addCustomActivityToFirestore({
             label: values.customExerciseName.trim(),
-            measurementType: values.customMeasurementType,
+            measurementType: values.customMeasurementType || 'none',
           });
 
           console.log(
@@ -809,7 +820,8 @@ export default function BiofeedbackEntryCreateScreen({
         exerciseName: input.exerciseName,
         measurementType: input.measurementType ?? null,
         activity: input.activity,
-        durationMinutes: Number(values.durationMinutes),
+        monitoringResult: input.monitoringResult ?? null,
+        durationMinutes: input.durationMinutes ?? Number(values.durationMinutes),
         hrvStressPercent: values.hrvStressPercent.trim(),
         hrvMidRangePercent: values.hrvMidRangePercent.trim(),
         hrvRelaxationPercent: values.hrvRelaxationPercent.trim(),
@@ -1326,7 +1338,9 @@ export default function BiofeedbackEntryCreateScreen({
               </Pressable>
             ) : null}
 
-            {isParameterizedTraining && selectedCatalogItem?.parameterSchema ? (
+            {selectedCatalogItem?.activityType === 'training' &&
+            isParameterizedTraining &&
+            selectedCatalogItem.parameterSchema ? (
               <View style={styles.parameterSection}>
                 <Text style={styles.sectionTitle}>פרמטרים</Text>
 
@@ -1361,16 +1375,48 @@ export default function BiofeedbackEntryCreateScreen({
               <Text style={styles.errorText}>{errors.monitoringType}</Text>
             ) : null}
 
-            <Text style={styles.label}>משך בדקות</Text>
-            <TextInput
-              value={String(values.durationMinutes)}
-              onChangeText={(text) => updateField('durationMinutes', Number(text) || 0)}
-              style={styles.input}
-              keyboardType="numeric"
-            />
-            {errors.durationMinutes ? (
-              <Text style={styles.errorText}>{errors.durationMinutes}</Text>
-            ) : null}
+            {isMorningMonitoring ? (
+              <View style={styles.parameterSection}>
+                <Text style={styles.sectionTitle}>ניטור בוקר</Text>
+
+                <Text style={styles.label}>ציון ניטור (0-100)</Text>
+                <TextInput
+                  value={values.monitoringScore}
+                  onChangeText={(text) => updateField('monitoringScore', text)}
+                  style={styles.input}
+                  keyboardType="numeric"
+                  placeholder="0-100"
+                />
+                {errors.monitoringScore ? (
+                  <Text style={styles.errorText}>{errors.monitoringScore}</Text>
+                ) : null}
+
+                <Text style={styles.label}>משך ניטור בדקות</Text>
+                <TextInput
+                  value={values.monitoringDurationMinutes}
+                  onChangeText={(text) => updateField('monitoringDurationMinutes', text)}
+                  style={styles.input}
+                  keyboardType="decimal-pad"
+                  placeholder="3"
+                />
+                {errors.monitoringDurationMinutes ? (
+                  <Text style={styles.errorText}>{errors.monitoringDurationMinutes}</Text>
+                ) : null}
+              </View>
+            ) : (
+              <>
+                <Text style={styles.label}>משך בדקות</Text>
+                <TextInput
+                  value={String(values.durationMinutes)}
+                  onChangeText={(text) => updateField('durationMinutes', Number(text) || 0)}
+                  style={styles.input}
+                  keyboardType="numeric"
+                />
+                {errors.durationMinutes ? (
+                  <Text style={styles.errorText}>{errors.durationMinutes}</Text>
+                ) : null}
+              </>
+            )}
           </View>
 
           {shouldShowHrvFields ? (

@@ -2,7 +2,7 @@
 
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { collection, getDocs } from 'firebase/firestore';
 
@@ -22,6 +22,7 @@ import { mapFirebaseBiofeedbackEntryToDomain } from '../data/biofeedback-entry.m
 import type { RoutineItem } from '../types/routine.types';
 import { ACTIVITY_CATALOG } from '../constants/activity-catalog';
 import { findOrCreatePlannedPracticeForRoutineItem } from '../lib/find-or-create-planned-practice';
+import { isMonitoringEntry } from '../lib/entry-kind';
 
 type Props = {
   dateKey: string;
@@ -80,9 +81,17 @@ function getMeasurementLabel(measurementType: RoutineItem['measurementType']): s
 }
 
 function getEntryDisplayName(entry: BiofeedbackEntry): string {
+  if (isMonitoringEntry(entry)) {
+    return 'ניטור בוקר';
+  }
+
   const catalogItem = ACTIVITY_CATALOG.find((item) => item.id === entry.exerciseName);
 
   return catalogItem?.label ?? entry.exerciseName;
+}
+
+function getMonitoringDuration(entry: BiofeedbackEntry): number {
+  return entry.monitoringResult?.durationMinutes ?? entry.durationMinutes;
 }
 
 export default function BiofeedbackDayEntriesScreen({ dateKey }: Props) {
@@ -118,6 +127,10 @@ export default function BiofeedbackDayEntriesScreen({ dateKey }: Props) {
           const uniqueDateKeys = Array.from(
             new Set(
               snapshot.docs
+                .filter(
+                  (docSnapshot) =>
+                    docSnapshot.data().activity?.activityType !== 'monitoring',
+                )
                 .map((docSnapshot) => docSnapshot.data().dateKey)
                 .filter((value): value is string => typeof value === 'string' && value.length > 0),
             ),
@@ -202,7 +215,7 @@ export default function BiofeedbackDayEntriesScreen({ dateKey }: Props) {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
+      <ScrollView contentContainerStyle={styles.container}>
         <BiofeedbackHeader />
 
         <View style={styles.headerRow}>
@@ -309,6 +322,31 @@ export default function BiofeedbackDayEntriesScreen({ dateKey }: Props) {
           </View>
         ) : (
           entries.map((entry) => (
+            isMonitoringEntry(entry) ? (
+              <Pressable
+                key={entry.id}
+                style={styles.card}
+                onPress={() => handleEntryPress(entry.id)}
+              >
+                <View style={styles.cardHeader}>
+                  <View style={styles.titleRow}>
+                    <Text style={styles.cardTitle}>ניטור בוקר</Text>
+                  </View>
+                  <Text style={styles.cardTime}>{formatEntryTime(entry.measuredAt)}</Text>
+                </View>
+
+                <Text style={styles.rowText}>
+                  ציון ניטור: {entry.monitoringResult?.monitoringScore ?? '-'} / 100
+                </Text>
+                <Text style={styles.rowText}>משך: {getMonitoringDuration(entry)} דקות</Text>
+
+                {entry.notes ? (
+                  <Text style={styles.notesText} numberOfLines={2}>
+                    הערות: {entry.notes}
+                  </Text>
+                ) : null}
+              </Pressable>
+            ) : (
             <Pressable
               key={entry.id}
               style={styles.card}
@@ -352,10 +390,11 @@ export default function BiofeedbackDayEntriesScreen({ dateKey }: Props) {
                 </Text>
               ) : null}
             </Pressable>
+            )
           ))
         )}
         </View>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -426,8 +465,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
   },
   container: {
-    flex: 1,
     padding: 16,
+    paddingBottom: 40,
     backgroundColor: '#ffffff',
   },
   title: {

@@ -1,4 +1,8 @@
-import type { BiofeedbackEntry } from '../types/biofeedback-entry.types';
+import type {
+  BiofeedbackEntry,
+  EntryActivity,
+  MonitoringResult,
+} from '../types/biofeedback-entry.types';
 import type { MeasurementType } from '../constants/exercise-options';
 import { deriveTimeOfDay } from '../lib/biofeedback-date.utils';
 
@@ -10,6 +14,8 @@ export type FirebaseBiofeedbackEntryLike = {
   measuredAt: string;
   exerciseName: string;
   measurementType?: MeasurementType | null;
+  activity?: EntryActivity;
+  monitoringResult?: MonitoringResult | null;
   durationMinutes: number;
   hrvStressPercent?: string | null;
   hrvMidRangePercent?: string | null;
@@ -55,9 +61,11 @@ export function mapFirebaseBiofeedbackEntryToDomain(
     measuredAt: entry.measuredAt,
     dateKey: entry.dateKey,
     timeOfDay: deriveTimeOfDay(entry.measuredAt),
+    activity: entry.activity,
     exerciseName: entry.exerciseName,
     measurementType: entry.measurementType ?? null,
     durationMinutes: entry.durationMinutes,
+    monitoringResult: entry.monitoringResult ?? null,
     hrvDistribution: {
       stressPercent: toOptionalNumber(entry.hrvStressPercent),
       midRangePercent: toOptionalNumber(entry.hrvMidRangePercent),

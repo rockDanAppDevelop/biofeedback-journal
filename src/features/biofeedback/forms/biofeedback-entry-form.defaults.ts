@@ -34,6 +34,8 @@ export function createDefaultBiofeedbackEntryFormValues(): BiofeedbackEntryFormV
     breathingExhale: '',
     breathingHoldAfterExhale: '',
     monitoringType: '',
+    monitoringScore: '',
+    monitoringDurationMinutes: '3',
     durationMinutes: 8,
     hrvStressPercent: '',
     hrvMidRangePercent: '',

@@ -71,6 +71,14 @@ export function createBiofeedbackEntryFormValuesFromEntry(
         ? ''
         : String(entry.activity.exerciseParameters.holdAfterExhale),
     monitoringType: entry.activity?.monitoringType ?? '',
+    monitoringScore:
+      entry.monitoringResult?.monitoringScore === undefined
+        ? ''
+        : String(entry.monitoringResult.monitoringScore),
+    monitoringDurationMinutes:
+      entry.monitoringResult?.durationMinutes === undefined
+        ? '3'
+        : String(entry.monitoringResult.durationMinutes),
     durationMinutes: entry.durationMinutes,
     hrvStressPercent:
       entry.hrvDistribution.stressPercent === null

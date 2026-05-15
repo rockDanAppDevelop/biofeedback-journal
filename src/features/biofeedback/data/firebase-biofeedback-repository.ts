@@ -3,7 +3,7 @@
 import { addDoc, collection } from 'firebase/firestore';
 import { auth, db } from '../../../lib/firebase';
 import type { MeasurementType } from '../constants/exercise-options';
-import type { EntryActivity } from '../types/biofeedback-entry.types';
+import type { EntryActivity, MonitoringResult } from '../types/biofeedback-entry.types';
 
 
 export type FirebaseBiofeedbackEntryInput = {
@@ -14,6 +14,7 @@ export type FirebaseBiofeedbackEntryInput = {
   exerciseName: string;
   measurementType: MeasurementType | null;
   activity?: EntryActivity;
+  monitoringResult?: MonitoringResult | null;
   durationMinutes: number;
   hrvStressPercent: string;
   hrvMidRangePercent: string;
@@ -42,6 +43,7 @@ export async function addBiofeedbackEntryToFirestore(
     exerciseName: input.exerciseName,
     measurementType: input.measurementType,
     ...(input.activity ? { activity: input.activity } : {}),
+    ...(input.monitoringResult ? { monitoringResult: input.monitoringResult } : {}),
     durationMinutes: input.durationMinutes,
     hrvStressPercent: input.hrvStressPercent,
     hrvMidRangePercent: input.hrvMidRangePercent,

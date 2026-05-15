@@ -1,4 +1,5 @@
 import { BiofeedbackEntry } from '../types/biofeedback-entry.types';
+import { isPracticeEntry } from './entry-kind';
 
 export type WeeklySummary = {
   weekStartDateKey: string;
@@ -52,12 +53,13 @@ export function getWeeklySummary(
   const dayOfWeek = getDayOfWeekFromDateKey(todayDateKey);
   const weekStartDateKey = addDaysToDateKey(todayDateKey, -dayOfWeek);
   const weekEndDateKey = addDaysToDateKey(weekStartDateKey, 6);
+  const practiceEntries = entries.filter(isPracticeEntry);
 
   // dateKey = habit day assignment; measuredAt = actual practice time.
-  const habitWeekEntries = entries.filter(
+  const habitWeekEntries = practiceEntries.filter(
     (entry) => entry.dateKey >= weekStartDateKey && entry.dateKey <= weekEndDateKey,
   );
-  const actualWeekEntries = entries.filter((entry) => {
+  const actualWeekEntries = practiceEntries.filter((entry) => {
     const actualDateKey = getDateKeyFromMeasuredAt(entry.measuredAt);
 
     return actualDateKey >= weekStartDateKey && actualDateKey <= weekEndDateKey;

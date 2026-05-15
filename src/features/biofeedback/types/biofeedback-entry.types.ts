@@ -28,6 +28,13 @@ export type EntryActivity = {
   monitoringType: 'morning' | 'short' | null;
 };
 
+export type MonitoringResult = {
+  type: 'morning';
+  source: 'manual';
+  durationMinutes: number;
+  monitoringScore: number;
+};
+
 export type BiofeedbackEntry = {
   id: string;
 
@@ -41,6 +48,7 @@ export type BiofeedbackEntry = {
   exerciseName: string;
   measurementType: 'hrv' | 'rlx' | null;
   durationMinutes: number;
+  monitoringResult?: MonitoringResult | null;
 
   hrvDistribution: HrvDistribution;
   rlx: RlxMetrics;

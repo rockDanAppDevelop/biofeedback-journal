@@ -18,6 +18,8 @@ import {
 import { listPlannedPracticesByDateKey } from '../data/firebase-planned-practices-repository';
 import { listBiofeedbackEntriesByDateKeyFromFirestore } from '../data/firebase-biofeedback-read-repository';
 import { findOrCreatePlannedPracticeForRoutineItem } from '../lib/find-or-create-planned-practice';
+import { isPracticeEntry } from '../lib/entry-kind';
+import type { BiofeedbackEntry } from '../types/biofeedback-entry.types';
 import type { RoutineItem } from '../types/routine.types';
 
 import { collection, getDocs } from 'firebase/firestore';
@@ -75,6 +77,7 @@ function getMeasurementLabel(measurementType: RoutineItem['measurementType']): s
 
 export default function BiofeedbackDashboardScreen() {
   const [entryDateKeys, setEntryDateKeys] = useState<string[]>([]);
+  const [practiceEntryDateKeys, setPracticeEntryDateKeys] = useState<string[]>([]);
   const [firstSeenDateKey, setFirstSeenDateKey] = useState('');
   const [referenceDate, setReferenceDate] = useState(() => new Date());
   const [plannedRoutineItems, setPlannedRoutineItems] = useState<PlannedRoutineItem[]>([]);
@@ -95,6 +98,7 @@ export default function BiofeedbackDashboardScreen() {
       if (!user) {
         console.log('DASHBOARD LOAD FAILED: No authenticated user');
         setEntryDateKeys([]);
+        setPracticeEntryDateKeys([]);
         setPlannedRoutineItems([]);
         return;
       }
@@ -112,8 +116,17 @@ export default function BiofeedbackDashboardScreen() {
             .filter((value): value is string => typeof value === 'string' && value.length > 0),
         ),
       );
+      const uniquePracticeDateKeys = Array.from(
+        new Set(
+          snapshot.docs
+            .filter((docSnapshot) => isPracticeEntry(docSnapshot.data() as BiofeedbackEntry))
+            .map((docSnapshot) => docSnapshot.data().dateKey)
+            .filter((value): value is string => typeof value === 'string' && value.length > 0),
+        ),
+      );
 
       setEntryDateKeys(uniqueDateKeys);
+      setPracticeEntryDateKeys(uniquePracticeDateKeys);
       const todayDateKey = toDateKey(new Date());
       const routines = await listActiveRoutines();
       const plannedPractices = await listPlannedPracticesByDateKey(todayDateKey);
@@ -144,6 +157,7 @@ export default function BiofeedbackDashboardScreen() {
       await syncDailyReminderForToday(uniqueDateKeys.includes(todayDateKey));
     } catch (error) {
       console.log('🔥 FIRESTORE ERROR:', error);
+      setPracticeEntryDateKeys([]);
       setPlannedRoutineItems([]);
     }
   }
@@ -218,7 +232,7 @@ export default function BiofeedbackDashboardScreen() {
           </Pressable>
         </View>
 
-        <StreakInsightCard entryDateKeys={entryDateKeys} todayDateKey={toDateKey(new Date())} />
+        <StreakInsightCard entryDateKeys={practiceEntryDateKeys} todayDateKey={toDateKey(new Date())} />
 
         <View style={styles.todayPlanSection}>
           <Text style={styles.todayPlanTitle}>התכנון להיום</Text>
@@ -285,7 +299,7 @@ export default function BiofeedbackDashboardScreen() {
 
         <MonthGrid
           referenceDate={referenceDate}
-          entryDateKeys={entryDateKeys}
+          entryDateKeys={practiceEntryDateKeys}
           onDayPress={handleDayPress}
           firstSeenDateKey={firstSeenDateKey}
         />

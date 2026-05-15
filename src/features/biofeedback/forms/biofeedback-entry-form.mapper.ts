@@ -2,13 +2,15 @@
 
 import { ACTIVITY_CATALOG } from '../constants/activity-catalog';
 import { BiofeedbackEntryFormValues } from '../types/biofeedback-entry-form.types';
-import type { EntryActivity } from '../types/biofeedback-entry.types';
+import type { EntryActivity, MonitoringResult } from '../types/biofeedback-entry.types';
 
 export type CreateBiofeedbackEntryInput = {
   measuredAt: string;
   exerciseName: string;
+  measurementType?: 'hrv' | 'rlx' | null;
   activity?: EntryActivity;
   durationMinutes?: number;
+  monitoringResult?: MonitoringResult | null;
   hrvDistribution: {
     stressPercent: number | null;
     midRangePercent: number | null;
@@ -47,6 +49,10 @@ export function toCreateBiofeedbackEntryInput(
 
   const trimmedCustomExerciseName = values.customExerciseName.trim();
   const trimmedExerciseName = values.exerciseName.trim();
+  const isMorningMonitoring =
+    values.selectedCategoryId === 'monitoring' && values.monitoringType === 'morning';
+  const monitoringDurationMinutes = Number(values.monitoringDurationMinutes.trim());
+  const monitoringScore = Number(values.monitoringScore.trim());
 
   const finalExerciseName = selectedCatalogItem
     ? selectedCatalogItem.label
@@ -93,7 +99,15 @@ export function toCreateBiofeedbackEntryInput(
             monitoringType: values.monitoringType || null,
           }
         : undefined,
-    durationMinutes: values.durationMinutes || 8,
+    durationMinutes: isMorningMonitoring ? monitoringDurationMinutes : values.durationMinutes || 8,
+    monitoringResult: isMorningMonitoring
+      ? {
+          type: 'morning',
+          source: 'manual',
+          durationMinutes: monitoringDurationMinutes,
+          monitoringScore,
+        }
+      : undefined,
     hrvDistribution: {
       stressPercent: values.hrvStressPercent === '' ? null : Number(values.hrvStressPercent),
       midRangePercent: values.hrvMidRangePercent === '' ? null : Number(values.hrvMidRangePercent),

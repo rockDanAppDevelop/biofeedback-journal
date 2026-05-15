@@ -213,6 +213,6 @@ export const ACTIVITY_CATALOG: ActivityCatalogItem[] = [
     label: 'ניטור קצר',
     measurementType: 'none',
     monitoringType: 'short',
-    isActive: true,
+    isActive: false,
   },
 ];
