@@ -1,6 +1,6 @@
 {
   "name": "biofeedback-journal",
-  "version": "1.0.0",
+  "version": "0.10.5",
   "main": "index.ts",
   "scripts": {
     "start": "expo start",
