@@ -14,13 +14,14 @@
       "backgroundColor": "#001B44"
     },
     "ios": {
-      "supportsTablet": true,
-      "bundleIdentifier": "com.rockdan.biofeedbackjournal",
-      "buildNumber": "8",
-      "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
-      }
-    },
+  "supportsTablet": true,
+  "bundleIdentifier": "com.rockdan.biofeedbackjournal",
+  "buildNumber": "8",
+  "googleServicesFile": "./GoogleService-Info.plist",
+  "infoPlist": {
+    "ITSAppUsesNonExemptEncryption": false
+  }
+},
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/appIcon.png",

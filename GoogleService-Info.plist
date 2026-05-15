@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CLIENT_ID</key>
+	<string>400338054941-7ofr538vvrjknbg1n4frru311htc48s1.apps.googleusercontent.com</string>
+	<key>REVERSED_CLIENT_ID</key>
+	<string>com.googleusercontent.apps.400338054941-7ofr538vvrjknbg1n4frru311htc48s1</string>
+	<key>ANDROID_CLIENT_ID</key>
+	<string>400338054941-ecmsg34p080eqeldh8nakiraijvbaljc.apps.googleusercontent.com</string>
+	<key>API_KEY</key>
+	<string>AIzaSyAwxTx23XRxNLdqxDz4Bocg4bs0EaYrEWw</string>
+	<key>GCM_SENDER_ID</key>
+	<string>400338054941</string>
+	<key>PLIST_VERSION</key>
+	<string>1</string>
+	<key>BUNDLE_ID</key>
+	<string>com.rockdan.biofeedbackjournal</string>
+	<key>PROJECT_ID</key>
+	<string>biofeedback-journal</string>
+	<key>STORAGE_BUCKET</key>
+	<string>biofeedback-journal.firebasestorage.app</string>
+	<key>IS_ADS_ENABLED</key>
+	<false></false>
+	<key>IS_ANALYTICS_ENABLED</key>
+	<false></false>
+	<key>IS_APPINVITE_ENABLED</key>
+	<true></true>
+	<key>IS_GCM_ENABLED</key>
+	<true></true>
+	<key>IS_SIGNIN_ENABLED</key>
+	<true></true>
+	<key>GOOGLE_APP_ID</key>
+	<string>1:400338054941:ios:512b5c56aeb6cfb23f7bf4</string>
+</dict>
+</plist>
