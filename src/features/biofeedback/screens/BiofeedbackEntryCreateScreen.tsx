@@ -64,6 +64,8 @@ type MapperSaveInput = ReturnType<typeof toCreateBiofeedbackEntryInput> & {
   measurementType?: 'hrv' | 'rlx' | null;
 };
 
+type MaterialCommunityIconName = keyof typeof MaterialCommunityIcons.glyphMap;
+
 const CATEGORY_LABELS: Record<ActivityCategoryId, string> = {
   trainers: 'מאמנים',
   relaxation: 'הרפיה',
@@ -84,7 +86,7 @@ const CATEGORY_ICONS = {
   relaxation: 'meditation',
   guided: 'flower-tulip-outline',
   monitoring: 'chart-line',
-};
+} satisfies Record<Exclude<ActivityCategoryId, 'custom'>, MaterialCommunityIconName>;
 
 const CUSTOM_ACTIVITIES_LOAD_TIMEOUT_MS = 5000;
 

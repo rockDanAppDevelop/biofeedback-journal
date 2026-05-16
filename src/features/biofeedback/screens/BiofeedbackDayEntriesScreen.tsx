@@ -268,7 +268,7 @@ export default function BiofeedbackDayEntriesScreen({ dateKey }: Props) {
             <View style={styles.emptyState}>
               <Text style={styles.emptyText}>אין תרגולים מתוכננים ליום הזה</Text>
               <Pressable
-                onPress={() => router.push('/entries/new')}
+                onPress={() => router.push(`/entries/new?dateKey=${dateKey}&fromDay=${dateKey}`)}
                 style={styles.emptyPlanButton}
               >
                 <Text style={styles.emptyPlanButtonText}>הוסף מדידה</Text>

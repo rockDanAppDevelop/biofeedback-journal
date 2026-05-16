@@ -1,5 +1,6 @@
 //src\features\biofeedback\components\MonthGrid.tsx
 
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { toDateKey } from './calendar.utils';
@@ -9,16 +10,22 @@ type CalendarDay = {
   dayNumber: number;
   isCurrentMonth: boolean;
   hasEntry: boolean;
+  hasMonitoring: boolean;
 };
 
 type MonthGridProps = {
   referenceDate: Date;
   entryDateKeys: string[];
+  monitoringDateKeys: string[];
   onDayPress: (dateKey: string) => void;
   firstSeenDateKey: string;
 };
 
-function buildMonthDays(referenceDate: Date, entryDateKeys: string[]): CalendarDay[] {
+function buildMonthDays(
+  referenceDate: Date,
+  entryDateKeys: string[],
+  monitoringDateKeys: string[],
+): CalendarDay[] {
   const year = referenceDate.getFullYear();
   const month = referenceDate.getMonth();
 
@@ -38,6 +45,7 @@ function buildMonthDays(referenceDate: Date, entryDateKeys: string[]): CalendarD
       dayNumber: date.getDate(),
       isCurrentMonth: false,
       hasEntry: entryDateKeys.includes(dateKey),
+      hasMonitoring: monitoringDateKeys.includes(dateKey),
     });
   }
 
@@ -50,6 +58,7 @@ function buildMonthDays(referenceDate: Date, entryDateKeys: string[]): CalendarD
       dayNumber: day,
       isCurrentMonth: true,
       hasEntry: entryDateKeys.includes(dateKey),
+      hasMonitoring: monitoringDateKeys.includes(dateKey),
     });
   }
 
@@ -64,6 +73,7 @@ function buildMonthDays(referenceDate: Date, entryDateKeys: string[]): CalendarD
       dayNumber: date.getDate(),
       isCurrentMonth: false,
       hasEntry: entryDateKeys.includes(dateKey),
+      hasMonitoring: monitoringDateKeys.includes(dateKey),
     });
 
     nextDay += 1;
@@ -77,10 +87,11 @@ const weekDayLabels = ['א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ש'];
 export default function MonthGrid({
   referenceDate,
   entryDateKeys,
+  monitoringDateKeys,
   onDayPress,
   firstSeenDateKey,
 }: MonthGridProps) {
-  const monthDays = buildMonthDays(referenceDate, entryDateKeys);
+  const monthDays = buildMonthDays(referenceDate, entryDateKeys, monitoringDateKeys);
   const todayKey = toDateKey(new Date());
 
   return (
@@ -126,6 +137,16 @@ export default function MonthGrid({
               </Text>
 
               {shouldShowMissed ? <View style={styles.missedDot} /> : null}
+              {day.hasMonitoring ? (
+                <View
+                  style={[
+                    styles.monitoringBadge,
+                    day.hasEntry && styles.monitoringBadgeOnDoneDay,
+                  ]}
+                >
+                  <MaterialCommunityIcons name="pulse" size={14} color="#6A35B8" />
+                </View>
+              ) : null}
             </Pressable>
           );
         })}
@@ -187,6 +208,20 @@ const styles = StyleSheet.create({
     height: 5,
     borderRadius: 2.5,
     backgroundColor: '#d96b6b',
+  },
+  monitoringBadge: {
+    position: 'absolute',
+    top: 3,
+    right: 3,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: '#F1E9FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  monitoringBadgeOnDoneDay: {
+    backgroundColor: '#F1E9FF',
   },
   dayText: {
     fontSize: 16,
