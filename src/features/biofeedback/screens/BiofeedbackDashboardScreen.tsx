@@ -132,10 +132,7 @@ export default function BiofeedbackDashboardScreen() {
             .filter((docSnapshot) => {
               const entry = docSnapshot.data() as BiofeedbackEntry;
 
-              return (
-                isMonitoringEntry(entry) &&
-                entry.activity?.monitoringType === 'morning'
-              );
+              return isMonitoringEntry(entry);
             })
             .map((docSnapshot) => docSnapshot.data().dateKey)
             .filter((value): value is string => typeof value === 'string' && value.length > 0),

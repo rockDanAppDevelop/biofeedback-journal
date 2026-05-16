@@ -12,6 +12,7 @@ export type WeeklySummary = {
   totalMinutesImproved: number;
   averageRelaxationPercent: number | null;
   morningMonitoringCount: number;
+  restingHeartRateMonitoringCount: number;
 };
 
 function addDaysToDateKey(dateKey: string, days: number): string {
@@ -75,6 +76,16 @@ export function getWeeklySummary(
       entry.activity?.monitoringType === 'morning'
     );
   });
+  const restingHeartRateMonitoringEntries = entries.filter((entry) => {
+    const actualDateKey = getDateKeyFromMeasuredAt(entry.measuredAt);
+
+    return (
+      actualDateKey >= weekStartDateKey &&
+      actualDateKey <= weekEndDateKey &&
+      isMonitoringEntry(entry) &&
+      entry.activity?.monitoringType === 'resting_heart_rate'
+    );
+  });
 
   const daysWithEntries = new Set(habitWeekEntries.map((entry) => entry.dateKey)).size;
   const totalDurationMinutes = actualWeekEntries.reduce(
@@ -108,5 +119,6 @@ export function getWeeklySummary(
     averageRelaxationPercent:
       hrvEntries.length > 0 ? totalRelaxationPercent / hrvEntries.length : null,
     morningMonitoringCount: morningMonitoringEntries.length,
+    restingHeartRateMonitoringCount: restingHeartRateMonitoringEntries.length,
   };
 }
