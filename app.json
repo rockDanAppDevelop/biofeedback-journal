@@ -3,7 +3,7 @@
     "name": "biofeedback-journal",
     "slug": "biofeedback-journal",
     "scheme": "biofeedbackjournal",
-    "version": "0.10.6",
+    "version": "0.10.7",
     "orientation": "portrait",
     "icon": "./assets/appIcon.png",
     "userInterfaceStyle": "light",
@@ -16,7 +16,7 @@
     "ios": {
   "supportsTablet": true,
   "bundleIdentifier": "com.rockdan.biofeedbackjournal",
-  "buildNumber": "9",
+  "buildNumber": "10",
   "googleServicesFile": "./GoogleService-Info.plist",
   "infoPlist": {
     "ITSAppUsesNonExemptEncryption": false
@@ -30,7 +30,7 @@
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "package": "com.anonymous.biofeedbackjournal",
-      "versionCode": 9
+      "versionCode": 10
     },
     "web": {
       "favicon": "./assets/appFavicon.png"
