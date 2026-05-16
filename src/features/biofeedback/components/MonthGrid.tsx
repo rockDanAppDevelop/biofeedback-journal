@@ -9,16 +9,22 @@ type CalendarDay = {
   dayNumber: number;
   isCurrentMonth: boolean;
   hasEntry: boolean;
+  hasMonitoring: boolean;
 };
 
 type MonthGridProps = {
   referenceDate: Date;
   entryDateKeys: string[];
+  monitoringDateKeys: string[];
   onDayPress: (dateKey: string) => void;
   firstSeenDateKey: string;
 };
 
-function buildMonthDays(referenceDate: Date, entryDateKeys: string[]): CalendarDay[] {
+function buildMonthDays(
+  referenceDate: Date,
+  entryDateKeys: string[],
+  monitoringDateKeys: string[],
+): CalendarDay[] {
   const year = referenceDate.getFullYear();
   const month = referenceDate.getMonth();
 
@@ -38,6 +44,7 @@ function buildMonthDays(referenceDate: Date, entryDateKeys: string[]): CalendarD
       dayNumber: date.getDate(),
       isCurrentMonth: false,
       hasEntry: entryDateKeys.includes(dateKey),
+      hasMonitoring: monitoringDateKeys.includes(dateKey),
     });
   }
 
@@ -50,6 +57,7 @@ function buildMonthDays(referenceDate: Date, entryDateKeys: string[]): CalendarD
       dayNumber: day,
       isCurrentMonth: true,
       hasEntry: entryDateKeys.includes(dateKey),
+      hasMonitoring: monitoringDateKeys.includes(dateKey),
     });
   }
 
@@ -64,6 +72,7 @@ function buildMonthDays(referenceDate: Date, entryDateKeys: string[]): CalendarD
       dayNumber: date.getDate(),
       isCurrentMonth: false,
       hasEntry: entryDateKeys.includes(dateKey),
+      hasMonitoring: monitoringDateKeys.includes(dateKey),
     });
 
     nextDay += 1;
@@ -77,10 +86,11 @@ const weekDayLabels = ['א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ש'];
 export default function MonthGrid({
   referenceDate,
   entryDateKeys,
+  monitoringDateKeys,
   onDayPress,
   firstSeenDateKey,
 }: MonthGridProps) {
-  const monthDays = buildMonthDays(referenceDate, entryDateKeys);
+  const monthDays = buildMonthDays(referenceDate, entryDateKeys, monitoringDateKeys);
   const todayKey = toDateKey(new Date());
 
   return (
@@ -126,6 +136,14 @@ export default function MonthGrid({
               </Text>
 
               {shouldShowMissed ? <View style={styles.missedDot} /> : null}
+              {day.hasMonitoring ? (
+                <View
+                  style={[
+                    styles.monitoringDot,
+                    day.hasEntry && styles.monitoringDotOnDoneDay,
+                  ]}
+                />
+              ) : null}
             </Pressable>
           );
         })}
@@ -187,6 +205,19 @@ const styles = StyleSheet.create({
     height: 5,
     borderRadius: 2.5,
     backgroundColor: '#d96b6b',
+  },
+  monitoringDot: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+    backgroundColor: '#7E57C2',
+  },
+  monitoringDotOnDoneDay: {
+    borderWidth: 1,
+    borderColor: '#ffffff',
   },
   dayText: {
     fontSize: 16,
