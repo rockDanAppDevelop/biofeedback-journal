@@ -440,6 +440,8 @@ export default function BiofeedbackEntryCreateScreen({
     values.selectedCategoryId === 'monitoring' ||
     selectedCatalogItem?.activityType === 'monitoring';
   const isMorningMonitoring = isMonitoring && values.monitoringType === 'morning';
+  const isRestingHeartRateMonitoring =
+    isMonitoring && values.monitoringType === 'resting_heart_rate';
 
   const isCustomTraining = values.selectedCategoryId === 'custom';
   const isParameterizedTraining =
@@ -556,6 +558,8 @@ export default function BiofeedbackEntryCreateScreen({
       monitoringType: '',
       monitoringScore: '',
       monitoringDurationMinutes: '3',
+      restingHeartRateBpm: '',
+      restingHeartRateDurationSeconds: '30',
     }));
     setIsCreatingNewCustomActivity(false);
     setShowAllCatalogActivities(false);
@@ -579,6 +583,9 @@ export default function BiofeedbackEntryCreateScreen({
         item.activityType === 'monitoring' ? item.monitoringType : '',
       monitoringDurationMinutes:
         item.activityType === 'monitoring' ? '3' : current.monitoringDurationMinutes,
+      restingHeartRateBpm: '',
+      restingHeartRateDurationSeconds:
+        item.activityType === 'monitoring' ? '30' : current.restingHeartRateDurationSeconds,
     }));
     setIsCreatingNewCustomActivity(false);
 
@@ -1403,6 +1410,25 @@ export default function BiofeedbackEntryCreateScreen({
                 />
                 {errors.monitoringDurationMinutes ? (
                   <Text style={styles.errorText}>{errors.monitoringDurationMinutes}</Text>
+                ) : null}
+              </View>
+            ) : isRestingHeartRateMonitoring ? (
+              <View style={styles.parameterSection}>
+                <Text style={styles.sectionTitle}>ניטור דופק מנוחה</Text>
+
+                <Text style={styles.label}>דופק מנוחה (BPM)</Text>
+                <TextInput
+                  value={values.restingHeartRateBpm}
+                  onChangeText={(text) => updateField('restingHeartRateBpm', text)}
+                  style={styles.input}
+                  keyboardType="numeric"
+                  placeholder="30-220"
+                />
+                {errors.restingHeartRateBpm ? (
+                  <Text style={styles.errorText}>{errors.restingHeartRateBpm}</Text>
+                ) : null}
+                {errors.restingHeartRateDurationSeconds ? (
+                  <Text style={styles.errorText}>{errors.restingHeartRateDurationSeconds}</Text>
                 ) : null}
               </View>
             ) : (

@@ -121,7 +121,7 @@ function mapFirebaseEntryToBiofeedbackEntry(entry: {
       exhale?: number | null;
       holdAfterExhale?: number | null;
     } | null;
-    monitoringType: 'morning' | 'short' | null;
+    monitoringType: 'morning' | 'short' | 'resting_heart_rate' | null;
   };
   monitoringResult?: BiofeedbackEntry['monitoringResult'];
   durationMinutes: number;
@@ -195,6 +195,13 @@ export default function BiofeedbackEntryDetailScreen({ entryId, fromDay }: Props
         item.isActive,
     );
   }, [values.selectedCategoryId]);
+
+  const isMonitoring =
+    values.selectedCategoryId === 'monitoring' ||
+    selectedCatalogItem?.activityType === 'monitoring';
+  const isMorningMonitoring = isMonitoring && values.monitoringType === 'morning';
+  const isRestingHeartRateMonitoring =
+    isMonitoring && values.monitoringType === 'resting_heart_rate';
 
   const errors = useMemo(
     () => validateBiofeedbackEntryForm(values, { todayDateKey }),
@@ -311,6 +318,8 @@ export default function BiofeedbackEntryDetailScreen({ entryId, fromDay }: Props
       monitoringType: '',
       monitoringScore: '',
       monitoringDurationMinutes: '3',
+      restingHeartRateBpm: '',
+      restingHeartRateDurationSeconds: '30',
     } as const;
   }
 
@@ -333,6 +342,9 @@ export default function BiofeedbackEntryDetailScreen({ entryId, fromDay }: Props
         item.activityType === 'monitoring' ? item.monitoringType : '',
       monitoringDurationMinutes:
         item.activityType === 'monitoring' ? '3' : current.monitoringDurationMinutes,
+      restingHeartRateBpm: '',
+      restingHeartRateDurationSeconds:
+        item.activityType === 'monitoring' ? '30' : current.restingHeartRateDurationSeconds,
     }));
   }
 
@@ -348,6 +360,8 @@ export default function BiofeedbackEntryDetailScreen({ entryId, fromDay }: Props
       monitoringType: '',
       monitoringScore: '',
       monitoringDurationMinutes: '3',
+      restingHeartRateBpm: '',
+      restingHeartRateDurationSeconds: '30',
       breathingInhale: '',
       breathingHoldAfterInhale: '',
       breathingExhale: '',
@@ -615,18 +629,70 @@ export default function BiofeedbackEntryDetailScreen({ entryId, fromDay }: Props
             </>
           ) : null}
 
-          <Text style={styles.label}>משך בדקות</Text>
-          <TextInput
-            value={String(values.durationMinutes)}
-            onChangeText={(text) => updateField('durationMinutes', Number(text) || 0)}
-            style={styles.input}
-            keyboardType="numeric"
-          />
-          {errors.durationMinutes ? (
-            <Text style={styles.errorText}>{errors.durationMinutes}</Text>
-          ) : null}
+          {isMorningMonitoring ? (
+            <View style={styles.parameterSection}>
+              <Text style={styles.sectionTitle}>ניטור בוקר</Text>
+
+              <Text style={styles.label}>ציון ניטור (0-100)</Text>
+              <TextInput
+                value={values.monitoringScore}
+                onChangeText={(text) => updateField('monitoringScore', text)}
+                style={styles.input}
+                keyboardType="numeric"
+                placeholder="0-100"
+              />
+              {errors.monitoringScore ? (
+                <Text style={styles.errorText}>{errors.monitoringScore}</Text>
+              ) : null}
+
+              <Text style={styles.label}>משך ניטור בדקות</Text>
+              <TextInput
+                value={values.monitoringDurationMinutes}
+                onChangeText={(text) => updateField('monitoringDurationMinutes', text)}
+                style={styles.input}
+                keyboardType="decimal-pad"
+                placeholder="3"
+              />
+              {errors.monitoringDurationMinutes ? (
+                <Text style={styles.errorText}>{errors.monitoringDurationMinutes}</Text>
+              ) : null}
+            </View>
+          ) : isRestingHeartRateMonitoring ? (
+            <View style={styles.parameterSection}>
+              <Text style={styles.sectionTitle}>ניטור דופק מנוחה</Text>
+
+              <Text style={styles.label}>דופק מנוחה (BPM)</Text>
+              <TextInput
+                value={values.restingHeartRateBpm}
+                onChangeText={(text) => updateField('restingHeartRateBpm', text)}
+                style={styles.input}
+                keyboardType="numeric"
+                placeholder="30-220"
+              />
+              {errors.restingHeartRateBpm ? (
+                <Text style={styles.errorText}>{errors.restingHeartRateBpm}</Text>
+              ) : null}
+              {errors.restingHeartRateDurationSeconds ? (
+                <Text style={styles.errorText}>{errors.restingHeartRateDurationSeconds}</Text>
+              ) : null}
+            </View>
+          ) : (
+            <>
+              <Text style={styles.label}>משך בדקות</Text>
+              <TextInput
+                value={String(values.durationMinutes)}
+                onChangeText={(text) => updateField('durationMinutes', Number(text) || 0)}
+                style={styles.input}
+                keyboardType="numeric"
+              />
+              {errors.durationMinutes ? (
+                <Text style={styles.errorText}>{errors.durationMinutes}</Text>
+              ) : null}
+            </>
+          )}
         </View>
 
+        {!isMonitoring ? (
         <View style={[styles.section, styles.hrvSection]}>
           <Text style={[styles.sectionTitle, styles.hrvSectionTitle]}>HRV</Text>
 
@@ -671,7 +737,9 @@ export default function BiofeedbackEntryDetailScreen({ entryId, fromDay }: Props
             ) : null}
           </View>
         </View>
+        ) : null}
 
+        {!isMonitoring ? (
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>RLX</Text>
 
@@ -693,6 +761,7 @@ export default function BiofeedbackEntryDetailScreen({ entryId, fromDay }: Props
           />
           {errors.rlxEndValue ? <Text style={styles.errorText}>{errors.rlxEndValue}</Text> : null}
         </View>
+        ) : null}
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>הערות</Text>
@@ -897,6 +966,9 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     marginBottom: 12,
+  },
+  parameterSection: {
+    marginTop: 4,
   },
   label: {
     fontSize: 14,

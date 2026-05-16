@@ -51,8 +51,16 @@ export function toCreateBiofeedbackEntryInput(
   const trimmedExerciseName = values.exerciseName.trim();
   const isMorningMonitoring =
     values.selectedCategoryId === 'monitoring' && values.monitoringType === 'morning';
+  const isRestingHeartRateMonitoring =
+    values.selectedCategoryId === 'monitoring' &&
+    values.monitoringType === 'resting_heart_rate';
   const monitoringDurationMinutes = Number(values.monitoringDurationMinutes.trim());
   const monitoringScore = Number(values.monitoringScore.trim());
+  const restingHeartRateDurationSeconds =
+    values.restingHeartRateDurationSeconds.trim() === ''
+      ? 30
+      : Number(values.restingHeartRateDurationSeconds.trim());
+  const restingHeartRateBpm = Number(values.restingHeartRateBpm.trim());
 
   const finalExerciseName = selectedCatalogItem
     ? selectedCatalogItem.label
@@ -99,7 +107,11 @@ export function toCreateBiofeedbackEntryInput(
             monitoringType: values.monitoringType || null,
           }
         : undefined,
-    durationMinutes: isMorningMonitoring ? monitoringDurationMinutes : values.durationMinutes || 8,
+    durationMinutes: isMorningMonitoring
+      ? monitoringDurationMinutes
+      : isRestingHeartRateMonitoring
+        ? restingHeartRateDurationSeconds / 60
+        : values.durationMinutes || 8,
     monitoringResult: isMorningMonitoring
       ? {
           type: 'morning',
@@ -107,7 +119,14 @@ export function toCreateBiofeedbackEntryInput(
           durationMinutes: monitoringDurationMinutes,
           monitoringScore,
         }
-      : undefined,
+      : isRestingHeartRateMonitoring
+        ? {
+            type: 'resting_heart_rate',
+            source: 'manual',
+            durationSeconds: restingHeartRateDurationSeconds,
+            bpm: restingHeartRateBpm,
+          }
+        : undefined,
     hrvDistribution: {
       stressPercent: values.hrvStressPercent === '' ? null : Number(values.hrvStressPercent),
       midRangePercent: values.hrvMidRangePercent === '' ? null : Number(values.hrvMidRangePercent),

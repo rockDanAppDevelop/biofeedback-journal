@@ -74,12 +74,23 @@ export function validateBiofeedbackEntryForm(
 
   const isMorningMonitoring =
     values.selectedCategoryId === 'monitoring' && values.monitoringType === 'morning';
+  const isRestingHeartRateMonitoring =
+    values.selectedCategoryId === 'monitoring' &&
+    values.monitoringType === 'resting_heart_rate';
   const monitoringScore =
     values.monitoringScore.trim() === '' ? null : Number(values.monitoringScore.trim());
   const monitoringDurationMinutes =
     values.monitoringDurationMinutes.trim() === ''
       ? null
       : Number(values.monitoringDurationMinutes.trim());
+  const restingHeartRateBpm =
+    values.restingHeartRateBpm.trim() === ''
+      ? null
+      : Number(values.restingHeartRateBpm.trim());
+  const restingHeartRateDurationSeconds =
+    values.restingHeartRateDurationSeconds.trim() === ''
+      ? 30
+      : Number(values.restingHeartRateDurationSeconds.trim());
 
   if (isMorningMonitoring) {
     if (monitoringScore === null || !Number.isFinite(monitoringScore)) {
@@ -92,6 +103,18 @@ export function validateBiofeedbackEntryForm(
       errors.monitoringDurationMinutes = 'יש להזין משך ניטור בין 1 ל-3 דקות';
     } else if (monitoringDurationMinutes < 1 || monitoringDurationMinutes > 3) {
       errors.monitoringDurationMinutes = 'משך ניטור חייב להיות בין 1 ל-3 דקות';
+    }
+  } else if (isRestingHeartRateMonitoring) {
+    if (restingHeartRateBpm === null || !Number.isFinite(restingHeartRateBpm)) {
+      errors.restingHeartRateBpm = 'יש להזין דופק מנוחה במספר בין 30 ל-220';
+    } else if (restingHeartRateBpm < 30 || restingHeartRateBpm > 220) {
+      errors.restingHeartRateBpm = 'דופק מנוחה חייב להיות בין 30 ל-220';
+    }
+
+    if (!Number.isFinite(restingHeartRateDurationSeconds) || restingHeartRateDurationSeconds <= 0) {
+      errors.restingHeartRateDurationSeconds = 'משך ניטור דופק מנוחה חייב להיות 30 שניות';
+    } else if (restingHeartRateDurationSeconds !== 30) {
+      errors.restingHeartRateDurationSeconds = 'משך ניטור דופק מנוחה חייב להיות 30 שניות';
     }
   } else if (!Number.isFinite(values.durationMinutes) || values.durationMinutes <= 0) {
     errors.durationMinutes = 'משך בדקות חייב להיות גדול מ-0';

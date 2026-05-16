@@ -25,15 +25,22 @@ export type EntryActivity = {
     exhale?: number | null;
     holdAfterExhale?: number | null;
   } | null;
-  monitoringType: 'morning' | 'short' | null;
+  monitoringType: 'morning' | 'short' | 'resting_heart_rate' | null;
 };
 
-export type MonitoringResult = {
-  type: 'morning';
-  source: 'manual';
-  durationMinutes: number;
-  monitoringScore: number;
-};
+export type MonitoringResult =
+  | {
+      type: 'morning';
+      source: 'manual';
+      durationMinutes: number;
+      monitoringScore: number;
+    }
+  | {
+      type: 'resting_heart_rate';
+      source: 'manual';
+      durationSeconds: number;
+      bpm: number;
+    };
 
 export type BiofeedbackEntry = {
   id: string;

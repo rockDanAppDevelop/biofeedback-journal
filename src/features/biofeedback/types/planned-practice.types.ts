@@ -14,7 +14,7 @@ export type PlannedPractice = {
   userCustomActivityId: string | null;
   customExerciseName: string | null;
 
-  monitoringType: 'morning' | 'short' | null;
+  monitoringType: 'morning' | 'short' | 'resting_heart_rate' | null;
 
   durationMinutes: number | null;
 

@@ -11,7 +11,7 @@ export type CatalogMeasurementType = 'hrv' | 'rlx' | 'none';
 
 export type TrainingExerciseType = 'preset' | 'parameterized';
 
-export type MonitoringType = 'morning' | 'short';
+export type MonitoringType = 'morning' | 'short' | 'resting_heart_rate';
 
 export type ActivityParameterFieldId =
   | 'inhale'
@@ -214,5 +214,14 @@ export const ACTIVITY_CATALOG: ActivityCatalogItem[] = [
     measurementType: 'none',
     monitoringType: 'short',
     isActive: false,
+  },
+  {
+    id: 'resting_heart_rate_monitoring',
+    activityType: 'monitoring',
+    categoryId: 'monitoring',
+    label: 'ניטור דופק מנוחה',
+    measurementType: 'none',
+    monitoringType: 'resting_heart_rate',
+    isActive: true,
   },
 ];

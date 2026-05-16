@@ -13,9 +13,11 @@ export type BiofeedbackEntryFormValues = {
   breathingHoldAfterInhale: string;
   breathingExhale: string;
   breathingHoldAfterExhale: string;
-  monitoringType: 'morning' | 'short' | '';
+  monitoringType: 'morning' | 'short' | 'resting_heart_rate' | '';
   monitoringScore: string;
   monitoringDurationMinutes: string;
+  restingHeartRateBpm: string;
+  restingHeartRateDurationSeconds: string;
   durationMinutes: number;
   hrvStressPercent: string;
   hrvMidRangePercent: string;

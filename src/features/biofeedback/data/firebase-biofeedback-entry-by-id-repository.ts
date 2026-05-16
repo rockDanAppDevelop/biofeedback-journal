@@ -25,7 +25,7 @@ export type FirebaseBiofeedbackEntryById = {
       exhale?: number | null;
       holdAfterExhale?: number | null;
     } | null;
-    monitoringType: 'morning' | 'short' | null;
+    monitoringType: 'morning' | 'short' | 'resting_heart_rate' | null;
   };
   monitoringResult?: MonitoringResult | null;
   durationMinutes: number;

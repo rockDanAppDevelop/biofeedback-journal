@@ -36,6 +36,8 @@ export function createDefaultBiofeedbackEntryFormValues(): BiofeedbackEntryFormV
     monitoringType: '',
     monitoringScore: '',
     monitoringDurationMinutes: '3',
+    restingHeartRateBpm: '',
+    restingHeartRateDurationSeconds: '30',
     durationMinutes: 8,
     hrvStressPercent: '',
     hrvMidRangePercent: '',

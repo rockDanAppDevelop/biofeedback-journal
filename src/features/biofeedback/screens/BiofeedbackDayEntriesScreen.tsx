@@ -58,6 +58,10 @@ function getRoutineItemDisplayName(item: RoutineItem): string {
   }
 
   if (item.activityType === 'monitoring' && item.monitoringType) {
+    if (item.monitoringType === 'resting_heart_rate') {
+      return 'ניטור דופק מנוחה';
+    }
+
     return item.monitoringType === 'morning' ? 'ניטור בוקר' : 'ניטור קצר';
   }
 
@@ -82,6 +86,10 @@ function getMeasurementLabel(measurementType: RoutineItem['measurementType']): s
 
 function getEntryDisplayName(entry: BiofeedbackEntry): string {
   if (isMonitoringEntry(entry)) {
+    if (entry.monitoringResult?.type === 'resting_heart_rate') {
+      return 'ניטור דופק מנוחה';
+    }
+
     return 'ניטור בוקר';
   }
 
@@ -91,7 +99,15 @@ function getEntryDisplayName(entry: BiofeedbackEntry): string {
 }
 
 function getMonitoringDuration(entry: BiofeedbackEntry): number {
-  return entry.monitoringResult?.durationMinutes ?? entry.durationMinutes;
+  return entry.monitoringResult?.type === 'morning'
+    ? entry.monitoringResult.durationMinutes
+    : entry.durationMinutes;
+}
+
+function getRestingHeartRateDurationSeconds(entry: BiofeedbackEntry): number {
+  return entry.monitoringResult?.type === 'resting_heart_rate'
+    ? entry.monitoringResult.durationSeconds
+    : Math.round(entry.durationMinutes * 60);
 }
 
 export default function BiofeedbackDayEntriesScreen({ dateKey }: Props) {
@@ -330,15 +346,28 @@ export default function BiofeedbackDayEntriesScreen({ dateKey }: Props) {
               >
                 <View style={styles.cardHeader}>
                   <View style={styles.titleRow}>
-                    <Text style={styles.cardTitle}>ניטור בוקר</Text>
+                    <Text style={styles.cardTitle}>{getEntryDisplayName(entry)}</Text>
                   </View>
                   <Text style={styles.cardTime}>{formatEntryTime(entry.measuredAt)}</Text>
                 </View>
 
-                <Text style={styles.rowText}>
-                  ציון ניטור: {entry.monitoringResult?.monitoringScore ?? '-'} / 100
-                </Text>
-                <Text style={styles.rowText}>משך: {getMonitoringDuration(entry)} דקות</Text>
+                {entry.monitoringResult?.type === 'resting_heart_rate' ? (
+                  <>
+                    <Text style={styles.rowText}>
+                      דופק מנוחה: {entry.monitoringResult.bpm} BPM
+                    </Text>
+                    <Text style={styles.rowText}>
+                      משך: {getRestingHeartRateDurationSeconds(entry)} שניות
+                    </Text>
+                  </>
+                ) : (
+                  <>
+                    <Text style={styles.rowText}>
+                      ציון ניטור: {entry.monitoringResult?.type === 'morning' ? entry.monitoringResult.monitoringScore : '-'} / 100
+                    </Text>
+                    <Text style={styles.rowText}>משך: {getMonitoringDuration(entry)} דקות</Text>
+                  </>
+                )}
 
                 {entry.notes ? (
                   <Text style={styles.notesText} numberOfLines={2}>
