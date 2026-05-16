@@ -44,6 +44,8 @@ type Props = {
   fromDay?: string;
 };
 
+type MaterialCommunityIconName = keyof typeof MaterialCommunityIcons.glyphMap;
+
 const CATEGORY_LABELS: Record<ActivityCategoryId, string> = {
   trainers: 'מאמנים',
   relaxation: 'הרפיה',
@@ -64,7 +66,7 @@ const CATEGORY_ICONS = {
   relaxation: 'meditation',
   guided: 'flower-tulip-outline',
   monitoring: 'chart-line',
-};
+} satisfies Record<Exclude<ActivityCategoryId, 'custom'>, MaterialCommunityIconName>;
 
 function toOptionalNumber(value: string): number | null {
   if (!value.trim()) {

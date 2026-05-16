@@ -1,5 +1,6 @@
 //src\features\biofeedback\components\MonthGrid.tsx
 
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { toDateKey } from './calendar.utils';
@@ -139,10 +140,12 @@ export default function MonthGrid({
               {day.hasMonitoring ? (
                 <View
                   style={[
-                    styles.monitoringDot,
-                    day.hasEntry && styles.monitoringDotOnDoneDay,
+                    styles.monitoringBadge,
+                    day.hasEntry && styles.monitoringBadgeOnDoneDay,
                   ]}
-                />
+                >
+                  <MaterialCommunityIcons name="pulse" size={14} color="#6A35B8" />
+                </View>
               ) : null}
             </Pressable>
           );
@@ -206,18 +209,19 @@ const styles = StyleSheet.create({
     borderRadius: 2.5,
     backgroundColor: '#d96b6b',
   },
-  monitoringDot: {
+  monitoringBadge: {
     position: 'absolute',
-    top: 6,
-    right: 6,
-    width: 7,
-    height: 7,
-    borderRadius: 3.5,
-    backgroundColor: '#7E57C2',
+    top: 3,
+    right: 3,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: '#F1E9FF',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  monitoringDotOnDoneDay: {
-    borderWidth: 1,
-    borderColor: '#ffffff',
+  monitoringBadgeOnDoneDay: {
+    backgroundColor: '#F1E9FF',
   },
   dayText: {
     fontSize: 16,
