@@ -9,6 +9,8 @@ export type CurrentUserProfile = {
   firstSeenDateKey: string;
   dailyReminderHour: number;
   dailyReminderMinute: number;
+  plannedReminderHour: number;
+  plannedReminderMinute: number;
   createdAt: string;
   updatedAt: string;
 };
@@ -20,6 +22,18 @@ function toReminderHour(value: unknown): number {
 }
 
 function toReminderMinute(value: unknown): number {
+  return typeof value === 'number' && Number.isInteger(value) && value >= 0 && value <= 59
+    ? value
+    : 0;
+}
+
+function toPlannedReminderHour(value: unknown): number {
+  return typeof value === 'number' && Number.isInteger(value) && value >= 0 && value <= 23
+    ? value
+    : 6;
+}
+
+function toPlannedReminderMinute(value: unknown): number {
   return typeof value === 'number' && Number.isInteger(value) && value >= 0 && value <= 59
     ? value
     : 0;
@@ -47,6 +61,8 @@ export async function getCurrentUserProfile(): Promise<CurrentUserProfile | null
     firstSeenDateKey: String(data.firstSeenDateKey ?? ''),
     dailyReminderHour: toReminderHour(data.dailyReminderHour),
     dailyReminderMinute: toReminderMinute(data.dailyReminderMinute),
+    plannedReminderHour: toPlannedReminderHour(data.plannedReminderHour),
+    plannedReminderMinute: toPlannedReminderMinute(data.plannedReminderMinute),
     createdAt: String(data.createdAt ?? ''),
     updatedAt: String(data.updatedAt ?? ''),
   };

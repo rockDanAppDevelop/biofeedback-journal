@@ -40,3 +40,23 @@ export async function updateCurrentUserReminderTime(
     updatedAt: new Date().toISOString(),
   });
 }
+
+export async function updateCurrentUserPlannedReminderTime(
+  input: ReminderTimeInput,
+): Promise<void> {
+  const user = auth.currentUser;
+
+  if (!user) {
+    throw new Error('No authenticated user');
+  }
+
+  assertValidReminderTime(input);
+
+  const userRef = doc(db, 'users', user.uid);
+
+  await updateDoc(userRef, {
+    plannedReminderHour: input.hour,
+    plannedReminderMinute: input.minute,
+    updatedAt: new Date().toISOString(),
+  });
+}

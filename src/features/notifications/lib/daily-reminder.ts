@@ -18,6 +18,11 @@ type DailyReminderTime = {
   minute: number;
 };
 
+type PlannedReminderTime = {
+  hour: number;
+  minute: number;
+};
+
 const ENCOURAGING_MESSAGES = [
   'זה זמן טוב לעצור לרגע ולמלא entry קטן לעצמך.',
   'עוד כמה דקות של תשומת לב לעצמך יכולות לעשות הבדל גדול.',
@@ -87,6 +92,42 @@ function normalizeDailyReminderTime(
   };
 }
 
+function getDefaultPlannedReminderTime(): PlannedReminderTime {
+  return {
+    hour: PLANNED_ITEMS_MORNING_REMINDER_HOUR,
+    minute: PLANNED_ITEMS_MORNING_REMINDER_MINUTE,
+  };
+}
+
+function normalizePlannedReminderTime(
+  reminderTime?: Partial<PlannedReminderTime> | null,
+): PlannedReminderTime {
+  const defaultReminderTime = getDefaultPlannedReminderTime();
+
+  if (!reminderTime) {
+    return defaultReminderTime;
+  }
+
+  const hour = Number(reminderTime.hour);
+  const minute = Number(reminderTime.minute);
+
+  if (
+    !Number.isInteger(hour) ||
+    !Number.isInteger(minute) ||
+    hour < 0 ||
+    hour > 23 ||
+    minute < 0 ||
+    minute > 59
+  ) {
+    return defaultReminderTime;
+  }
+
+  return {
+    hour,
+    minute,
+  };
+}
+
 function getTomorrowAtReminderTime(now: Date, reminderTime: DailyReminderTime): Date {
   return new Date(
     now.getFullYear(),
@@ -111,13 +152,17 @@ function getTodayAtReminderTime(now: Date, reminderTime: DailyReminderTime): Dat
   );
 }
 
-function getMorningReminderDate(now: Date, daysFromToday: number): Date {
+function getMorningReminderDate(
+  now: Date,
+  daysFromToday: number,
+  reminderTime: PlannedReminderTime,
+): Date {
   return new Date(
     now.getFullYear(),
     now.getMonth(),
     now.getDate() + daysFromToday,
-    PLANNED_ITEMS_MORNING_REMINDER_HOUR,
-    PLANNED_ITEMS_MORNING_REMINDER_MINUTE,
+    reminderTime.hour,
+    reminderTime.minute,
     0,
     0,
   );
@@ -228,12 +273,13 @@ function getNextReminderDate(
 async function findNextPlannedItemsMorningReminderDate(
   daysAhead: number,
   now: Date,
+  reminderTime: PlannedReminderTime,
 ): Promise<Date | null> {
-  const startOffset = now < getMorningReminderDate(now, 0) ? 0 : 1;
+  const startOffset = now < getMorningReminderDate(now, 0, reminderTime) ? 0 : 1;
   const daysToCheck = Math.max(0, daysAhead);
 
   for (let offset = startOffset; offset < startOffset + daysToCheck; offset += 1) {
-    const reminderDate = getMorningReminderDate(now, offset);
+    const reminderDate = getMorningReminderDate(now, offset, reminderTime);
     const dateKey = toDateKey(reminderDate);
     const hasOpenPlannedItems = await hasPlannedItemsForDate(dateKey);
 
@@ -294,7 +340,10 @@ export async function syncDailyReminderForToday(
   });
 }
 
-export async function syncPlannedItemsMorningReminder(daysAhead = 7): Promise<void> {
+export async function syncPlannedItemsMorningReminder(
+  daysAhead = 7,
+  reminderTime?: Partial<PlannedReminderTime> | null,
+): Promise<void> {
   if (Platform.OS === 'web') {
     return;
   }
@@ -318,6 +367,7 @@ export async function syncPlannedItemsMorningReminder(daysAhead = 7): Promise<vo
   const nextReminderDate = await findNextPlannedItemsMorningReminderDate(
     daysAhead,
     new Date(),
+    normalizePlannedReminderTime(reminderTime),
   );
 
   if (!nextReminderDate) {

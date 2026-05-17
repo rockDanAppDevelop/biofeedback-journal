@@ -19,12 +19,24 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import BiofeedbackHeader from '../../biofeedback/components/BiofeedbackHeader';
 import { toDateKey } from '../../biofeedback/components/calendar.utils';
 import { hasBiofeedbackEntryForDateKeyFromFirestore } from '../../biofeedback/data/firebase-biofeedback-read-repository';
-import { updateCurrentUserReminderTime } from '../../auth/data/update-current-user-reminder-time';
-import { syncDailyReminderForToday } from '../lib/daily-reminder';
+import {
+  updateCurrentUserPlannedReminderTime,
+  updateCurrentUserReminderTime,
+} from '../../auth/data/update-current-user-reminder-time';
+import {
+  syncDailyReminderForToday,
+  syncPlannedItemsMorningReminder,
+} from '../lib/daily-reminder';
 import {
   DEFAULT_DAILY_REMINDER_TIME,
   getDailyReminderTime,
 } from '../lib/get-daily-reminder-time';
+import {
+  DEFAULT_PLANNED_REMINDER_TIME,
+  getPlannedReminderTime,
+} from '../lib/get-planned-reminder-time';
+
+type ReminderPickerTarget = 'daily' | 'planned';
 
 function formatTwoDigits(value: number): string {
   return String(value).padStart(2, '0');
@@ -48,12 +60,16 @@ function toTimeLabel(hourText: string, minuteText: string): string {
   return `${formatTwoDigits(hour)}:${formatTwoDigits(minute)}`;
 }
 
-function toTimeDate(hourText: string, minuteText: string): Date {
+function toTimeDate(
+  hourText: string,
+  minuteText: string,
+  fallbackTime: { hour: number; minute: number },
+): Date {
   const date = new Date();
   const reminderTime = parseReminderTime(hourText, minuteText);
 
   if (!reminderTime) {
-    date.setHours(DEFAULT_DAILY_REMINDER_TIME.hour, DEFAULT_DAILY_REMINDER_TIME.minute, 0, 0);
+    date.setHours(fallbackTime.hour, fallbackTime.minute, 0, 0);
     return date;
   }
 
@@ -86,12 +102,25 @@ function parseReminderTime(
 }
 
 export default function ReminderSettingsScreen() {
-  const [hourText, setHourText] = useState(String(DEFAULT_DAILY_REMINDER_TIME.hour));
-  const [minuteText, setMinuteText] = useState(String(DEFAULT_DAILY_REMINDER_TIME.minute));
+  const [dailyHourText, setDailyHourText] = useState(String(DEFAULT_DAILY_REMINDER_TIME.hour));
+  const [dailyMinuteText, setDailyMinuteText] = useState(String(DEFAULT_DAILY_REMINDER_TIME.minute));
+  const [plannedHourText, setPlannedHourText] = useState(
+    String(DEFAULT_PLANNED_REMINDER_TIME.hour),
+  );
+  const [plannedMinuteText, setPlannedMinuteText] = useState(
+    String(DEFAULT_PLANNED_REMINDER_TIME.minute),
+  );
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [isPickerOpen, setIsPickerOpen] = useState(false);
-  const timeLabel = useMemo(() => toTimeLabel(hourText, minuteText), [hourText, minuteText]);
+  const [pickerTarget, setPickerTarget] = useState<ReminderPickerTarget | null>(null);
+  const dailyTimeLabel = useMemo(
+    () => toTimeLabel(dailyHourText, dailyMinuteText),
+    [dailyHourText, dailyMinuteText],
+  );
+  const plannedTimeLabel = useMemo(
+    () => toTimeLabel(plannedHourText, plannedMinuteText),
+    [plannedHourText, plannedMinuteText],
+  );
 
   useEffect(() => {
     let isActive = true;
@@ -99,14 +128,19 @@ export default function ReminderSettingsScreen() {
     async function loadReminderTime() {
       try {
         setIsLoading(true);
-        const reminderTime = await getDailyReminderTime();
+        const [dailyReminderTime, plannedReminderTime] = await Promise.all([
+          getDailyReminderTime(),
+          getPlannedReminderTime(),
+        ]);
 
         if (!isActive) {
           return;
         }
 
-        setHourText(String(reminderTime.hour));
-        setMinuteText(String(reminderTime.minute));
+        setDailyHourText(String(dailyReminderTime.hour));
+        setDailyMinuteText(String(dailyReminderTime.minute));
+        setPlannedHourText(String(plannedReminderTime.hour));
+        setPlannedMinuteText(String(plannedReminderTime.minute));
       } finally {
         if (isActive) {
           setIsLoading(false);
@@ -123,15 +157,21 @@ export default function ReminderSettingsScreen() {
 
   function handleTimePickerChange(event: DateTimePickerEvent, selectedDate?: Date) {
     if (Platform.OS !== 'ios') {
-      setIsPickerOpen(false);
+      setPickerTarget(null);
     }
 
-    if (event.type === 'dismissed' || !selectedDate) {
+    if (event.type === 'dismissed' || !selectedDate || !pickerTarget) {
       return;
     }
 
-    setHourText(String(selectedDate.getHours()));
-    setMinuteText(String(selectedDate.getMinutes()));
+    if (pickerTarget === 'daily') {
+      setDailyHourText(String(selectedDate.getHours()));
+      setDailyMinuteText(String(selectedDate.getMinutes()));
+      return;
+    }
+
+    setPlannedHourText(String(selectedDate.getHours()));
+    setPlannedMinuteText(String(selectedDate.getMinutes()));
   }
 
   async function handleSave() {
@@ -139,22 +179,40 @@ export default function ReminderSettingsScreen() {
       return;
     }
 
-    const reminderTime = parseReminderTime(hourText, minuteText);
+    const dailyReminderTime = parseReminderTime(dailyHourText, dailyMinuteText);
+    const plannedReminderTime = parseReminderTime(plannedHourText, plannedMinuteText);
 
-    if (!reminderTime) {
+    if (!dailyReminderTime || !plannedReminderTime) {
       Alert.alert('שעה לא תקינה', 'יש להזין שעה בין 0 ל-23 ודקה בין 0 ל-59.');
+      return;
+    }
+
+    const dailyMinutes = dailyReminderTime.hour * 60 + dailyReminderTime.minute;
+    const plannedMinutes = plannedReminderTime.hour * 60 + plannedReminderTime.minute;
+
+    if (plannedMinutes >= dailyMinutes) {
+      Alert.alert(
+        'שעה לא תקינה',
+        'תזכורת לתרגולים מתוכננים חייבת להיות מוקדמת יותר מהתזכורת היומית.',
+      );
       return;
     }
 
     try {
       setIsSaving(true);
-      await updateCurrentUserReminderTime(reminderTime);
+      await Promise.all([
+        updateCurrentUserReminderTime(dailyReminderTime),
+        updateCurrentUserPlannedReminderTime(plannedReminderTime),
+      ]);
 
       const todayDateKey = toDateKey(new Date());
       const hasEntryToday = await hasBiofeedbackEntryForDateKeyFromFirestore(todayDateKey);
-      await syncDailyReminderForToday(hasEntryToday, reminderTime);
+      await Promise.all([
+        syncDailyReminderForToday(hasEntryToday, dailyReminderTime),
+        syncPlannedItemsMorningReminder(7, plannedReminderTime),
+      ]);
 
-      Alert.alert('נשמר', `התזכורת היומית תישלח בשעה ${timeLabel}.`, [
+      Alert.alert('נשמר', 'שעות התזכורת נשמרו.', [
         {
           text: 'אישור',
           onPress: () => router.replace('/dashboard'),
@@ -190,8 +248,8 @@ export default function ReminderSettingsScreen() {
                 <>
                   <Text style={styles.label}>שעה</Text>
                   <TextInput
-                    value={hourText}
-                    onChangeText={setHourText}
+                    value={dailyHourText}
+                    onChangeText={setDailyHourText}
                     style={styles.input}
                     keyboardType="numeric"
                     maxLength={2}
@@ -200,8 +258,8 @@ export default function ReminderSettingsScreen() {
 
                   <Text style={styles.label}>דקה</Text>
                   <TextInput
-                    value={minuteText}
-                    onChangeText={setMinuteText}
+                    value={dailyMinuteText}
+                    onChangeText={setDailyMinuteText}
                     style={styles.input}
                     keyboardType="numeric"
                     maxLength={2}
@@ -210,14 +268,77 @@ export default function ReminderSettingsScreen() {
                 </>
               ) : (
                 <>
-                  <Pressable style={styles.timeField} onPress={() => setIsPickerOpen(true)}>
+                  <Pressable style={styles.timeField} onPress={() => setPickerTarget('daily')}>
                     <Text style={styles.timeFieldLabel}>שעה</Text>
-                    <Text style={styles.currentTimeText}>{timeLabel}</Text>
+                    <Text style={styles.currentTimeText}>{dailyTimeLabel}</Text>
                   </Pressable>
 
-                  {isPickerOpen ? (
+                  {pickerTarget === 'daily' ? (
                     <DateTimePicker
-                      value={toTimeDate(hourText, minuteText)}
+                      value={toTimeDate(
+                        dailyHourText,
+                        dailyMinuteText,
+                        DEFAULT_DAILY_REMINDER_TIME,
+                      )}
+                      mode="time"
+                      display="default"
+                      is24Hour
+                      onChange={handleTimePickerChange}
+                    />
+                  ) : null}
+                </>
+              )}
+            </>
+          )}
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>תזכורת לתרגולים מתוכננים</Text>
+          <Text style={styles.descriptionText}>תישלח אם יש תרגולים מתוכננים לאותו יום.</Text>
+
+          {isLoading ? (
+            <View style={styles.loadingRow}>
+              <ActivityIndicator size="small" color="#1e4f8a" />
+              <Text style={styles.loadingText}>טוען...</Text>
+            </View>
+          ) : (
+            <>
+              {Platform.OS === 'web' ? (
+                <>
+                  <Text style={styles.label}>שעה</Text>
+                  <TextInput
+                    value={plannedHourText}
+                    onChangeText={setPlannedHourText}
+                    style={styles.input}
+                    keyboardType="numeric"
+                    maxLength={2}
+                    placeholder="06"
+                  />
+
+                  <Text style={styles.label}>דקה</Text>
+                  <TextInput
+                    value={plannedMinuteText}
+                    onChangeText={setPlannedMinuteText}
+                    style={styles.input}
+                    keyboardType="numeric"
+                    maxLength={2}
+                    placeholder="00"
+                  />
+                </>
+              ) : (
+                <>
+                  <Pressable style={styles.timeField} onPress={() => setPickerTarget('planned')}>
+                    <Text style={styles.timeFieldLabel}>שעה</Text>
+                    <Text style={styles.currentTimeText}>{plannedTimeLabel}</Text>
+                  </Pressable>
+
+                  {pickerTarget === 'planned' ? (
+                    <DateTimePicker
+                      value={toTimeDate(
+                        plannedHourText,
+                        plannedMinuteText,
+                        DEFAULT_PLANNED_REMINDER_TIME,
+                      )}
                       mode="time"
                       display="default"
                       is24Hour
