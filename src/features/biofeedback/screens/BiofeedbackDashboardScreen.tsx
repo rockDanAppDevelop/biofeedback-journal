@@ -27,6 +27,7 @@ import { testFirebaseConnection } from '../../../lib/testFirebase';
 import { auth, db } from '../../../lib/firebase';
 import { getCurrentUserProfile } from '../../auth/data/get-current-user-profile';
 import { syncDailyReminderForToday } from '../../notifications/lib/daily-reminder';
+import { getDailyReminderTime } from '../../notifications/lib/get-daily-reminder-time';
 
 function getMonthTitle(date: Date): string {
   return new Intl.DateTimeFormat('he-IL', {
@@ -169,7 +170,8 @@ export default function BiofeedbackDashboardScreen() {
       );
 
       setPlannedRoutineItems(nextPlannedRoutineItems);
-      await syncDailyReminderForToday(uniqueDateKeys.includes(todayDateKey));
+      const reminderTime = await getDailyReminderTime();
+      await syncDailyReminderForToday(uniqueDateKeys.includes(todayDateKey), reminderTime);
     } catch (error) {
       console.log('🔥 FIRESTORE ERROR:', error);
       setPracticeEntryDateKeys([]);

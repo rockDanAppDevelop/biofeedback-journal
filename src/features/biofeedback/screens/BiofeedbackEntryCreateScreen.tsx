@@ -52,6 +52,7 @@ import {
   syncDailyReminderForToday,
   syncPlannedItemsMorningReminder,
 } from '../../notifications/lib/daily-reminder';
+import { getDailyReminderTime } from '../../notifications/lib/get-daily-reminder-time';
 import type { PlannedPractice } from '../types/planned-practice.types';
 
 type Props = {
@@ -867,7 +868,8 @@ export default function BiofeedbackEntryCreateScreen({
       });
 
       if (habitDateKey === toDateKey(new Date())) {
-        await syncDailyReminderForToday(true);
+        const reminderTime = await getDailyReminderTime();
+        await syncDailyReminderForToday(true, reminderTime);
       }
 
       await syncPlannedItemsMorningReminder();

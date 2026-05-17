@@ -16,6 +16,7 @@ import {
   syncDailyReminderForToday,
   syncPlannedItemsMorningReminder,
 } from '../../notifications/lib/daily-reminder';
+import { getDailyReminderTime } from '../../notifications/lib/get-daily-reminder-time';
 
 type StartupState = 'loading' | 'error';
 
@@ -33,7 +34,8 @@ export default function BiofeedbackStartupDecisionScreen() {
       const todayDateKey = toDateKey(new Date());
       const hasEntryToday =
         await hasBiofeedbackEntryForDateKeyFromFirestore(todayDateKey);
-      await syncDailyReminderForToday(hasEntryToday);
+      const reminderTime = await getDailyReminderTime();
+      await syncDailyReminderForToday(hasEntryToday, reminderTime);
 
       const hasPlannedItemsToday = await hasPlannedItemsForDate(todayDateKey);
       await syncPlannedItemsMorningReminder();

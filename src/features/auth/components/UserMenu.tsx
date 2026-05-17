@@ -22,6 +22,7 @@ type UserMenuProps = {
 
 const navigationItems = [
   { label: 'סיכום שבועי', route: '/weekly-summary' },
+  { label: 'תזכורות', route: '/reminder-settings' },
   { label: 'ייצוא נתונים', route: '/export' },
   { label: 'רוטינות', route: '/planning' },
   { label: 'ניהול התרגולים שלי', route: '/custom-activities/manage' },

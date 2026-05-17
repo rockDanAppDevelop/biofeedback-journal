@@ -13,6 +13,11 @@ const PLANNED_ITEMS_MORNING_REMINDER_MINUTE = 0;
 const isDebugReminder = false;
 const DEBUG_REMINDER_DELAY_MINUTES = 2;
 
+type DailyReminderTime = {
+  hour: number;
+  minute: number;
+};
+
 const ENCOURAGING_MESSAGES = [
   'זה זמן טוב לעצור לרגע ולמלא entry קטן לעצמך.',
   'עוד כמה דקות של תשומת לב לעצמך יכולות לעשות הבדל גדול.',
@@ -46,25 +51,61 @@ function getRandomEncouragingMessage(): string {
   return ENCOURAGING_MESSAGES[randomIndex];
 }
 
-function getTomorrowAtNinePm(now: Date): Date {
+function getDefaultDailyReminderTime(): DailyReminderTime {
+  return {
+    hour: DAILY_REMINDER_HOUR,
+    minute: DAILY_REMINDER_MINUTE,
+  };
+}
+
+function normalizeDailyReminderTime(
+  reminderTime?: Partial<DailyReminderTime> | null,
+): DailyReminderTime {
+  const defaultReminderTime = getDefaultDailyReminderTime();
+
+  if (!reminderTime) {
+    return defaultReminderTime;
+  }
+
+  const hour = Number(reminderTime.hour);
+  const minute = Number(reminderTime.minute);
+
+  if (
+    !Number.isInteger(hour) ||
+    !Number.isInteger(minute) ||
+    hour < 0 ||
+    hour > 23 ||
+    minute < 0 ||
+    minute > 59
+  ) {
+    return defaultReminderTime;
+  }
+
+  return {
+    hour,
+    minute,
+  };
+}
+
+function getTomorrowAtReminderTime(now: Date, reminderTime: DailyReminderTime): Date {
   return new Date(
     now.getFullYear(),
     now.getMonth(),
     now.getDate() + 1,
-    DAILY_REMINDER_HOUR,
-    DAILY_REMINDER_MINUTE,
+    reminderTime.hour,
+    reminderTime.minute,
     0,
     0,
   );
 }
 
-function getTodayAtNinePm(now: Date): Date {
+function getTodayAtReminderTime(now: Date, reminderTime: DailyReminderTime): Date {
   return new Date(
     now.getFullYear(),
     now.getMonth(),
     now.getDate(),
-    DAILY_REMINDER_HOUR,
-    DAILY_REMINDER_MINUTE,
+    reminderTime.hour,
+    reminderTime.minute,
     0,
     0,
   );
@@ -162,22 +203,26 @@ async function cancelExistingPlannedItemsMorningReminder(
   );
 }
 
-function getNextReminderDate(hasEntryForToday: boolean, now: Date): Date {
+function getNextReminderDate(
+  hasEntryForToday: boolean,
+  now: Date,
+  reminderTime: DailyReminderTime,
+): Date {
   if (hasEntryForToday) {
-    return getTomorrowAtNinePm(now);
+    return getTomorrowAtReminderTime(now, reminderTime);
   }
 
   if (isDebugReminder) {
     return getDebugReminderDate(now);
   }
 
-  const todayAtNinePm = getTodayAtNinePm(now);
+  const todayAtReminderTime = getTodayAtReminderTime(now, reminderTime);
 
-  if (now < todayAtNinePm) {
-    return todayAtNinePm;
+  if (now < todayAtReminderTime) {
+    return todayAtReminderTime;
   }
 
-  return getTomorrowAtNinePm(now);
+  return getTomorrowAtReminderTime(now, reminderTime);
 }
 
 async function findNextPlannedItemsMorningReminderDate(
@@ -202,6 +247,7 @@ async function findNextPlannedItemsMorningReminderDate(
 
 export async function syncDailyReminderForToday(
   hasEntryForToday: boolean,
+  reminderTime?: Partial<DailyReminderTime> | null,
 ): Promise<void> {
   if (Platform.OS === 'web') {
     return;
@@ -225,7 +271,11 @@ export async function syncDailyReminderForToday(
   await ensureAndroidNotificationChannel(Notifications);
   await cancelExistingDailyReminder(Notifications);
 
-  const nextReminderDate = getNextReminderDate(hasEntryForToday, now);
+  const nextReminderDate = getNextReminderDate(
+    hasEntryForToday,
+    now,
+    normalizeDailyReminderTime(reminderTime),
+  );
 
   await Notifications.scheduleNotificationAsync({
     content: {
