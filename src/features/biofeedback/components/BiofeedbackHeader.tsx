@@ -3,6 +3,7 @@ import { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { UserMenu } from '../../auth/components/UserMenu';
+import WhatsNewModal from '../../whats-new/components/WhatsNewModal';
 
 type BiofeedbackHeaderProps = {
   variant?: 'home' | 'screen';
@@ -47,7 +48,8 @@ export default function BiofeedbackHeader({
 
   if (variant === 'screen') {
     return (
-      <View style={styles.screenHeader}>
+      <>
+        <View style={styles.screenHeader}>
         <View style={styles.screenHeaderSide}>
           <UserMenu variant="inline" />
         </View>
@@ -65,15 +67,20 @@ export default function BiofeedbackHeader({
             <Text style={styles.backButtonText}>‹</Text>
           </Pressable>
         </View>
-      </View>
+        </View>
+        <WhatsNewModal />
+      </>
     );
   }
 
   return (
-    <View style={styles.dashboardHeader}>
-      <UserMenu variant="inline" />
-      <Text style={styles.dashboardGreeting}>{dashboardGreeting}</Text>
-    </View>
+    <>
+      <View style={styles.dashboardHeader}>
+        <UserMenu variant="inline" />
+        <Text style={styles.dashboardGreeting}>{dashboardGreeting}</Text>
+      </View>
+      <WhatsNewModal />
+    </>
   );
 }
 
