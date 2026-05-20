@@ -6,7 +6,7 @@ import {
   setSeenWhatsNewVersion,
 } from '../lib/whats-new-storage';
 
-const WHATS_NEW_VERSION = '0.11.3';
+const WHATS_NEW_VERSION = '0.11.4';
 
 let activeModalInstanceId: symbol | null = null;
 
@@ -80,18 +80,18 @@ export default function WhatsNewModal() {
     <Modal visible={isVisible} transparent animationType="fade" onRequestClose={handleDismiss}>
       <View style={styles.backdrop}>
         <View style={styles.card}>
-          <Text style={styles.title}>חדש בגרסה 0.11.3</Text>
+          <Text style={styles.title}>חדש בגרסה 0.11.4</Text>
 
           <View style={styles.body}>
-            <Text style={styles.bullet}>• לכל תרגול מתוכנן יש עכשיו תזכורת נפרדת.</Text>
-            <Text style={styles.bullet}>• ההתראות מציגות את שם התרגול המתוכנן.</Text>
+            <Text style={styles.bullet}>• שיפרנו את מערכת התזכורות לתרגולים מתוכננים.</Text>
             <Text style={styles.bullet}>
-              • אם נכנסת מתזכורת ולא ביצעת, האפליקציה יכולה להזכיר שוב בהמשך היום.
+              • נוספה תזכורת חוזרת חכמה אם נכנסת מתזכורת ולא ביצעת.
             </Text>
+            <Text style={styles.bullet}>• מסך התזכורות עודכן עם שמירה חכמה וחזרה לברירת מחדל.</Text>
           </View>
 
           <Text style={styles.note}>
-            התזכורות המתוכננות אמורות להיות ברורות יותר, ולהיעלם כשמסיימים את התרגול.
+            התזכורות אמורות להרגיש מדויקות יותר, עם פחות פעולות מיותרות במסך ההגדרות.
           </Text>
 
           <Pressable style={styles.button} onPress={handleDismiss}>
