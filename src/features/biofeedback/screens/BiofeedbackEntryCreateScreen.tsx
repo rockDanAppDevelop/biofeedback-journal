@@ -55,6 +55,7 @@ import {
 import { getDailyReminderTime } from '../../notifications/lib/get-daily-reminder-time';
 import { getPlannedReminderTime } from '../../notifications/lib/get-planned-reminder-time';
 import type { PlannedPractice } from '../types/planned-practice.types';
+import { hasPlannedItemsForDate } from '../lib/routine-plan-status';
 
 type Props = {
   initialDateKey?: string;
@@ -844,9 +845,14 @@ export default function BiofeedbackEntryCreateScreen({
       console.log('AFTER FIREBASE SAVE');
       console.log('FIREBASE SAVE SUCCESS:', firebaseId);
 
+      let hasOpenPlannedItemsForReturnDate: boolean | null = null;
+      const plannedReturnDateKey = fromDay ?? habitDateKey;
+
       if (plannedPracticeId) {
         try {
           await markPlannedPracticeCompleted(plannedPracticeId, firebaseId);
+          hasOpenPlannedItemsForReturnDate =
+            await hasPlannedItemsForDate(plannedReturnDateKey);
         } catch (error) {
           console.error('FAILED TO MARK PLANNED PRACTICE COMPLETED:', error);
         }
@@ -876,7 +882,7 @@ export default function BiofeedbackEntryCreateScreen({
       const plannedReminderTime = await getPlannedReminderTime();
       await syncPlannedItemsMorningReminder(7, plannedReminderTime);
 
-      navigateToReturnTarget();
+      navigateToReturnTarget(hasOpenPlannedItemsForReturnDate);
     } catch (error) {
       console.error('SAVE ENTRY FAILED:', error);
       Alert.alert(
@@ -923,7 +929,12 @@ export default function BiofeedbackEntryCreateScreen({
     await saveEntryWithHabitDateKey(values.measurementDate);
   }
 
-  function navigateToReturnTarget() {
+  function navigateToReturnTarget(hasOpenPlannedItemsForReturnDate: boolean | null = null) {
+    if (plannedPracticeId && hasOpenPlannedItemsForReturnDate === false) {
+      router.replace('/dashboard');
+      return;
+    }
+
     if (fromDay) {
       router.replace(`/day/${fromDay}`);
       return;
@@ -960,7 +971,7 @@ export default function BiofeedbackEntryCreateScreen({
         },
         {
           text: 'חזרה למסך הראשי',
-          onPress: navigateToReturnTarget,
+          onPress: () => navigateToReturnTarget(),
         },
       ],
     );
