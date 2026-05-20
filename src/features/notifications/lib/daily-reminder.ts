@@ -283,6 +283,44 @@ export async function dismissDeliveredPlannedItemsMorningRemindersByKind(): Prom
   );
 }
 
+export async function clearPlannedItemReminder(plannedPracticeId: string): Promise<void> {
+  if (Platform.OS === 'web') {
+    return;
+  }
+
+  if (isExpoGo()) {
+    return;
+  }
+
+  const Notifications = await loadNotificationsModule();
+  const [scheduledNotifications, presentedNotifications] = await Promise.all([
+    Notifications.getAllScheduledNotificationsAsync(),
+    Notifications.getPresentedNotificationsAsync(),
+  ]);
+
+  const scheduledReminderNotifications = scheduledNotifications.filter(
+    (notification) =>
+      notification.content.data?.kind ===
+        PLANNED_ITEMS_MORNING_REMINDER_NOTIFICATION_KIND &&
+      notification.content.data?.plannedPracticeId === plannedPracticeId,
+  );
+  const presentedReminderNotifications = presentedNotifications.filter(
+    (notification) =>
+      notification.request.content.data?.kind ===
+        PLANNED_ITEMS_MORNING_REMINDER_NOTIFICATION_KIND &&
+      notification.request.content.data?.plannedPracticeId === plannedPracticeId,
+  );
+
+  await Promise.all([
+    ...scheduledReminderNotifications.map((notification) =>
+      Notifications.cancelScheduledNotificationAsync(notification.identifier),
+    ),
+    ...presentedReminderNotifications.map((notification) =>
+      Notifications.dismissNotificationAsync(notification.request.identifier),
+    ),
+  ]);
+}
+
 function getNextReminderDate(
   hasEntryForToday: boolean,
   now: Date,

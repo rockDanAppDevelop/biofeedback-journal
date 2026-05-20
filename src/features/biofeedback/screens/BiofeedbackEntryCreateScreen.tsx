@@ -49,6 +49,7 @@ import {
   type ActivityParameterFieldId,
 } from '../constants/activity-catalog';
 import {
+  clearPlannedItemReminder,
   syncDailyReminderForToday,
   syncPlannedItemsMorningReminder,
 } from '../../notifications/lib/daily-reminder';
@@ -851,6 +852,11 @@ export default function BiofeedbackEntryCreateScreen({
       if (plannedPracticeId) {
         try {
           await markPlannedPracticeCompleted(plannedPracticeId, firebaseId);
+          try {
+            await clearPlannedItemReminder(plannedPracticeId);
+          } catch (error) {
+            console.warn('FAILED TO CLEAR PLANNED ITEM REMINDER:', error);
+          }
           hasOpenPlannedItemsForReturnDate =
             await hasPlannedItemsForDate(plannedReturnDateKey);
         } catch (error) {
