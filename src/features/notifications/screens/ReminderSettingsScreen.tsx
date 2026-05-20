@@ -103,6 +103,22 @@ function parseReminderTime(
   };
 }
 
+function areReminderTimesEqual(
+  firstTime: ReminderTime | null,
+  secondTime: ReminderTime | null,
+): boolean {
+  return (
+    firstTime !== null &&
+    secondTime !== null &&
+    firstTime.hour === secondTime.hour &&
+    firstTime.minute === secondTime.minute
+  );
+}
+
+function isReminderTimeBefore(firstTime: ReminderTime, secondTime: ReminderTime): boolean {
+  return firstTime.hour * 60 + firstTime.minute < secondTime.hour * 60 + secondTime.minute;
+}
+
 export default function ReminderSettingsScreen() {
   const [dailyHourText, setDailyHourText] = useState(String(DEFAULT_DAILY_REMINDER_TIME.hour));
   const [dailyMinuteText, setDailyMinuteText] = useState(String(DEFAULT_DAILY_REMINDER_TIME.minute));
@@ -115,6 +131,9 @@ export default function ReminderSettingsScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [pickerTarget, setPickerTarget] = useState<ReminderPickerTarget | null>(null);
+  const [loadedDailyReminderTime, setLoadedDailyReminderTime] = useState<ReminderTime | null>(null);
+  const [loadedPlannedReminderTime, setLoadedPlannedReminderTime] =
+    useState<ReminderTime | null>(null);
   const loadedPlannedReminderTimeRef = useRef<ReminderTime | null>(null);
   const dailyTimeLabel = useMemo(
     () => toTimeLabel(dailyHourText, dailyMinuteText),
@@ -124,6 +143,36 @@ export default function ReminderSettingsScreen() {
     () => toTimeLabel(plannedHourText, plannedMinuteText),
     [plannedHourText, plannedMinuteText],
   );
+  const currentDailyReminderTime = useMemo(
+    () => parseReminderTime(dailyHourText, dailyMinuteText),
+    [dailyHourText, dailyMinuteText],
+  );
+  const currentPlannedReminderTime = useMemo(
+    () => parseReminderTime(plannedHourText, plannedMinuteText),
+    [plannedHourText, plannedMinuteText],
+  );
+  const hasChanges = useMemo(() => {
+    if (!loadedDailyReminderTime || !loadedPlannedReminderTime) {
+      return false;
+    }
+
+    if (!currentDailyReminderTime || !currentPlannedReminderTime) {
+      return true;
+    }
+
+    return (
+      !areReminderTimesEqual(currentDailyReminderTime, loadedDailyReminderTime) ||
+      !areReminderTimesEqual(currentPlannedReminderTime, loadedPlannedReminderTime)
+    );
+  }, [
+    currentDailyReminderTime,
+    currentPlannedReminderTime,
+    loadedDailyReminderTime,
+    loadedPlannedReminderTime,
+  ]);
+  const canResetToDefaults =
+    !areReminderTimesEqual(currentDailyReminderTime, DEFAULT_DAILY_REMINDER_TIME) ||
+    !areReminderTimesEqual(currentPlannedReminderTime, DEFAULT_PLANNED_REMINDER_TIME);
 
   useEffect(() => {
     let isActive = true;
@@ -144,6 +193,8 @@ export default function ReminderSettingsScreen() {
         setDailyMinuteText(String(dailyReminderTime.minute));
         setPlannedHourText(String(plannedReminderTime.hour));
         setPlannedMinuteText(String(plannedReminderTime.minute));
+        setLoadedDailyReminderTime(dailyReminderTime);
+        setLoadedPlannedReminderTime(plannedReminderTime);
         loadedPlannedReminderTimeRef.current = plannedReminderTime;
       } finally {
         if (isActive) {
@@ -178,23 +229,16 @@ export default function ReminderSettingsScreen() {
     setPlannedMinuteText(String(selectedDate.getMinutes()));
   }
 
-  async function handleSave() {
-    if (isSaving) {
-      return;
-    }
-
-    const dailyReminderTime = parseReminderTime(dailyHourText, dailyMinuteText);
-    const plannedReminderTime = parseReminderTime(plannedHourText, plannedMinuteText);
-
+  async function saveReminderTimes(
+    dailyReminderTime: ReminderTime | null,
+    plannedReminderTime: ReminderTime | null,
+  ) {
     if (!dailyReminderTime || !plannedReminderTime) {
       Alert.alert('שעה לא תקינה', 'יש להזין שעה בין 0 ל-23 ודקה בין 0 ל-59.');
       return;
     }
 
-    const dailyMinutes = dailyReminderTime.hour * 60 + dailyReminderTime.minute;
-    const plannedMinutes = plannedReminderTime.hour * 60 + plannedReminderTime.minute;
-
-    if (plannedMinutes >= dailyMinutes) {
+    if (!isReminderTimeBefore(plannedReminderTime, dailyReminderTime)) {
       Alert.alert(
         'שעה לא תקינה',
         'תזכורת לתרגולים מתוכננים חייבת להיות מוקדמת יותר מהתזכורת היומית.',
@@ -226,9 +270,11 @@ export default function ReminderSettingsScreen() {
 
       if (didPlannedReminderTimeChange) {
         await dismissDeliveredPlannedItemsMorningRemindersByKind();
-        loadedPlannedReminderTimeRef.current = plannedReminderTime;
       }
 
+      loadedPlannedReminderTimeRef.current = plannedReminderTime;
+      setLoadedDailyReminderTime(dailyReminderTime);
+      setLoadedPlannedReminderTime(plannedReminderTime);
       Alert.alert('נשמר', 'שעות התזכורת נשמרו.', [
         {
           text: 'אישור',
@@ -241,6 +287,41 @@ export default function ReminderSettingsScreen() {
     } finally {
       setIsSaving(false);
     }
+  }
+
+  async function handleSave() {
+    if (isSaving || !hasChanges) {
+      return;
+    }
+
+    await saveReminderTimes(currentDailyReminderTime, currentPlannedReminderTime);
+  }
+
+  function handleResetToDefaultsPress() {
+    if (isSaving || isLoading) {
+      return;
+    }
+
+    Alert.alert(
+      'חזרה לברירת מחדל',
+      'להחזיר את התזכורת היומית ל-21:00 ואת תזכורת התרגולים המתוכננים ל-06:00?',
+      [
+        {
+          text: 'ביטול',
+          style: 'cancel',
+        },
+        {
+          text: 'אישור',
+          onPress: () => {
+            setDailyHourText(String(DEFAULT_DAILY_REMINDER_TIME.hour));
+            setDailyMinuteText(String(DEFAULT_DAILY_REMINDER_TIME.minute));
+            setPlannedHourText(String(DEFAULT_PLANNED_REMINDER_TIME.hour));
+            setPlannedMinuteText(String(DEFAULT_PLANNED_REMINDER_TIME.minute));
+            void saveReminderTimes(DEFAULT_DAILY_REMINDER_TIME, DEFAULT_PLANNED_REMINDER_TIME);
+          },
+        },
+      ],
+    );
   }
 
   return (
@@ -368,10 +449,23 @@ export default function ReminderSettingsScreen() {
           )}
         </View>
 
+        {canResetToDefaults ? (
+          <Pressable
+            style={[styles.resetButton, (isLoading || isSaving) && styles.resetButtonDisabled]}
+            onPress={handleResetToDefaultsPress}
+            disabled={isLoading || isSaving}
+          >
+            <Text style={styles.resetButtonText}>חזרה לברירת מחדל</Text>
+          </Pressable>
+        ) : null}
+
         <Pressable
-          style={[styles.saveButton, (isLoading || isSaving) && styles.saveButtonDisabled]}
+          style={[
+            styles.saveButton,
+            (isLoading || isSaving || !hasChanges) && styles.saveButtonDisabled,
+          ]}
           onPress={handleSave}
-          disabled={isLoading || isSaving}
+          disabled={isLoading || isSaving || !hasChanges}
         >
           <Text style={styles.saveButtonText}>{isSaving ? 'שומר...' : 'שמירה'}</Text>
         </Pressable>
@@ -472,6 +566,24 @@ const styles = StyleSheet.create({
   saveButtonText: {
     color: '#ffffff',
     fontSize: 16,
+    fontWeight: '700',
+  },
+  resetButton: {
+    height: 46,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#b6c7dd',
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
+  resetButtonDisabled: {
+    opacity: 0.55,
+  },
+  resetButtonText: {
+    color: '#1e4f8a',
+    fontSize: 15,
     fontWeight: '700',
   },
 });
