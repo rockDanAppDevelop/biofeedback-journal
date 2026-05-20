@@ -1,7 +1,10 @@
 import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 
-import { hasPlannedItemsForDate } from '../../biofeedback/lib/routine-plan-status';
+import {
+  getPlannedReminderTargetsForDate,
+  type PlannedReminderTarget,
+} from '../../biofeedback/lib/planned-reminder-targets';
 
 const DAILY_REMINDER_NOTIFICATION_KIND = 'daily-reminder';
 const PLANNED_ITEMS_MORNING_REMINDER_NOTIFICATION_KIND = 'planned-items-morning-reminder';
@@ -12,6 +15,7 @@ const PLANNED_ITEMS_MORNING_REMINDER_HOUR = 6;
 const PLANNED_ITEMS_MORNING_REMINDER_MINUTE = 0;
 const isDebugReminder = false;
 const DEBUG_REMINDER_DELAY_MINUTES = 2;
+let plannedItemsMorningReminderSyncPromise: Promise<void> | null = null;
 
 type DailyReminderTime = {
   hour: number;
@@ -21,6 +25,12 @@ type DailyReminderTime = {
 type PlannedReminderTime = {
   hour: number;
   minute: number;
+};
+
+type PlannedItemsMorningReminderPlan = {
+  reminderDate: Date;
+  dateKey: string;
+  targets: PlannedReminderTarget[];
 };
 
 const ENCOURAGING_MESSAGES = [
@@ -248,6 +258,31 @@ async function cancelExistingPlannedItemsMorningReminder(
   );
 }
 
+export async function dismissDeliveredPlannedItemsMorningRemindersByKind(): Promise<void> {
+  if (Platform.OS === 'web') {
+    return;
+  }
+
+  if (isExpoGo()) {
+    return;
+  }
+
+  const Notifications = await loadNotificationsModule();
+  const presentedNotifications = await Notifications.getPresentedNotificationsAsync();
+
+  const reminderNotifications = presentedNotifications.filter(
+    (notification) =>
+      notification.request.content.data?.kind ===
+      PLANNED_ITEMS_MORNING_REMINDER_NOTIFICATION_KIND,
+  );
+
+  await Promise.all(
+    reminderNotifications.map((notification) =>
+      Notifications.dismissNotificationAsync(notification.request.identifier),
+    ),
+  );
+}
+
 function getNextReminderDate(
   hasEntryForToday: boolean,
   now: Date,
@@ -274,17 +309,21 @@ async function findNextPlannedItemsMorningReminderDate(
   daysAhead: number,
   now: Date,
   reminderTime: PlannedReminderTime,
-): Promise<Date | null> {
+): Promise<PlannedItemsMorningReminderPlan | null> {
   const startOffset = now < getMorningReminderDate(now, 0, reminderTime) ? 0 : 1;
   const daysToCheck = Math.max(0, daysAhead);
 
   for (let offset = startOffset; offset < startOffset + daysToCheck; offset += 1) {
     const reminderDate = getMorningReminderDate(now, offset, reminderTime);
     const dateKey = toDateKey(reminderDate);
-    const hasOpenPlannedItems = await hasPlannedItemsForDate(dateKey);
+    const targets = await getPlannedReminderTargetsForDate(dateKey);
 
-    if (hasOpenPlannedItems) {
-      return reminderDate;
+    if (targets.length > 0) {
+      return {
+        reminderDate,
+        dateKey,
+        targets,
+      };
     }
   }
 
@@ -344,6 +383,24 @@ export async function syncPlannedItemsMorningReminder(
   daysAhead = 7,
   reminderTime?: Partial<PlannedReminderTime> | null,
 ): Promise<void> {
+  if (plannedItemsMorningReminderSyncPromise) {
+    return plannedItemsMorningReminderSyncPromise;
+  }
+
+  plannedItemsMorningReminderSyncPromise = syncPlannedItemsMorningReminderInternal(
+    daysAhead,
+    reminderTime,
+  ).finally(() => {
+    plannedItemsMorningReminderSyncPromise = null;
+  });
+
+  return plannedItemsMorningReminderSyncPromise;
+}
+
+async function syncPlannedItemsMorningReminderInternal(
+  daysAhead = 7,
+  reminderTime?: Partial<PlannedReminderTime> | null,
+): Promise<void> {
   if (Platform.OS === 'web') {
     return;
   }
@@ -364,32 +421,36 @@ export async function syncPlannedItemsMorningReminder(
   await ensureAndroidNotificationChannel(Notifications);
   await cancelExistingPlannedItemsMorningReminder(Notifications);
 
-  const nextReminderDate = await findNextPlannedItemsMorningReminderDate(
+  const nextReminderPlan = await findNextPlannedItemsMorningReminderDate(
     daysAhead,
     new Date(),
     normalizePlannedReminderTime(reminderTime),
   );
 
-  if (!nextReminderDate) {
+  if (!nextReminderPlan) {
     return;
   }
 
-  await Notifications.scheduleNotificationAsync({
-    content: {
-      title: 'Biofeedback Journal',
-      body: 'יש לך תרגולים מתוכננים להיום.',
-      data: {
-        kind: PLANNED_ITEMS_MORNING_REMINDER_NOTIFICATION_KIND,
-        plannedPracticeId: null,
-        routineItemId: null,
-        dateKey: toDateKey(nextReminderDate),
-      },
-      sound: false,
-    },
-    trigger: {
-      type: Notifications.SchedulableTriggerInputTypes.DATE,
-      date: nextReminderDate,
-      channelId: DAILY_REMINDER_CHANNEL_ID,
-    },
-  });
+  await Promise.all(
+    nextReminderPlan.targets.map((target) =>
+      Notifications.scheduleNotificationAsync({
+        content: {
+          title: 'Biofeedback Journal',
+          body: 'יש לך תרגולים מתוכננים להיום.',
+          data: {
+            kind: PLANNED_ITEMS_MORNING_REMINDER_NOTIFICATION_KIND,
+            dateKey: nextReminderPlan.dateKey,
+            plannedPracticeId: target.plannedPracticeId,
+            routineItemId: target.routineItemId,
+          },
+          sound: false,
+        },
+        trigger: {
+          type: Notifications.SchedulableTriggerInputTypes.DATE,
+          date: nextReminderPlan.reminderDate,
+          channelId: DAILY_REMINDER_CHANNEL_ID,
+        },
+      }),
+    ),
+  );
 }

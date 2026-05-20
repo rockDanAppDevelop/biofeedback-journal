@@ -2,7 +2,7 @@ import { router } from 'expo-router';
 import DateTimePicker, {
   DateTimePickerEvent,
 } from '@react-native-community/datetimepicker';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -24,6 +24,7 @@ import {
   updateCurrentUserReminderTime,
 } from '../../auth/data/update-current-user-reminder-time';
 import {
+  dismissDeliveredPlannedItemsMorningRemindersByKind,
   syncDailyReminderForToday,
   syncPlannedItemsMorningReminder,
 } from '../lib/daily-reminder';
@@ -37,6 +38,7 @@ import {
 } from '../lib/get-planned-reminder-time';
 
 type ReminderPickerTarget = 'daily' | 'planned';
+type ReminderTime = { hour: number; minute: number };
 
 function formatTwoDigits(value: number): string {
   return String(value).padStart(2, '0');
@@ -80,7 +82,7 @@ function toTimeDate(
 function parseReminderTime(
   hourText: string,
   minuteText: string,
-): { hour: number; minute: number } | null {
+): ReminderTime | null {
   const hour = Number(hourText.trim());
   const minute = Number(minuteText.trim());
 
@@ -113,6 +115,7 @@ export default function ReminderSettingsScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [pickerTarget, setPickerTarget] = useState<ReminderPickerTarget | null>(null);
+  const loadedPlannedReminderTimeRef = useRef<ReminderTime | null>(null);
   const dailyTimeLabel = useMemo(
     () => toTimeLabel(dailyHourText, dailyMinuteText),
     [dailyHourText, dailyMinuteText],
@@ -141,6 +144,7 @@ export default function ReminderSettingsScreen() {
         setDailyMinuteText(String(dailyReminderTime.minute));
         setPlannedHourText(String(plannedReminderTime.hour));
         setPlannedMinuteText(String(plannedReminderTime.minute));
+        loadedPlannedReminderTimeRef.current = plannedReminderTime;
       } finally {
         if (isActive) {
           setIsLoading(false);
@@ -211,6 +215,19 @@ export default function ReminderSettingsScreen() {
         syncDailyReminderForToday(hasEntryToday, dailyReminderTime),
         syncPlannedItemsMorningReminder(7, plannedReminderTime),
       ]);
+
+      const loadedPlannedReminderTime = loadedPlannedReminderTimeRef.current;
+      const didPlannedReminderTimeChange =
+        loadedPlannedReminderTime !== null &&
+        (
+          loadedPlannedReminderTime.hour !== plannedReminderTime.hour ||
+          loadedPlannedReminderTime.minute !== plannedReminderTime.minute
+        );
+
+      if (didPlannedReminderTimeChange) {
+        await dismissDeliveredPlannedItemsMorningRemindersByKind();
+        loadedPlannedReminderTimeRef.current = plannedReminderTime;
+      }
 
       Alert.alert('נשמר', 'שעות התזכורת נשמרו.', [
         {
