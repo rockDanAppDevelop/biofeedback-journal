@@ -7,8 +7,11 @@ import {
 } from '../../biofeedback/lib/planned-reminder-targets';
 
 const DAILY_REMINDER_NOTIFICATION_KIND = 'daily-reminder';
-const PLANNED_ITEMS_MORNING_REMINDER_NOTIFICATION_KIND = 'planned-items-morning-reminder';
-const DAILY_REMINDER_CHANNEL_ID = 'daily-reminder';
+export const PLANNED_ITEMS_MORNING_REMINDER_NOTIFICATION_KIND =
+  'planned-items-morning-reminder';
+export const PLANNED_ITEMS_MORNING_REMINDER_RETRY_NOTIFICATION_KIND =
+  'planned-items-morning-reminder-retry';
+export const DAILY_REMINDER_CHANNEL_ID = 'daily-reminder';
 const DAILY_REMINDER_HOUR = 21;
 const DAILY_REMINDER_MINUTE = 0;
 const PLANNED_ITEMS_MORNING_REMINDER_HOUR = 6;
@@ -300,14 +303,22 @@ export async function clearPlannedItemReminder(plannedPracticeId: string): Promi
 
   const scheduledReminderNotifications = scheduledNotifications.filter(
     (notification) =>
-      notification.content.data?.kind ===
-        PLANNED_ITEMS_MORNING_REMINDER_NOTIFICATION_KIND &&
+      (
+        notification.content.data?.kind ===
+          PLANNED_ITEMS_MORNING_REMINDER_NOTIFICATION_KIND ||
+        notification.content.data?.kind ===
+          PLANNED_ITEMS_MORNING_REMINDER_RETRY_NOTIFICATION_KIND
+      ) &&
       notification.content.data?.plannedPracticeId === plannedPracticeId,
   );
   const presentedReminderNotifications = presentedNotifications.filter(
     (notification) =>
-      notification.request.content.data?.kind ===
-        PLANNED_ITEMS_MORNING_REMINDER_NOTIFICATION_KIND &&
+      (
+        notification.request.content.data?.kind ===
+          PLANNED_ITEMS_MORNING_REMINDER_NOTIFICATION_KIND ||
+        notification.request.content.data?.kind ===
+          PLANNED_ITEMS_MORNING_REMINDER_RETRY_NOTIFICATION_KIND
+      ) &&
       notification.request.content.data?.plannedPracticeId === plannedPracticeId,
   );
 
