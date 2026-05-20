@@ -7,6 +7,7 @@ import {
   getRoutineItemsForDate,
   listActiveRoutines,
 } from '../data/firebase-routines-repository';
+import { ACTIVITY_CATALOG } from '../constants/activity-catalog';
 import type { PlannedPractice } from '../types/planned-practice.types';
 import type { RoutineItem } from '../types/routine.types';
 
@@ -15,6 +16,7 @@ export type PlannedReminderTarget = {
   dateKey: string;
   routineId: string;
   routineItemId: string;
+  label: string;
 };
 
 function getPlannedPracticeKey(
@@ -70,6 +72,51 @@ function toCreatePlannedPracticeInput(
     exerciseParameters: item.exerciseParameters,
     completedEntryId: null,
   };
+}
+
+function getMonitoringLabel(
+  monitoringType: PlannedPractice['monitoringType'],
+): string | null {
+  if (monitoringType === 'morning') {
+    return 'ניטור בוקר';
+  }
+
+  if (monitoringType === 'short') {
+    return 'ניטור קצר';
+  }
+
+  if (monitoringType === 'resting_heart_rate') {
+    return 'ניטור דופק מנוחה';
+  }
+
+  return null;
+}
+
+function getPlannedPracticeLabel(
+  plannedPractice: PlannedPractice,
+  item: RoutineItem,
+): string {
+  if (plannedPractice.customExerciseName) {
+    return plannedPractice.customExerciseName;
+  }
+
+  if (item.customExerciseName) {
+    return item.customExerciseName;
+  }
+
+  const catalogItemId = plannedPractice.catalogItemId ?? item.catalogItemId;
+  const catalogItem = catalogItemId
+    ? ACTIVITY_CATALOG.find((currentItem) => currentItem.id === catalogItemId)
+    : null;
+
+  if (catalogItem) {
+    return catalogItem.label;
+  }
+
+  return (
+    getMonitoringLabel(plannedPractice.monitoringType ?? item.monitoringType) ??
+    'תרגול מתוכנן'
+  );
 }
 
 export async function getPlannedReminderTargetsForDate(
@@ -128,6 +175,7 @@ export async function getPlannedReminderTargetsForDate(
         dateKey,
         routineId: routine.id,
         routineItemId: item.id,
+        label: getPlannedPracticeLabel(plannedPractice, item),
       });
     }
   }

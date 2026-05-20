@@ -435,8 +435,8 @@ async function syncPlannedItemsMorningReminderInternal(
     nextReminderPlan.targets.map((target) =>
       Notifications.scheduleNotificationAsync({
         content: {
-          title: 'Biofeedback Journal',
-          body: 'יש לך תרגולים מתוכננים להיום.',
+          title: 'תרגול מתוכנן להיום',
+          body: target.label,
           data: {
             kind: PLANNED_ITEMS_MORNING_REMINDER_NOTIFICATION_KIND,
             dateKey: nextReminderPlan.dateKey,
