@@ -6,7 +6,7 @@ import {
   setSeenWhatsNewVersion,
 } from '../lib/whats-new-storage';
 
-const WHATS_NEW_VERSION = '0.11.0';
+const WHATS_NEW_VERSION = '0.11.3';
 
 let activeModalInstanceId: symbol | null = null;
 
@@ -80,19 +80,18 @@ export default function WhatsNewModal() {
     <Modal visible={isVisible} transparent animationType="fade" onRequestClose={handleDismiss}>
       <View style={styles.backdrop}>
         <View style={styles.card}>
-          <Text style={styles.title}>חדש בגרסה 0.11.0</Text>
+          <Text style={styles.title}>חדש בגרסה 0.11.3</Text>
 
           <View style={styles.body}>
-            <Text style={styles.bullet}>• אפשר לבחור את שעת התזכורת היומית.</Text>
-            <Text style={styles.bullet}>• אפשר לבחור את שעת התזכורת לתרגולים מתוכננים.</Text>
-            <Text style={styles.bullet}>• שופרה ההפרדה בין תרגול רגיל לבין מדידת בוקר.</Text>
+            <Text style={styles.bullet}>• לכל תרגול מתוכנן יש עכשיו תזכורת נפרדת.</Text>
+            <Text style={styles.bullet}>• ההתראות מציגות את שם התרגול המתוכנן.</Text>
             <Text style={styles.bullet}>
-              • נוספו סימונים ברורים יותר ביומן כדי להבין מה בוצע בכל יום.
+              • אם נכנסת מתזכורת ולא ביצעת, האפליקציה יכולה להזכיר שוב בהמשך היום.
             </Text>
           </View>
 
           <Text style={styles.note}>
-            כדאי להיכנס למסך ההגדרות ולעדכן את שעות התזכורות לפי מה שנוח לך.
+            התזכורות המתוכננות אמורות להיות ברורות יותר, ולהיעלם כשמסיימים את התרגול.
           </Text>
 
           <Pressable style={styles.button} onPress={handleDismiss}>
