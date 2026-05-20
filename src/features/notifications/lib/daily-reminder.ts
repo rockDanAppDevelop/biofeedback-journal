@@ -380,6 +380,8 @@ export async function syncPlannedItemsMorningReminder(
       body: 'יש לך תרגולים מתוכננים להיום.',
       data: {
         kind: PLANNED_ITEMS_MORNING_REMINDER_NOTIFICATION_KIND,
+        plannedPracticeId: null,
+        routineItemId: null,
         dateKey: toDateKey(nextReminderDate),
       },
       sound: false,
