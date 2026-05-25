@@ -7,6 +7,8 @@ import { captureRef } from 'react-native-view-shot';
 
 import { toDateKey } from '../components/calendar.utils';
 import { listAllBiofeedbackEntriesFromFirestore } from '../data/firebase-biofeedback-read-repository';
+import WeeklySuccessIndicator from '../components/WeeklySuccessIndicator';
+import { isPracticeEntry } from '../lib/entry-kind';
 import { getWeeklySummary } from '../lib/weekly-summary';
 import { BiofeedbackEntry } from '../types/biofeedback-entry.types';
 import BiofeedbackHeader from '../components/BiofeedbackHeader';
@@ -99,6 +101,10 @@ export default function BiofeedbackWeeklySummaryScreen() {
     () => getWeeklySummary(entries, todayDateKey),
     [entries, todayDateKey],
   );
+  const practiceEntryDateKeys = useMemo(
+    () => entries.filter(isPracticeEntry).map((entry) => entry.dateKey),
+    [entries],
+  );
   const hasWeeklyEntries =
     summary.totalEntries > 0 ||
     summary.morningMonitoringCount > 0 ||
@@ -181,6 +187,13 @@ export default function BiofeedbackWeeklySummaryScreen() {
               <Text style={styles.weekNavButtonText}>שבוע הבא</Text>
             </Pressable>
           </View>
+
+          {!isLoading && !errorMessage ? (
+            <WeeklySuccessIndicator
+              weekStartDateKey={summary.weekStartDateKey}
+              practiceEntryDateKeys={practiceEntryDateKeys}
+            />
+          ) : null}
 
           {isLoading ? (
             <View style={styles.stateCard}>

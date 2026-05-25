@@ -8,6 +8,7 @@ import { collection, getDocs } from 'firebase/firestore';
 
 import BiofeedbackHeader from '../components/BiofeedbackHeader';
 import StreakInsightCard from '../components/StreakInsightCard';
+import WeeklySuccessIndicator from '../components/WeeklySuccessIndicator';
 import { toDateKey } from '../components/calendar.utils';
 import { BiofeedbackEntry } from '../types/biofeedback-entry.types';
 import { listBiofeedbackEntriesByDateKeyFromFirestore } from '../data/firebase-biofeedback-read-repository';
@@ -50,6 +51,12 @@ function addDaysToDateKey(dateKey: string, days: number): string {
   date.setDate(date.getDate() + days);
 
   return toDateKey(date);
+}
+
+function getWeekStartDateKey(dateKey: string): string {
+  const date = new Date(`${dateKey}T00:00:00`);
+
+  return addDaysToDateKey(dateKey, -date.getDay());
 }
 
 function getRoutineItemDisplayName(item: RoutineItem): string {
@@ -118,6 +125,7 @@ export default function BiofeedbackDayEntriesScreen({ dateKey }: Props) {
   const previousDateKey = addDaysToDateKey(dateKey, -1);
   const todayDateKey = toDateKey(new Date());
   const nextDateKey = addDaysToDateKey(dateKey, 1);
+  const weekStartDateKey = getWeekStartDateKey(dateKey);
 
   useFocusEffect(
   useCallback(() => {
@@ -276,6 +284,10 @@ export default function BiofeedbackDayEntriesScreen({ dateKey }: Props) {
         </View>
 
         <StreakInsightCard entryDateKeys={entryDateKeys} todayDateKey={todayDateKey} />
+        <WeeklySuccessIndicator
+          weekStartDateKey={weekStartDateKey}
+          practiceEntryDateKeys={entryDateKeys}
+        />
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>תרגולים מתוכננים</Text>
