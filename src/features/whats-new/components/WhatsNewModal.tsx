@@ -6,7 +6,7 @@ import {
   setSeenWhatsNewVersion,
 } from '../lib/whats-new-storage';
 
-const WHATS_NEW_VERSION = '0.11.4';
+const WHATS_NEW_VERSION = '0.11.5';
 
 let activeModalInstanceId: symbol | null = null;
 
@@ -80,18 +80,18 @@ export default function WhatsNewModal() {
     <Modal visible={isVisible} transparent animationType="fade" onRequestClose={handleDismiss}>
       <View style={styles.backdrop}>
         <View style={styles.card}>
-          <Text style={styles.title}>חדש בגרסה 0.11.4</Text>
+          <Text style={styles.title}>חדש בגרסה 0.11.5</Text>
 
           <View style={styles.body}>
-            <Text style={styles.bullet}>• שיפרנו את מערכת התזכורות לתרגולים מתוכננים.</Text>
+            <Text style={styles.bullet}>• סימון ברור יותר של ימי תרגול בגריד החודשי.</Text>
             <Text style={styles.bullet}>
-              • נוספה תזכורת חוזרת חכמה אם נכנסת מתזכורת ולא ביצעת.
+              • חיווי הצלחה שבועי חדש עם עיגולי ימים וגביע.
             </Text>
-            <Text style={styles.bullet}>• מסך התזכורות עודכן עם שמירה חכמה וחזרה לברירת מחדל.</Text>
+            <Text style={styles.bullet}>• שיפור תחושת ההתמדה וההצלחה היומית.</Text>
           </View>
 
           <Text style={styles.note}>
-            התזכורות אמורות להרגיש מדויקות יותר, עם פחות פעולות מיותרות במסך ההגדרות.
+            עכשיו קל יותר לראות במבט אחד איפה תרגלת, ואיך השבוע שלך מתקדם.
           </Text>
 
           <Pressable style={styles.button} onPress={handleDismiss}>
