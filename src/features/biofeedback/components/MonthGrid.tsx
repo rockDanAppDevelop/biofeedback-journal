@@ -107,12 +107,6 @@ export default function MonthGrid({
       <View style={styles.grid}>
         {monthDays.map((day) => {
           const isToday = day.dateKey === todayKey;
-          const isAfterFirstSeen =
-            firstSeenDateKey !== '' && day.dateKey >= firstSeenDateKey;
-          const isPastDay = day.dateKey < todayKey;
-          const isEligibleCurrentMonthDay =
-            day.isCurrentMonth && isAfterFirstSeen && isPastDay;
-          const shouldShowMissed = isEligibleCurrentMonthDay && !day.hasEntry;
 
           return (
             <Pressable
@@ -122,7 +116,6 @@ export default function MonthGrid({
                 styles.dayCell,
                 !day.isCurrentMonth && styles.dayCellOutsideMonth,
                 day.hasEntry && styles.dayCellDone,
-                shouldShowMissed && styles.dayCellMissed,
                 isToday && styles.dayCellToday,
               ]}
             >
@@ -136,7 +129,14 @@ export default function MonthGrid({
                 {day.dayNumber}
               </Text>
 
-              {shouldShowMissed ? <View style={styles.missedDot} /> : null}
+              {day.hasEntry ? (
+                <MaterialCommunityIcons
+                  name="check"
+                  size={15}
+                  color="#ffffff"
+                  style={styles.doneIcon}
+                />
+              ) : null}
               {day.hasMonitoring ? (
                 <View
                   style={[
@@ -177,10 +177,10 @@ const styles = StyleSheet.create({
   dayCell: {
     width: '14.2857%',
     aspectRatio: 1,
-    borderRadius: 12,
+    borderRadius: 999,
     borderWidth: 1,
-    borderColor: '#e2e2e2',
-    backgroundColor: '#ffffff',
+    borderColor: '#dedede',
+    backgroundColor: '#eeeeee',
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
@@ -198,16 +198,9 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#1976d2',
   },
-  dayCellMissed: {
-    position: 'relative',
-  },
-  missedDot: {
+  doneIcon: {
     position: 'absolute',
-    bottom: 7,
-    width: 5,
-    height: 5,
-    borderRadius: 2.5,
-    backgroundColor: '#d96b6b',
+    bottom: 6,
   },
   monitoringBadge: {
     position: 'absolute',
