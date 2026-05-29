@@ -57,6 +57,9 @@ import { getDailyReminderTime } from '../../notifications/lib/get-daily-reminder
 import { getPlannedReminderTime } from '../../notifications/lib/get-planned-reminder-time';
 import type { PlannedPractice } from '../types/planned-practice.types';
 import { hasPlannedItemsForDate } from '../lib/routine-plan-status';
+import { deriveTimeOfDay } from '../lib/biofeedback-date.utils';
+import { completeMonitoringSchedulesForEntry } from '../lib/monitoring-schedule-completion';
+import type { BiofeedbackEntry } from '../types/biofeedback-entry.types';
 
 type Props = {
   initialDateKey?: string;
@@ -845,6 +848,30 @@ export default function BiofeedbackEntryCreateScreen({
 
       console.log('AFTER FIREBASE SAVE');
       console.log('FIREBASE SAVE SUCCESS:', firebaseId);
+
+      const savedEntry: BiofeedbackEntry = {
+        id: firebaseId,
+        userId: '',
+        measuredAt: input.measuredAt,
+        dateKey: habitDateKey,
+        timeOfDay: deriveTimeOfDay(input.measuredAt),
+        activity: input.activity,
+        exerciseName: input.exerciseName,
+        measurementType: input.measurementType ?? null,
+        durationMinutes: input.durationMinutes ?? Number(values.durationMinutes),
+        monitoringResult: input.monitoringResult ?? null,
+        hrvDistribution: input.hrvDistribution,
+        rlx: input.rlx,
+        notes: values.notes.trim(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+
+      try {
+        await completeMonitoringSchedulesForEntry(savedEntry);
+      } catch (error) {
+        console.warn('FAILED TO COMPLETE MONITORING SCHEDULES:', error);
+      }
 
       let hasOpenPlannedItemsForReturnDate: boolean | null = null;
       const plannedReturnDateKey = fromDay ?? habitDateKey;
