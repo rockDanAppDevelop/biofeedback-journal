@@ -1,4 +1,4 @@
-export type MonitoringScheduleFrequency = 'weekly' | 'biweekly' | 'monthly';
+export type MonitoringScheduleFrequency = 'weekly' | 'biweekly' | 'triweekly' | 'monthly';
 
 export type MonitoringSchedule = {
   id: string;

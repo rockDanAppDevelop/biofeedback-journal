@@ -1,4 +1,4 @@
-import type { BiofeedbackEntry } from '../types/biofeedback-entry.types';
+﻿import type { BiofeedbackEntry } from '../types/biofeedback-entry.types';
 import type { MonitoringSchedule } from '../types/monitoring-schedule.types';
 import type { VisibleMonitoringScheduleState } from './monitoring-schedule-visibility';
 import { isMorningMonitoringEntry } from './monitoring-schedule-status';
@@ -20,6 +20,10 @@ function getFrequencyLabel(frequency: MonitoringSchedule['frequency']): string {
 
   if (frequency === 'biweekly') {
     return 'דו-שבועי';
+  }
+
+  if (frequency === 'triweekly') {
+    return 'תלת-שבועי';
   }
 
   return 'חודשי';

@@ -14,9 +14,10 @@ import type { MonitoringScheduleFrequency } from '../types/monitoring-schedule.t
 import { syncMonitoringMorningReminders } from '../../notifications/lib/monitoring-reminders';
 
 const FREQUENCY_OPTIONS: { label: string; value: MonitoringScheduleFrequency }[] = [
-  { label: 'weekly', value: 'weekly' },
-  { label: 'biweekly', value: 'biweekly' },
-  { label: 'monthly', value: 'monthly' },
+  { label: 'שבועי', value: 'weekly' },
+  { label: 'דו-שבועי', value: 'biweekly' },
+  { label: 'תלת-שבועי', value: 'triweekly' },
+  { label: 'חודשי', value: 'monthly' },
 ];
 
 function parseTimeValue(timeValue: string): { hour: number; minute: number } | null {

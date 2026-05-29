@@ -21,17 +21,6 @@ function addDaysToDateKey(dateKey: string, days: number): string {
   return toDateKey(date);
 }
 
-function addMonthsToDateKey(dateKey: string, months: number): string {
-  const sourceDate = new Date(`${dateKey}T00:00:00`);
-  const sourceDay = sourceDate.getDate();
-  const targetYear = sourceDate.getFullYear();
-  const targetMonth = sourceDate.getMonth() + months;
-  const lastDayOfTargetMonth = new Date(targetYear, targetMonth + 1, 0).getDate();
-  const targetDay = Math.min(sourceDay, lastDayOfTargetMonth);
-
-  return toDateKey(new Date(targetYear, targetMonth, targetDay));
-}
-
 export function isMonitoringSchedulePending(schedule: MonitoringSchedule): boolean {
   return schedule.isActive && schedule.pendingSinceDateKey !== null;
 }
@@ -78,7 +67,11 @@ export function getNextMonitoringDueDateKey(
     return addDaysToDateKey(fromDateKey, 14);
   }
 
-  return addMonthsToDateKey(fromDateKey, 1);
+  if (frequency === 'triweekly') {
+    return addDaysToDateKey(fromDateKey, 21);
+  }
+
+  return addDaysToDateKey(fromDateKey, 28);
 }
 
 export function getNextMonitoringDueDateKeyAfterCompletion(
