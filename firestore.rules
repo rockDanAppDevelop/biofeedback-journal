@@ -30,6 +30,10 @@ service cloud.firestore {
       match /plannedPractices/{practiceId} {
         allow read, create, update, delete: if isOwner(userId);
       }
+
+      match /monitoringSchedules/{scheduleId} {
+        allow read, create, update, delete: if isOwner(userId);
+      }
     }
   }
 }
