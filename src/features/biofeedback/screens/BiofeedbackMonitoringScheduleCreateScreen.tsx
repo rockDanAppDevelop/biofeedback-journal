@@ -1,5 +1,5 @@
-import { router } from 'expo-router';
-import { useMemo, useState } from 'react';
+﻿import { router } from 'expo-router';
+import { useEffect, useMemo, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -9,8 +9,12 @@ import { toDateKey } from '../components/calendar.utils';
 import {
   createMonitoringSchedule,
   listActiveMonitoringSchedules,
+  updateMonitoringSchedule,
 } from '../data/firebase-monitoring-schedules-repository';
-import type { MonitoringScheduleFrequency } from '../types/monitoring-schedule.types';
+import type {
+  MonitoringSchedule,
+  MonitoringScheduleFrequency,
+} from '../types/monitoring-schedule.types';
 import { syncMonitoringMorningReminders } from '../../notifications/lib/monitoring-reminders';
 
 const FREQUENCY_OPTIONS: { label: string; value: MonitoringScheduleFrequency }[] = [
@@ -39,11 +43,18 @@ function parseTimeValue(timeValue: string): { hour: number; minute: number } | n
   return { hour, minute };
 }
 
+function toTimeValue(hour: number, minute: number): string {
+  return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+}
+
 export default function BiofeedbackMonitoringScheduleCreateScreen() {
   const todayDateKey = useMemo(() => toDateKey(new Date()), []);
   const [frequency, setFrequency] = useState<MonitoringScheduleFrequency>('weekly');
   const [reminderTime, setReminderTime] = useState('20:00');
   const [nextDueDateKey, setNextDueDateKey] = useState(todayDateKey);
+  const [activeMorningSchedule, setActiveMorningSchedule] =
+    useState<MonitoringSchedule | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
   function navigateBackSafely() {
@@ -54,8 +65,47 @@ export default function BiofeedbackMonitoringScheduleCreateScreen() {
     }
   }
 
+  useEffect(() => {
+    let isActive = true;
+
+    async function loadActiveMorningSchedule() {
+      try {
+        setIsLoading(true);
+        const activeSchedules = await listActiveMonitoringSchedules();
+        const morningSchedule =
+          activeSchedules.find((schedule) => schedule.monitoringType === 'morning') ?? null;
+
+        if (!isActive) {
+          return;
+        }
+
+        setActiveMorningSchedule(morningSchedule);
+
+        if (morningSchedule) {
+          setFrequency(morningSchedule.frequency);
+          setReminderTime(
+            toTimeValue(morningSchedule.reminderHour, morningSchedule.reminderMinute),
+          );
+          setNextDueDateKey(morningSchedule.nextDueDateKey);
+        }
+      } catch (error) {
+        console.warn('MONITORING SCHEDULE LOAD FAILED:', error);
+      } finally {
+        if (isActive) {
+          setIsLoading(false);
+        }
+      }
+    }
+
+    void loadActiveMorningSchedule();
+
+    return () => {
+      isActive = false;
+    };
+  }, []);
+
   async function handleSave() {
-    if (isSaving) {
+    if (isSaving || isLoading) {
       return;
     }
 
@@ -69,28 +119,25 @@ export default function BiofeedbackMonitoringScheduleCreateScreen() {
     try {
       setIsSaving(true);
 
-      const activeSchedules = await listActiveMonitoringSchedules();
-      const hasActiveMorningSchedule = activeSchedules.some(
-        (schedule) => schedule.monitoringType === 'morning',
-      );
-
-      if (hasActiveMorningSchedule) {
-        Alert.alert(
-          'ניטור בוקר כבר קיים',
-          'כרגע אפשר ליצור ניטור בוקר פעיל אחד בלבד.',
-        );
-        return;
+      if (activeMorningSchedule) {
+        await updateMonitoringSchedule(activeMorningSchedule.id, {
+          frequency,
+          reminderHour: parsedReminderTime.hour,
+          reminderMinute: parsedReminderTime.minute,
+          nextDueDateKey,
+          pendingSinceDateKey: null,
+        });
+      } else {
+        await createMonitoringSchedule({
+          monitoringType: 'morning',
+          frequency,
+          reminderHour: parsedReminderTime.hour,
+          reminderMinute: parsedReminderTime.minute,
+          nextDueDateKey,
+          pendingSinceDateKey: null,
+          isActive: true,
+        });
       }
-
-      await createMonitoringSchedule({
-        monitoringType: 'morning',
-        frequency,
-        reminderHour: parsedReminderTime.hour,
-        reminderMinute: parsedReminderTime.minute,
-        nextDueDateKey,
-        pendingSinceDateKey: null,
-        isActive: true,
-      });
 
       try {
         await syncMonitoringMorningReminders();
@@ -100,7 +147,7 @@ export default function BiofeedbackMonitoringScheduleCreateScreen() {
 
       navigateBackSafely();
     } catch (error) {
-      console.log('MONITORING SCHEDULE CREATE FAILED:', error);
+      console.log('MONITORING SCHEDULE SAVE FAILED:', error);
       Alert.alert(
         'שמירת ניטור הבוקר נכשלה',
         error instanceof Error ? error.message : 'לא הצלחנו לשמור את ניטור הבוקר כרגע.',
@@ -167,12 +214,12 @@ export default function BiofeedbackMonitoringScheduleCreateScreen() {
         </View>
 
         <Pressable
-          style={[styles.saveButton, isSaving ? styles.saveButtonDisabled : null]}
+          style={[styles.saveButton, isSaving || isLoading ? styles.saveButtonDisabled : null]}
           onPress={handleSave}
-          disabled={isSaving}
+          disabled={isSaving || isLoading}
         >
           <Text style={styles.saveButtonText}>
-            {isSaving ? 'שומר...' : 'שמור ניטור בוקר'}
+            {isLoading ? 'טוען...' : isSaving ? 'שומר...' : 'שמור ניטור בוקר'}
           </Text>
         </Pressable>
       </ScrollView>
