@@ -2,6 +2,7 @@ import {
   listActiveMonitoringSchedules,
   updateMonitoringSchedule,
 } from '../data/firebase-monitoring-schedules-repository';
+import { syncMonitoringMorningReminders } from '../../notifications/lib/monitoring-reminders';
 import type { BiofeedbackEntry } from '../types/biofeedback-entry.types';
 import {
   doesEntryCompleteMonitoringSchedule,
@@ -47,4 +48,14 @@ export async function completeMonitoringSchedulesForEntry(
       });
     }
   });
+
+  const didCompleteAnySchedule = results.some((result) => result.status === 'fulfilled');
+
+  if (didCompleteAnySchedule) {
+    try {
+      await syncMonitoringMorningReminders();
+    } catch (error) {
+      console.warn('MONITORING REMINDER SYNC AFTER COMPLETION FAILED:', error);
+    }
+  }
 }

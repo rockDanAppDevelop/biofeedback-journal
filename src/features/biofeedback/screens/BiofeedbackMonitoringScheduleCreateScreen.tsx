@@ -11,6 +11,7 @@ import {
   listActiveMonitoringSchedules,
 } from '../data/firebase-monitoring-schedules-repository';
 import type { MonitoringScheduleFrequency } from '../types/monitoring-schedule.types';
+import { syncMonitoringMorningReminders } from '../../notifications/lib/monitoring-reminders';
 
 const FREQUENCY_OPTIONS: { label: string; value: MonitoringScheduleFrequency }[] = [
   { label: 'weekly', value: 'weekly' },
@@ -89,6 +90,12 @@ export default function BiofeedbackMonitoringScheduleCreateScreen() {
         pendingSinceDateKey: null,
         isActive: true,
       });
+
+      try {
+        await syncMonitoringMorningReminders();
+      } catch (error) {
+        console.warn('MONITORING REMINDER SYNC FAILED:', error);
+      }
 
       navigateBackSafely();
     } catch (error) {
