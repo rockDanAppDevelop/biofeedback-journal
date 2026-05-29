@@ -15,6 +15,7 @@ function AppStack() {
       <Stack.Screen name="planning" options={{ headerShown: false }} />
       <Stack.Screen name="weekly-summary" options={{ headerShown: false }} />
       <Stack.Screen name="reminder-settings" options={{ headerShown: false }} />
+      <Stack.Screen name="monitoring-schedules/new" options={{ headerShown: false }} />
       <Stack.Screen name="routines/new" options={{ headerShown: false }} />
       <Stack.Screen name="routines/[routineId]" options={{ headerShown: false }} />
       <Stack.Screen name="routines/[routineId]/add-item" options={{ headerShown: false }} />

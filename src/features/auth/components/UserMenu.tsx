@@ -21,6 +21,7 @@ type UserMenuProps = {
 };
 
 const navigationItems = [
+  { label: 'ניטור בוקר', route: '/monitoring-schedules/new' },
   { label: 'סיכום שבועי', route: '/weekly-summary' },
   { label: 'תזכורות', route: '/reminder-settings' },
   { label: 'ייצוא נתונים', route: '/export' },
