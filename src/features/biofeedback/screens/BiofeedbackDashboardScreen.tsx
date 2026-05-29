@@ -17,9 +17,14 @@ import {
 } from '../data/firebase-routines-repository';
 import { listPlannedPracticesByDateKey } from '../data/firebase-planned-practices-repository';
 import { listBiofeedbackEntriesByDateKeyFromFirestore } from '../data/firebase-biofeedback-read-repository';
+import { listActiveMonitoringSchedules } from '../data/firebase-monitoring-schedules-repository';
 import { findOrCreatePlannedPracticeForRoutineItem } from '../lib/find-or-create-planned-practice';
 import { isMonitoringEntry, isPracticeEntry } from '../lib/entry-kind';
 import { isPracticeRoutineItem } from '../lib/routine-item-kind';
+import {
+  getVisibleMorningMonitoringSchedulesForDate,
+  type VisibleMonitoringSchedule,
+} from '../lib/monitoring-schedule-visibility';
 import type { BiofeedbackEntry } from '../types/biofeedback-entry.types';
 import type { RoutineItem } from '../types/routine.types';
 
@@ -84,6 +89,9 @@ export default function BiofeedbackDashboardScreen() {
   const [firstSeenDateKey, setFirstSeenDateKey] = useState('');
   const [referenceDate, setReferenceDate] = useState(() => new Date());
   const [plannedRoutineItems, setPlannedRoutineItems] = useState<PlannedRoutineItem[]>([]);
+  const [visibleMonitoringSchedules, setVisibleMonitoringSchedules] = useState<
+    VisibleMonitoringSchedule[]
+  >([]);
   const [startingPlannedItemId, setStartingPlannedItemId] = useState<string | null>(null);
 
   useFocusEffect(
@@ -104,6 +112,7 @@ export default function BiofeedbackDashboardScreen() {
         setPracticeEntryDateKeys([]);
         setMonitoringDateKeys([]);
         setPlannedRoutineItems([]);
+        setVisibleMonitoringSchedules([]);
         return;
       }
 
@@ -146,6 +155,7 @@ export default function BiofeedbackDashboardScreen() {
       setMonitoringDateKeys(uniqueMonitoringDateKeys);
       const todayDateKey = toDateKey(new Date());
       const routines = await listActiveRoutines();
+      const activeMonitoringSchedules = await listActiveMonitoringSchedules();
       const plannedPractices = await listPlannedPracticesByDateKey(todayDateKey);
       const todayEntries = await listBiofeedbackEntriesByDateKeyFromFirestore(todayDateKey);
       const todayEntryIds = new Set(todayEntries.map((entry) => entry.id));
@@ -171,6 +181,9 @@ export default function BiofeedbackDashboardScreen() {
       );
 
       setPlannedRoutineItems(nextPlannedRoutineItems);
+      setVisibleMonitoringSchedules(
+        getVisibleMorningMonitoringSchedulesForDate(activeMonitoringSchedules, todayDateKey),
+      );
       const reminderTime = await getDailyReminderTime();
       await syncDailyReminderForToday(uniqueDateKeys.includes(todayDateKey), reminderTime);
     } catch (error) {
@@ -178,6 +191,7 @@ export default function BiofeedbackDashboardScreen() {
       setPracticeEntryDateKeys([]);
       setMonitoringDateKeys([]);
       setPlannedRoutineItems([]);
+      setVisibleMonitoringSchedules([]);
     }
   }
 
@@ -224,6 +238,12 @@ export default function BiofeedbackDashboardScreen() {
     }
   }
 
+  function handleStartMorningMonitoringPress() {
+    const todayDateKey = toDateKey(new Date());
+
+    router.push(`/entries/new?dateKey=${todayDateKey}`);
+  }
+
   const monthTitle = useMemo(() => getMonthTitle(referenceDate), [referenceDate]);
 
   return (
@@ -252,6 +272,54 @@ export default function BiofeedbackDashboardScreen() {
         </View>
 
         <StreakInsightCard entryDateKeys={practiceEntryDateKeys} todayDateKey={toDateKey(new Date())} />
+
+        {visibleMonitoringSchedules.length > 0 ? (
+          <View style={styles.monitoringSection}>
+            <Text style={styles.monitoringTitle}>ניטור בוקר</Text>
+
+            {visibleMonitoringSchedules.map((visibleSchedule) => (
+              <View
+                key={visibleSchedule.schedule.id}
+                style={[
+                  styles.monitoringCard,
+                  visibleSchedule.state === 'scheduled'
+                    ? styles.monitoringCardScheduled
+                    : visibleSchedule.state === 'due'
+                      ? styles.monitoringCardDue
+                      : styles.monitoringCardPending,
+                ]}
+              >
+                <View style={styles.monitoringCardHeader}>
+                  <Text style={styles.monitoringCardTitle}>
+                    {visibleSchedule.state === 'pending'
+                      ? 'ממתין לביצוע'
+                      : visibleSchedule.state === 'due'
+                        ? 'הגיע הזמן לניטור'
+                        : 'מתוכנן להיום'}
+                  </Text>
+                  <View style={styles.monitoringStateBadge}>
+                    <Text style={styles.monitoringStateBadgeText}>
+                      {visibleSchedule.state}
+                    </Text>
+                  </View>
+                </View>
+
+                <Text style={styles.monitoringMeta}>
+                  {visibleSchedule.state === 'pending'
+                    ? `ממתין מאז ${visibleSchedule.schedule.pendingSinceDateKey}`
+                    : `תאריך יעד ${visibleSchedule.schedule.nextDueDateKey}`}
+                </Text>
+
+                <Pressable
+                  style={styles.monitoringActionButton}
+                  onPress={handleStartMorningMonitoringPress}
+                >
+                  <Text style={styles.monitoringActionButtonText}>בצע ניטור</Text>
+                </Pressable>
+              </View>
+            ))}
+          </View>
+        ) : null}
 
         <View style={styles.todayPlanSection}>
           <Text style={styles.todayPlanTitle}>התכנון להיום</Text>
@@ -332,6 +400,84 @@ export default function BiofeedbackDashboardScreen() {
 }
 
 const styles = StyleSheet.create({
+  monitoringSection: {
+    marginTop: 6,
+    marginBottom: 18,
+  },
+  monitoringTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#243447',
+    textAlign: 'right',
+    marginBottom: 10,
+  },
+  monitoringCard: {
+    borderWidth: 1,
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 10,
+  },
+  monitoringCardScheduled: {
+    borderColor: '#d7dce5',
+    backgroundColor: '#f6f7f9',
+  },
+  monitoringCardDue: {
+    borderColor: '#e0c27a',
+    backgroundColor: '#fff8e5',
+  },
+  monitoringCardPending: {
+    borderColor: '#c8b6e8',
+    backgroundColor: '#f6f0ff',
+  },
+  monitoringCardHeader: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+    marginBottom: 8,
+  },
+  monitoringCardTitle: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#243447',
+    textAlign: 'right',
+  },
+  monitoringStateBadge: {
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#d7dce5',
+  },
+  monitoringStateBadgeText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#4b5563',
+  },
+  monitoringMeta: {
+    fontSize: 13,
+    color: '#5b6b7d',
+    textAlign: 'right',
+    marginBottom: 12,
+  },
+  monitoringActionButton: {
+    alignSelf: 'flex-end',
+    minHeight: 38,
+    borderRadius: 10,
+    backgroundColor: '#ede7f6',
+    borderWidth: 1,
+    borderColor: '#c8b6e8',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 14,
+  },
+  monitoringActionButtonText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#5e35b1',
+  },
   todayPlanSection: {
     marginTop: 6,
     marginBottom: 18,

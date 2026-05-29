@@ -12,6 +12,7 @@ import WeeklySuccessIndicator from '../components/WeeklySuccessIndicator';
 import { toDateKey } from '../components/calendar.utils';
 import { BiofeedbackEntry } from '../types/biofeedback-entry.types';
 import { listBiofeedbackEntriesByDateKeyFromFirestore } from '../data/firebase-biofeedback-read-repository';
+import { listActiveMonitoringSchedules } from '../data/firebase-monitoring-schedules-repository';
 import { listPlannedPracticesByDateKey } from '../data/firebase-planned-practices-repository';
 import {
   getRoutineItemsForDate,
@@ -24,6 +25,10 @@ import type { RoutineItem } from '../types/routine.types';
 import { ACTIVITY_CATALOG } from '../constants/activity-catalog';
 import { findOrCreatePlannedPracticeForRoutineItem } from '../lib/find-or-create-planned-practice';
 import { isMonitoringEntry } from '../lib/entry-kind';
+import {
+  getVisibleMorningMonitoringSchedulesForDate,
+  type VisibleMonitoringSchedule,
+} from '../lib/monitoring-schedule-visibility';
 import { isPracticeRoutineItem } from '../lib/routine-item-kind';
 
 type Props = {
@@ -122,6 +127,9 @@ export default function BiofeedbackDayEntriesScreen({ dateKey }: Props) {
   const [entries, setEntries] = useState<BiofeedbackEntry[]>([]);
   const [entryDateKeys, setEntryDateKeys] = useState<string[]>([]);
   const [plannedRoutineItems, setPlannedRoutineItems] = useState<PlannedRoutineItem[]>([]);
+  const [visibleMonitoringSchedules, setVisibleMonitoringSchedules] = useState<
+    VisibleMonitoringSchedule[]
+  >([]);
   const [startingPlannedItemId, setStartingPlannedItemId] = useState<string | null>(null);
   const previousDateKey = addDaysToDateKey(dateKey, -1);
   const todayDateKey = toDateKey(new Date());
@@ -164,6 +172,11 @@ export default function BiofeedbackDayEntriesScreen({ dateKey }: Props) {
           setEntryDateKeys(uniqueDateKeys);
         }
 
+        const activeMonitoringSchedules = await listActiveMonitoringSchedules();
+        setVisibleMonitoringSchedules(
+          getVisibleMorningMonitoringSchedulesForDate(activeMonitoringSchedules, dateKey),
+        );
+
         const routines = await listActiveRoutines();
         const plannedPractices = await listPlannedPracticesByDateKey(dateKey);
         const nextPlannedRoutineItems = routines.flatMap((routine) =>
@@ -195,6 +208,7 @@ export default function BiofeedbackDayEntriesScreen({ dateKey }: Props) {
         console.log('FIREBASE LOAD FAILED:', e);
         setEntryDateKeys([]);
         setPlannedRoutineItems([]);
+        setVisibleMonitoringSchedules([]);
       }
     }
 
@@ -237,6 +251,10 @@ export default function BiofeedbackDayEntriesScreen({ dateKey }: Props) {
     } finally {
       setStartingPlannedItemId(null);
     }
+  }
+
+  function handleStartMorningMonitoringPress() {
+    router.push(`/entries/new?dateKey=${dateKey}&fromDay=${dateKey}`);
   }
 
   return (
@@ -290,6 +308,33 @@ export default function BiofeedbackDayEntriesScreen({ dateKey }: Props) {
           weekStartDateKey={weekStartDateKey}
           practiceEntryDateKeys={entryDateKeys}
         />
+
+        {visibleMonitoringSchedules.length > 0 ? (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>ניטור בוקר</Text>
+
+            {visibleMonitoringSchedules.map((visibleSchedule) => (
+              <View key={visibleSchedule.schedule.id} style={styles.monitoringCard}>
+                <View style={styles.cardHeader}>
+                  <Text style={styles.cardTitle}>
+                    {visibleSchedule.state === 'pending'
+                      ? 'ממתין לביצוע'
+                      : visibleSchedule.state === 'due'
+                        ? 'הגיע הזמן לניטור'
+                        : 'מתוכנן ליום הזה'}
+                  </Text>
+                </View>
+
+                <Pressable
+                  style={styles.monitoringActionButton}
+                  onPress={handleStartMorningMonitoringPress}
+                >
+                  <Text style={styles.monitoringActionButtonText}>בצע ניטור</Text>
+                </Pressable>
+              </View>
+            ))}
+          </View>
+        ) : null}
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>תרגולים מתוכננים</Text>
@@ -574,6 +619,30 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#1b5e20',
     textAlign: 'center',
+  },
+  monitoringCard: {
+    borderWidth: 1,
+    borderColor: '#c8b6e8',
+    borderRadius: 14,
+    padding: 14,
+    backgroundColor: '#f6f0ff',
+    marginBottom: 12,
+  },
+  monitoringActionButton: {
+    alignSelf: 'flex-end',
+    minHeight: 38,
+    borderRadius: 10,
+    backgroundColor: '#ede7f6',
+    borderWidth: 1,
+    borderColor: '#c8b6e8',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 14,
+  },
+  monitoringActionButtonText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#5e35b1',
   },
   card: {
     borderWidth: 1,
