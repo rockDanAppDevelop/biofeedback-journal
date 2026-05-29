@@ -20,6 +20,11 @@ import BiofeedbackHeader from '../../biofeedback/components/BiofeedbackHeader';
 import { toDateKey } from '../../biofeedback/components/calendar.utils';
 import { hasBiofeedbackEntryForDateKeyFromFirestore } from '../../biofeedback/data/firebase-biofeedback-read-repository';
 import {
+  listActiveMonitoringSchedules,
+  updateMonitoringSchedule,
+} from '../../biofeedback/data/firebase-monitoring-schedules-repository';
+import type { MonitoringSchedule } from '../../biofeedback/types/monitoring-schedule.types';
+import {
   updateCurrentUserPlannedReminderTime,
   updateCurrentUserReminderTime,
 } from '../../auth/data/update-current-user-reminder-time';
@@ -36,8 +41,9 @@ import {
   DEFAULT_PLANNED_REMINDER_TIME,
   getPlannedReminderTime,
 } from '../lib/get-planned-reminder-time';
+import { syncMonitoringMorningReminders } from '../lib/monitoring-reminders';
 
-type ReminderPickerTarget = 'daily' | 'planned';
+type ReminderPickerTarget = 'daily' | 'planned' | 'monitoring';
 type ReminderTime = { hour: number; minute: number };
 
 function formatTwoDigits(value: number): string {
@@ -128,6 +134,10 @@ export default function ReminderSettingsScreen() {
   const [plannedMinuteText, setPlannedMinuteText] = useState(
     String(DEFAULT_PLANNED_REMINDER_TIME.minute),
   );
+  const [monitoringHourText, setMonitoringHourText] = useState('20');
+  const [monitoringMinuteText, setMonitoringMinuteText] = useState('0');
+  const [activeMorningMonitoringSchedule, setActiveMorningMonitoringSchedule] =
+    useState<MonitoringSchedule | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [pickerTarget, setPickerTarget] = useState<ReminderPickerTarget | null>(null);
@@ -135,6 +145,8 @@ export default function ReminderSettingsScreen() {
   const [loadedPlannedReminderTime, setLoadedPlannedReminderTime] =
     useState<ReminderTime | null>(null);
   const loadedPlannedReminderTimeRef = useRef<ReminderTime | null>(null);
+  const [loadedMonitoringReminderTime, setLoadedMonitoringReminderTime] =
+    useState<ReminderTime | null>(null);
   const dailyTimeLabel = useMemo(
     () => toTimeLabel(dailyHourText, dailyMinuteText),
     [dailyHourText, dailyMinuteText],
@@ -143,6 +155,10 @@ export default function ReminderSettingsScreen() {
     () => toTimeLabel(plannedHourText, plannedMinuteText),
     [plannedHourText, plannedMinuteText],
   );
+  const monitoringTimeLabel = useMemo(
+    () => toTimeLabel(monitoringHourText, monitoringMinuteText),
+    [monitoringHourText, monitoringMinuteText],
+  );
   const currentDailyReminderTime = useMemo(
     () => parseReminderTime(dailyHourText, dailyMinuteText),
     [dailyHourText, dailyMinuteText],
@@ -150,6 +166,10 @@ export default function ReminderSettingsScreen() {
   const currentPlannedReminderTime = useMemo(
     () => parseReminderTime(plannedHourText, plannedMinuteText),
     [plannedHourText, plannedMinuteText],
+  );
+  const currentMonitoringReminderTime = useMemo(
+    () => parseReminderTime(monitoringHourText, monitoringMinuteText),
+    [monitoringHourText, monitoringMinuteText],
   );
   const hasChanges = useMemo(() => {
     if (!loadedDailyReminderTime || !loadedPlannedReminderTime) {
@@ -160,14 +180,29 @@ export default function ReminderSettingsScreen() {
       return true;
     }
 
-    return (
+    const didBaseReminderTimesChange =
       !areReminderTimesEqual(currentDailyReminderTime, loadedDailyReminderTime) ||
-      !areReminderTimesEqual(currentPlannedReminderTime, loadedPlannedReminderTime)
+      !areReminderTimesEqual(currentPlannedReminderTime, loadedPlannedReminderTime);
+
+    if (!activeMorningMonitoringSchedule) {
+      return didBaseReminderTimesChange;
+    }
+
+    if (!currentMonitoringReminderTime || !loadedMonitoringReminderTime) {
+      return true;
+    }
+
+    return (
+      didBaseReminderTimesChange ||
+      !areReminderTimesEqual(currentMonitoringReminderTime, loadedMonitoringReminderTime)
     );
   }, [
+    activeMorningMonitoringSchedule,
     currentDailyReminderTime,
+    currentMonitoringReminderTime,
     currentPlannedReminderTime,
     loadedDailyReminderTime,
+    loadedMonitoringReminderTime,
     loadedPlannedReminderTime,
   ]);
   const canResetToDefaults =
@@ -180,21 +215,37 @@ export default function ReminderSettingsScreen() {
     async function loadReminderTime() {
       try {
         setIsLoading(true);
-        const [dailyReminderTime, plannedReminderTime] = await Promise.all([
+        const [dailyReminderTime, plannedReminderTime, monitoringSchedules] = await Promise.all([
           getDailyReminderTime(),
           getPlannedReminderTime(),
+          listActiveMonitoringSchedules(),
         ]);
 
         if (!isActive) {
           return;
         }
 
+        const morningMonitoringSchedule =
+          monitoringSchedules.find((schedule) => schedule.monitoringType === 'morning') ?? null;
+        const monitoringReminderTime = morningMonitoringSchedule
+          ? {
+              hour: morningMonitoringSchedule.reminderHour,
+              minute: morningMonitoringSchedule.reminderMinute,
+            }
+          : null;
+
         setDailyHourText(String(dailyReminderTime.hour));
         setDailyMinuteText(String(dailyReminderTime.minute));
         setPlannedHourText(String(plannedReminderTime.hour));
         setPlannedMinuteText(String(plannedReminderTime.minute));
+        setActiveMorningMonitoringSchedule(morningMonitoringSchedule);
+        if (monitoringReminderTime) {
+          setMonitoringHourText(String(monitoringReminderTime.hour));
+          setMonitoringMinuteText(String(monitoringReminderTime.minute));
+        }
         setLoadedDailyReminderTime(dailyReminderTime);
         setLoadedPlannedReminderTime(plannedReminderTime);
+        setLoadedMonitoringReminderTime(monitoringReminderTime);
         loadedPlannedReminderTimeRef.current = plannedReminderTime;
       } finally {
         if (isActive) {
@@ -225,6 +276,12 @@ export default function ReminderSettingsScreen() {
       return;
     }
 
+    if (pickerTarget === 'monitoring') {
+      setMonitoringHourText(String(selectedDate.getHours()));
+      setMonitoringMinuteText(String(selectedDate.getMinutes()));
+      return;
+    }
+
     setPlannedHourText(String(selectedDate.getHours()));
     setPlannedMinuteText(String(selectedDate.getMinutes()));
   }
@@ -232,9 +289,15 @@ export default function ReminderSettingsScreen() {
   async function saveReminderTimes(
     dailyReminderTime: ReminderTime | null,
     plannedReminderTime: ReminderTime | null,
+    monitoringReminderTime: ReminderTime | null,
   ) {
     if (!dailyReminderTime || !plannedReminderTime) {
       Alert.alert('שעה לא תקינה', 'יש להזין שעה בין 0 ל-23 ודקה בין 0 ל-59.');
+      return;
+    }
+
+    if (activeMorningMonitoringSchedule && !monitoringReminderTime) {
+      Alert.alert('שעה לא תקינה', 'יש להזין שעה תקינה לתזכורת ניטור הבוקר.');
       return;
     }
 
@@ -251,6 +314,12 @@ export default function ReminderSettingsScreen() {
       await Promise.all([
         updateCurrentUserReminderTime(dailyReminderTime),
         updateCurrentUserPlannedReminderTime(plannedReminderTime),
+        activeMorningMonitoringSchedule && monitoringReminderTime
+          ? updateMonitoringSchedule(activeMorningMonitoringSchedule.id, {
+              reminderHour: monitoringReminderTime.hour,
+              reminderMinute: monitoringReminderTime.minute,
+            })
+          : Promise.resolve(),
       ]);
 
       const todayDateKey = toDateKey(new Date());
@@ -258,6 +327,7 @@ export default function ReminderSettingsScreen() {
       await Promise.all([
         syncDailyReminderForToday(hasEntryToday, dailyReminderTime),
         syncPlannedItemsMorningReminder(7, plannedReminderTime),
+        syncMonitoringMorningReminders(),
       ]);
 
       const loadedPlannedReminderTime = loadedPlannedReminderTimeRef.current;
@@ -275,6 +345,14 @@ export default function ReminderSettingsScreen() {
       loadedPlannedReminderTimeRef.current = plannedReminderTime;
       setLoadedDailyReminderTime(dailyReminderTime);
       setLoadedPlannedReminderTime(plannedReminderTime);
+      if (activeMorningMonitoringSchedule && monitoringReminderTime) {
+        setActiveMorningMonitoringSchedule({
+          ...activeMorningMonitoringSchedule,
+          reminderHour: monitoringReminderTime.hour,
+          reminderMinute: monitoringReminderTime.minute,
+        });
+        setLoadedMonitoringReminderTime(monitoringReminderTime);
+      }
       Alert.alert('נשמר', 'שעות התזכורת נשמרו.', [
         {
           text: 'אישור',
@@ -294,7 +372,11 @@ export default function ReminderSettingsScreen() {
       return;
     }
 
-    await saveReminderTimes(currentDailyReminderTime, currentPlannedReminderTime);
+    await saveReminderTimes(
+      currentDailyReminderTime,
+      currentPlannedReminderTime,
+      activeMorningMonitoringSchedule ? currentMonitoringReminderTime : null,
+    );
   }
 
   function handleResetToDefaultsPress() {
@@ -317,7 +399,11 @@ export default function ReminderSettingsScreen() {
             setDailyMinuteText(String(DEFAULT_DAILY_REMINDER_TIME.minute));
             setPlannedHourText(String(DEFAULT_PLANNED_REMINDER_TIME.hour));
             setPlannedMinuteText(String(DEFAULT_PLANNED_REMINDER_TIME.minute));
-            void saveReminderTimes(DEFAULT_DAILY_REMINDER_TIME, DEFAULT_PLANNED_REMINDER_TIME);
+            void saveReminderTimes(
+              DEFAULT_DAILY_REMINDER_TIME,
+              DEFAULT_PLANNED_REMINDER_TIME,
+              activeMorningMonitoringSchedule ? currentMonitoringReminderTime : null,
+            );
           },
         },
       ],
@@ -446,6 +532,75 @@ export default function ReminderSettingsScreen() {
                 </>
               )}
             </>
+          )}
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>ניטור בוקר</Text>
+          <Text style={styles.descriptionText}>
+            {activeMorningMonitoringSchedule
+              ? 'תישלח בערב שלפני תאריך היעד של ניטור הבוקר.'
+              : 'לא מוגדר ניטור בוקר.'}
+          </Text>
+
+          {isLoading ? (
+            <View style={styles.loadingRow}>
+              <ActivityIndicator size="small" color="#1e4f8a" />
+              <Text style={styles.loadingText}>טוען...</Text>
+            </View>
+          ) : activeMorningMonitoringSchedule ? (
+            <>
+              {Platform.OS === 'web' ? (
+                <>
+                  <Text style={styles.label}>שעה</Text>
+                  <TextInput
+                    value={monitoringHourText}
+                    onChangeText={setMonitoringHourText}
+                    style={styles.input}
+                    keyboardType="numeric"
+                    maxLength={2}
+                    placeholder="20"
+                  />
+
+                  <Text style={styles.label}>דקה</Text>
+                  <TextInput
+                    value={monitoringMinuteText}
+                    onChangeText={setMonitoringMinuteText}
+                    style={styles.input}
+                    keyboardType="numeric"
+                    maxLength={2}
+                    placeholder="00"
+                  />
+                </>
+              ) : (
+                <>
+                  <Pressable style={styles.timeField} onPress={() => setPickerTarget('monitoring')}>
+                    <Text style={styles.timeFieldLabel}>שעה</Text>
+                    <Text style={styles.currentTimeText}>{monitoringTimeLabel}</Text>
+                  </Pressable>
+
+                  {pickerTarget === 'monitoring' ? (
+                    <DateTimePicker
+                      value={toTimeDate(monitoringHourText, monitoringMinuteText, {
+                        hour: 20,
+                        minute: 0,
+                      })}
+                      mode="time"
+                      display="default"
+                      is24Hour
+                      onChange={handleTimePickerChange}
+                    />
+                  ) : null}
+                </>
+              )}
+            </>
+          ) : (
+            <Pressable
+              style={styles.resetButton}
+              onPress={() => router.push('/monitoring-schedules/new')}
+            >
+              <Text style={styles.resetButtonText}>הגדר ניטור בוקר</Text>
+            </Pressable>
           )}
         </View>
 
