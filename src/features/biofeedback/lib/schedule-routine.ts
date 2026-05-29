@@ -4,6 +4,7 @@ import {
 } from '../data/firebase-planned-practices-repository';
 import { getRoutineItemsForDate } from '../data/firebase-routines-repository';
 import type { Routine } from '../types/routine.types';
+import { isPracticeRoutineItem } from './routine-item-kind';
 
 export type ScheduleRoutineForDateSummary = {
   createdCount: number;
@@ -14,7 +15,7 @@ export async function scheduleRoutineForDate(
   routine: Routine,
   dateKey: string,
 ): Promise<ScheduleRoutineForDateSummary> {
-  const routineItems = getRoutineItemsForDate(routine, dateKey);
+  const routineItems = getRoutineItemsForDate(routine, dateKey).filter(isPracticeRoutineItem);
   const existingPlannedPractices = await listPlannedPracticesByDateKey(dateKey);
 
   const existingRoutineItemIds = new Set(

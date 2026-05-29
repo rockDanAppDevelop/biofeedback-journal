@@ -4,14 +4,17 @@ import {
 } from '../data/firebase-routines-repository';
 import { listBiofeedbackEntriesByDateKeyFromFirestore } from '../data/firebase-biofeedback-read-repository';
 import { listPlannedPracticesByDateKey } from '../data/firebase-planned-practices-repository';
+import { isPracticeRoutineItem } from './routine-item-kind';
 
 export async function hasPlannedItemsForDate(dateKey: string): Promise<boolean> {
   const routines = await listActiveRoutines();
   const plannedRoutineItems = routines.flatMap((routine) =>
-    getRoutineItemsForDate(routine, dateKey).map((item) => ({
-      routineId: routine.id,
-      item,
-    })),
+    getRoutineItemsForDate(routine, dateKey)
+      .filter(isPracticeRoutineItem)
+      .map((item) => ({
+        routineId: routine.id,
+        item,
+      })),
   );
 
   if (plannedRoutineItems.length === 0) {

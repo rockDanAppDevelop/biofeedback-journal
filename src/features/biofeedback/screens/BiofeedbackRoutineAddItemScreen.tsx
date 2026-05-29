@@ -38,7 +38,6 @@ const BUILT_IN_CATEGORY_DISPLAY_ORDER: Exclude<ActivityCategoryId, 'custom'>[] =
   'trainers',
   'relaxation',
   'guided',
-  'monitoring',
 ];
 
 const NEW_CUSTOM_ACTIVITY_ID = '__new_custom_activity__';
@@ -150,7 +149,10 @@ export default function BiofeedbackRoutineAddItemScreen({ routineId }: Props) {
     }
 
     return ACTIVITY_CATALOG.filter(
-      (item) => item.categoryId === selectedCategoryId && item.isActive,
+      (item) =>
+        item.categoryId === selectedCategoryId &&
+        item.activityType === 'training' &&
+        item.isActive,
     );
   }, [selectedCategoryId]);
 
@@ -257,6 +259,11 @@ export default function BiofeedbackRoutineAddItemScreen({ routineId }: Props) {
       return;
     }
 
+    if (selectedCatalogItem && selectedCatalogItem.activityType !== 'training') {
+      Alert.alert('Monitoring is not supported in practice routines.');
+      return;
+    }
+
     const trimmedNewCustomExerciseName = newCustomExerciseName.trim();
     const parsedNewCustomDurationMinutes = Number(newCustomDurationMinutes.trim());
 
@@ -304,15 +311,12 @@ export default function BiofeedbackRoutineAddItemScreen({ routineId }: Props) {
 
       if (selectedCatalogItem) {
         baseItem = {
-          activityType: selectedCatalogItem.activityType,
+          activityType: 'training',
           measurementType: selectedCatalogItem.measurementType,
           catalogItemId: selectedCatalogItem.id,
           userCustomActivityId: null,
           customExerciseName: null,
-          monitoringType:
-            selectedCatalogItem.activityType === 'monitoring'
-              ? selectedCatalogItem.monitoringType
-              : null,
+          monitoringType: null,
           exerciseParameters: buildExerciseParameters(selectedCatalogItem),
         };
       } else if (isCreatingNewCustomRoutineItem) {

@@ -19,6 +19,7 @@ import { listPlannedPracticesByDateKey } from '../data/firebase-planned-practice
 import { listBiofeedbackEntriesByDateKeyFromFirestore } from '../data/firebase-biofeedback-read-repository';
 import { findOrCreatePlannedPracticeForRoutineItem } from '../lib/find-or-create-planned-practice';
 import { isMonitoringEntry, isPracticeEntry } from '../lib/entry-kind';
+import { isPracticeRoutineItem } from '../lib/routine-item-kind';
 import type { BiofeedbackEntry } from '../types/biofeedback-entry.types';
 import type { RoutineItem } from '../types/routine.types';
 
@@ -149,7 +150,7 @@ export default function BiofeedbackDashboardScreen() {
       const todayEntries = await listBiofeedbackEntriesByDateKeyFromFirestore(todayDateKey);
       const todayEntryIds = new Set(todayEntries.map((entry) => entry.id));
       const nextPlannedRoutineItems = routines.flatMap((routine) =>
-        getRoutineItemsForDate(routine, todayDateKey).map((item) => {
+        getRoutineItemsForDate(routine, todayDateKey).filter(isPracticeRoutineItem).map((item) => {
           const matchingPlannedPractice = plannedPractices.find(
             (practice) =>
               practice.routineId === routine.id &&

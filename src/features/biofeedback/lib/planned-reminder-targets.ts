@@ -10,6 +10,7 @@ import {
 import { ACTIVITY_CATALOG } from '../constants/activity-catalog';
 import type { PlannedPractice } from '../types/planned-practice.types';
 import type { RoutineItem } from '../types/routine.types';
+import { isPracticeRoutineItem } from './routine-item-kind';
 
 export type PlannedReminderTarget = {
   plannedPracticeId: string;
@@ -145,7 +146,7 @@ export async function getPlannedReminderTargetsForDate(
   const seenKeys = new Set<string>();
 
   for (const routine of routines) {
-    const routineItems = getRoutineItemsForDate(routine, dateKey);
+    const routineItems = getRoutineItemsForDate(routine, dateKey).filter(isPracticeRoutineItem);
 
     for (const item of routineItems) {
       const key = getPlannedPracticeKey(routine.id, item.id, dateKey);

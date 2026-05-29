@@ -24,6 +24,7 @@ import type { RoutineItem } from '../types/routine.types';
 import { ACTIVITY_CATALOG } from '../constants/activity-catalog';
 import { findOrCreatePlannedPracticeForRoutineItem } from '../lib/find-or-create-planned-practice';
 import { isMonitoringEntry } from '../lib/entry-kind';
+import { isPracticeRoutineItem } from '../lib/routine-item-kind';
 
 type Props = {
   dateKey: string;
@@ -167,6 +168,7 @@ export default function BiofeedbackDayEntriesScreen({ dateKey }: Props) {
         const plannedPractices = await listPlannedPracticesByDateKey(dateKey);
         const nextPlannedRoutineItems = routines.flatMap((routine) =>
           getRoutineItemsForDate(routine, dateKey)
+            .filter(isPracticeRoutineItem)
             .filter((item) => {
               const matchingPlannedPractice = plannedPractices.find(
                 (practice) =>
