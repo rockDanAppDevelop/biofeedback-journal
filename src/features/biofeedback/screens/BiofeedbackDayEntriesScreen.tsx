@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { collection, getDocs } from 'firebase/firestore';
 
 import BiofeedbackHeader from '../components/BiofeedbackHeader';
+import MorningMonitoringCardSection from '../components/MorningMonitoringCardSection';
 import StreakInsightCard from '../components/StreakInsightCard';
 import WeeklySuccessIndicator from '../components/WeeklySuccessIndicator';
 import { toDateKey } from '../components/calendar.utils';
@@ -29,6 +30,10 @@ import {
   getVisibleMorningMonitoringSchedulesForDate,
   type VisibleMonitoringSchedule,
 } from '../lib/monitoring-schedule-visibility';
+import {
+  getMonitoringScheduleCardSummary,
+  type MonitoringScheduleCardSummary,
+} from '../lib/monitoring-schedule-summary';
 import { isPracticeRoutineItem } from '../lib/routine-item-kind';
 
 type Props = {
@@ -130,6 +135,9 @@ export default function BiofeedbackDayEntriesScreen({ dateKey }: Props) {
   const [visibleMonitoringSchedules, setVisibleMonitoringSchedules] = useState<
     VisibleMonitoringSchedule[]
   >([]);
+  const [monitoringScheduleSummaries, setMonitoringScheduleSummaries] = useState<
+    MonitoringScheduleCardSummary[]
+  >([]);
   const [startingPlannedItemId, setStartingPlannedItemId] = useState<string | null>(null);
   const previousDateKey = addDaysToDateKey(dateKey, -1);
   const todayDateKey = toDateKey(new Date());
@@ -153,10 +161,22 @@ export default function BiofeedbackDayEntriesScreen({ dateKey }: Props) {
         setEntries(mapped);
         const entryIds = new Set(mapped.map((entry) => entry.id));
         const user = auth.currentUser;
+        let allEntries = mapped;
 
         if (user) {
           const entriesCollection = collection(db, 'users', user.uid, 'entries');
           const snapshot = await getDocs(entriesCollection);
+          allEntries = snapshot.docs.map((docSnapshot) =>
+            mapFirebaseBiofeedbackEntryToDomain(
+              {
+                id: docSnapshot.id,
+                ...docSnapshot.data(),
+              } as Parameters<typeof mapFirebaseBiofeedbackEntryToDomain>[0],
+              {
+                userId: user.uid,
+              },
+            ),
+          );
           const uniqueDateKeys = Array.from(
             new Set(
               snapshot.docs
@@ -173,8 +193,20 @@ export default function BiofeedbackDayEntriesScreen({ dateKey }: Props) {
         }
 
         const activeMonitoringSchedules = await listActiveMonitoringSchedules();
-        setVisibleMonitoringSchedules(
-          getVisibleMorningMonitoringSchedulesForDate(activeMonitoringSchedules, dateKey),
+        const nextVisibleMonitoringSchedules = getVisibleMorningMonitoringSchedulesForDate(
+          activeMonitoringSchedules,
+          dateKey,
+        );
+        setVisibleMonitoringSchedules(nextVisibleMonitoringSchedules);
+        setMonitoringScheduleSummaries(
+          nextVisibleMonitoringSchedules.map((visibleSchedule) =>
+            getMonitoringScheduleCardSummary(
+              visibleSchedule.schedule,
+              visibleSchedule.state,
+              dateKey,
+              allEntries,
+            ),
+          ),
         );
 
         const routines = await listActiveRoutines();
@@ -209,6 +241,7 @@ export default function BiofeedbackDayEntriesScreen({ dateKey }: Props) {
         setEntryDateKeys([]);
         setPlannedRoutineItems([]);
         setVisibleMonitoringSchedules([]);
+        setMonitoringScheduleSummaries([]);
       }
     }
 
@@ -255,6 +288,10 @@ export default function BiofeedbackDayEntriesScreen({ dateKey }: Props) {
 
   function handleStartMorningMonitoringPress() {
     router.push(`/entries/new?dateKey=${dateKey}&fromDay=${dateKey}`);
+  }
+
+  function handleManageMorningMonitoringPress() {
+    router.push('/monitoring-schedules/new');
   }
 
   return (
@@ -309,32 +346,12 @@ export default function BiofeedbackDayEntriesScreen({ dateKey }: Props) {
           practiceEntryDateKeys={entryDateKeys}
         />
 
-        {visibleMonitoringSchedules.length > 0 ? (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>ניטור בוקר</Text>
+        <MorningMonitoringCardSection
+          summaries={monitoringScheduleSummaries}
+          onStartMonitoring={handleStartMorningMonitoringPress}
+          onManageMonitoring={handleManageMorningMonitoringPress}
+        />
 
-            {visibleMonitoringSchedules.map((visibleSchedule) => (
-              <View key={visibleSchedule.schedule.id} style={styles.monitoringCard}>
-                <View style={styles.cardHeader}>
-                  <Text style={styles.cardTitle}>
-                    {visibleSchedule.state === 'pending'
-                      ? 'ממתין לביצוע'
-                      : visibleSchedule.state === 'due'
-                        ? 'הגיע הזמן לניטור'
-                        : 'מתוכנן ליום הזה'}
-                  </Text>
-                </View>
-
-                <Pressable
-                  style={styles.monitoringActionButton}
-                  onPress={handleStartMorningMonitoringPress}
-                >
-                  <Text style={styles.monitoringActionButtonText}>בצע ניטור</Text>
-                </Pressable>
-              </View>
-            ))}
-          </View>
-        ) : null}
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>תרגולים מתוכננים</Text>
