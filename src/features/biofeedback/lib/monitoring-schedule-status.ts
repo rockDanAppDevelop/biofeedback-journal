@@ -57,7 +57,7 @@ export function isMonitoringScheduleDue(
   return (
     schedule.isActive &&
     schedule.pendingSinceDateKey === null &&
-    schedule.nextDueDateKey <= todayDateKey
+    schedule.nextDueDateKey === todayDateKey
   );
 }
 
