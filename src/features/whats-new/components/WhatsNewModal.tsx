@@ -6,7 +6,7 @@ import {
   setSeenWhatsNewVersion,
 } from '../lib/whats-new-storage';
 
-const WHATS_NEW_VERSION = '0.11.5';
+const WHATS_NEW_VERSION = '0.12.0';
 
 let activeModalInstanceId: symbol | null = null;
 
@@ -80,18 +80,26 @@ export default function WhatsNewModal() {
     <Modal visible={isVisible} transparent animationType="fade" onRequestClose={handleDismiss}>
       <View style={styles.backdrop}>
         <View style={styles.card}>
-          <Text style={styles.title}>חדש בגרסה 0.11.5</Text>
+          <Text style={styles.title}>חדש בגרסה 0.12.0</Text>
 
           <View style={styles.body}>
-            <Text style={styles.bullet}>• סימון ברור יותר של ימי תרגול בגריד החודשי.</Text>
+            <Text style={styles.bullet}>• נוסף ניטור בוקר תקופתי.</Text>
             <Text style={styles.bullet}>
-              • חיווי הצלחה שבועי חדש עם עיגולי ימים וגביע.
+              • אפשר לבחור תדירות: שבועי, דו-שבועי, תלת-שבועי או חודשי.
             </Text>
-            <Text style={styles.bullet}>• שיפור תחושת ההתמדה וההצלחה היומית.</Text>
+            <Text style={styles.bullet}>
+              • אפשר לנהל, להשבית ולהפעיל מחדש ניטור בוקר.
+            </Text>
+            <Text style={styles.bullet}>• תזכורת ערב לפני הניטור.</Text>
+            <Text style={styles.bullet}>• תזכורות חוזרות אם הניטור ממתין לביצוע.</Text>
+            <Text style={styles.bullet}>• כניסה ישירה להזנת ניטור בוקר.</Text>
+            <Text style={styles.bullet}>
+              • הפרדה ברורה יותר בין תרגול יומי לבין ניטור.
+            </Text>
           </View>
 
           <Text style={styles.note}>
-            עכשיו קל יותר לראות במבט אחד איפה תרגלת, ואיך השבוע שלך מתקדם.
+            ניטור בוקר מודד מגמה תקופתית, בלי להשפיע על רצף התרגול היומי.
           </Text>
 
           <Pressable style={styles.button} onPress={handleDismiss}>
