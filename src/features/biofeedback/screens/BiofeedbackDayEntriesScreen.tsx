@@ -287,7 +287,9 @@ export default function BiofeedbackDayEntriesScreen({ dateKey }: Props) {
   }
 
   function handleStartMorningMonitoringPress() {
-    router.push(`/entries/new?dateKey=${dateKey}&fromDay=${dateKey}`);
+    router.push(
+      `/entries/new?dateKey=${dateKey}&fromDay=${dateKey}&activityType=monitoring&monitoringType=morning`,
+    );
   }
 
   function handleManageMorningMonitoringPress() {

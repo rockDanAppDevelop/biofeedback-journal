@@ -9,6 +9,8 @@ export default function NewEntryPage() {
     dateKey?: string;
     plannedPracticeId?: string;
     fromDay?: string;
+    activityType?: string;
+    monitoringType?: string;
   }>();
 
   return (
@@ -16,6 +18,8 @@ export default function NewEntryPage() {
       initialDateKey={params.dateKey}
       plannedPracticeId={params.plannedPracticeId}
       fromDay={params.fromDay}
+      activityType={params.activityType}
+      monitoringType={params.monitoringType}
     />
   );
 }

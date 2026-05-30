@@ -65,6 +65,8 @@ type Props = {
   initialDateKey?: string;
   plannedPracticeId?: string;
   fromDay?: string;
+  activityType?: string;
+  monitoringType?: string;
 };
 
 type MapperSaveInput = ReturnType<typeof toCreateBiofeedbackEntryInput> & {
@@ -124,6 +126,8 @@ export default function BiofeedbackEntryCreateScreen({
   initialDateKey,
   plannedPracticeId,
   fromDay,
+  activityType,
+  monitoringType,
 }: Props) {
   useEffect(() => {
     void testFirebaseConnection();
@@ -132,14 +136,25 @@ export default function BiofeedbackEntryCreateScreen({
   const [values, setValues] = useState(() => {
     const defaults = createDefaultBiofeedbackEntryFormValues();
 
-    if (initialDateKey) {
+    const valuesWithDate = initialDateKey
+      ? {
+          ...defaults,
+          measurementDate: initialDateKey,
+        }
+      : defaults;
+
+    if (activityType === 'monitoring' && monitoringType === 'morning') {
       return {
-        ...defaults,
-        measurementDate: initialDateKey,
+        ...valuesWithDate,
+        selectedCategoryId: 'monitoring' as const,
+        selectedCatalogItemId: '',
+        exerciseName: 'ניטור בוקר',
+        monitoringType: 'morning' as const,
+        monitoringDurationMinutes: '3',
       };
     }
 
-    return defaults;
+    return valuesWithDate;
   });
 
   const [isSaving, setIsSaving] = useState(false);

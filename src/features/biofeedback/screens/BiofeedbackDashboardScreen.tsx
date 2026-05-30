@@ -291,7 +291,9 @@ export default function BiofeedbackDashboardScreen() {
   function handleStartMorningMonitoringPress() {
     const todayDateKey = toDateKey(new Date());
 
-    router.push(`/entries/new?dateKey=${todayDateKey}`);
+    router.push(
+      `/entries/new?dateKey=${todayDateKey}&activityType=monitoring&monitoringType=morning`,
+    );
   }
 
   function handleManageMorningMonitoringPress() {
