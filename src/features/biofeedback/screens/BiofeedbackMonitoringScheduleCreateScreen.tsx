@@ -6,11 +6,16 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import BiofeedbackHeader from '../components/BiofeedbackHeader';
 import DateTimeField from '../components/DateTimeField';
 import { toDateKey } from '../components/calendar.utils';
+import { listAllBiofeedbackEntriesFromFirestore } from '../data/firebase-biofeedback-read-repository';
 import {
   createMonitoringSchedule,
-  listActiveMonitoringSchedules,
+  listMonitoringSchedules,
   updateMonitoringSchedule,
 } from '../data/firebase-monitoring-schedules-repository';
+import {
+  getNextMonitoringDueDateKey,
+  isMorningMonitoringEntry,
+} from '../lib/monitoring-schedule-status';
 import type {
   MonitoringSchedule,
   MonitoringScheduleFrequency,
@@ -47,13 +52,56 @@ function toTimeValue(hour: number, minute: number): string {
   return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
 }
 
+function createScheduleFormUpdate(
+  frequency: MonitoringScheduleFrequency,
+  reminderTime: { hour: number; minute: number },
+  nextDueDateKey: string,
+) {
+  return {
+    frequency,
+    reminderHour: reminderTime.hour,
+    reminderMinute: reminderTime.minute,
+    nextDueDateKey,
+    pendingSinceDateKey: null,
+  };
+}
+
+function getLastMorningMonitoringDateKeyFromEntries(
+  entries: Awaited<ReturnType<typeof listAllBiofeedbackEntriesFromFirestore>>,
+): string | null {
+  return entries
+    .filter(isMorningMonitoringEntry)
+    .map((entry) => entry.dateKey)
+    .sort()
+    .at(-1) ?? null;
+}
+
+function getNextDueDateKeyForFrequency(
+  schedule: MonitoringSchedule | null,
+  frequency: MonitoringScheduleFrequency,
+  formNextDueDateKey: string,
+  lastMorningMonitoringDateKey: string | null,
+): string {
+  if (
+    schedule &&
+    schedule.frequency !== frequency &&
+    lastMorningMonitoringDateKey !== null
+  ) {
+    return getNextMonitoringDueDateKey(lastMorningMonitoringDateKey, frequency);
+  }
+
+  return formNextDueDateKey;
+}
+
 export default function BiofeedbackMonitoringScheduleCreateScreen() {
   const todayDateKey = useMemo(() => toDateKey(new Date()), []);
   const [frequency, setFrequency] = useState<MonitoringScheduleFrequency>('weekly');
   const [reminderTime, setReminderTime] = useState('20:00');
   const [nextDueDateKey, setNextDueDateKey] = useState(todayDateKey);
-  const [activeMorningSchedule, setActiveMorningSchedule] =
+  const [morningSchedule, setMorningSchedule] =
     useState<MonitoringSchedule | null>(null);
+  const [lastMorningMonitoringDateKey, setLastMorningMonitoringDateKey] =
+    useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -68,25 +116,29 @@ export default function BiofeedbackMonitoringScheduleCreateScreen() {
   useEffect(() => {
     let isActive = true;
 
-    async function loadActiveMorningSchedule() {
+    async function loadMorningSchedule() {
       try {
         setIsLoading(true);
-        const activeSchedules = await listActiveMonitoringSchedules();
-        const morningSchedule =
-          activeSchedules.find((schedule) => schedule.monitoringType === 'morning') ?? null;
+        const schedules = await listMonitoringSchedules();
+        const entries = await listAllBiofeedbackEntriesFromFirestore();
+        const nextMorningSchedule =
+          schedules.find((schedule) => schedule.monitoringType === 'morning') ?? null;
+        const nextLastMorningMonitoringDateKey =
+          getLastMorningMonitoringDateKeyFromEntries(entries);
 
         if (!isActive) {
           return;
         }
 
-        setActiveMorningSchedule(morningSchedule);
+        setMorningSchedule(nextMorningSchedule);
+        setLastMorningMonitoringDateKey(nextLastMorningMonitoringDateKey);
 
-        if (morningSchedule) {
-          setFrequency(morningSchedule.frequency);
+        if (nextMorningSchedule) {
+          setFrequency(nextMorningSchedule.frequency);
           setReminderTime(
-            toTimeValue(morningSchedule.reminderHour, morningSchedule.reminderMinute),
+            toTimeValue(nextMorningSchedule.reminderHour, nextMorningSchedule.reminderMinute),
           );
-          setNextDueDateKey(morningSchedule.nextDueDateKey);
+          setNextDueDateKey(nextMorningSchedule.nextDueDateKey);
         }
       } catch (error) {
         console.warn('MONITORING SCHEDULE LOAD FAILED:', error);
@@ -97,7 +149,7 @@ export default function BiofeedbackMonitoringScheduleCreateScreen() {
       }
     }
 
-    void loadActiveMorningSchedule();
+    void loadMorningSchedule();
 
     return () => {
       isActive = false;
@@ -118,25 +170,32 @@ export default function BiofeedbackMonitoringScheduleCreateScreen() {
 
     try {
       setIsSaving(true);
+      const scheduleFormUpdate = createScheduleFormUpdate(
+        frequency,
+        parsedReminderTime,
+        getNextDueDateKeyForFrequency(
+          morningSchedule,
+          frequency,
+          nextDueDateKey,
+          lastMorningMonitoringDateKey,
+        ),
+      );
 
-      if (activeMorningSchedule) {
-        await updateMonitoringSchedule(activeMorningSchedule.id, {
-          frequency,
-          reminderHour: parsedReminderTime.hour,
-          reminderMinute: parsedReminderTime.minute,
-          nextDueDateKey,
-          pendingSinceDateKey: null,
+      if (morningSchedule) {
+        await updateMonitoringSchedule(morningSchedule.id, scheduleFormUpdate);
+        setMorningSchedule({
+          ...morningSchedule,
+          ...scheduleFormUpdate,
         });
+        setNextDueDateKey(scheduleFormUpdate.nextDueDateKey);
       } else {
-        await createMonitoringSchedule({
+        const createdSchedule = await createMonitoringSchedule({
           monitoringType: 'morning',
-          frequency,
-          reminderHour: parsedReminderTime.hour,
-          reminderMinute: parsedReminderTime.minute,
-          nextDueDateKey,
-          pendingSinceDateKey: null,
+          ...scheduleFormUpdate,
           isActive: true,
         });
+        setMorningSchedule(createdSchedule);
+        setNextDueDateKey(createdSchedule.nextDueDateKey);
       }
 
       try {
@@ -151,6 +210,70 @@ export default function BiofeedbackMonitoringScheduleCreateScreen() {
       Alert.alert(
         'שמירת ניטור הבוקר נכשלה',
         error instanceof Error ? error.message : 'לא הצלחנו לשמור את ניטור הבוקר כרגע.',
+      );
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  async function handleToggleActivePress() {
+    if (!morningSchedule || isSaving || isLoading) {
+      return;
+    }
+
+    const parsedReminderTime = parseTimeValue(reminderTime);
+
+    if (!morningSchedule.isActive && !parsedReminderTime) {
+      Alert.alert('שעה לא תקינה', 'יש לבחור שעת תזכורת תקינה.');
+      return;
+    }
+
+    try {
+      setIsSaving(true);
+      const scheduleFormUpdate = parsedReminderTime
+        ? createScheduleFormUpdate(
+            frequency,
+            parsedReminderTime,
+            getNextDueDateKeyForFrequency(
+              morningSchedule,
+              frequency,
+              nextDueDateKey,
+              lastMorningMonitoringDateKey,
+            ),
+          )
+        : null;
+
+      if (morningSchedule.isActive) {
+        await updateMonitoringSchedule(morningSchedule.id, {
+          isActive: false,
+        });
+        setMorningSchedule({
+          ...morningSchedule,
+          isActive: false,
+        });
+      } else if (scheduleFormUpdate) {
+        await updateMonitoringSchedule(morningSchedule.id, {
+          isActive: true,
+          ...scheduleFormUpdate,
+        });
+        setMorningSchedule({
+          ...morningSchedule,
+          isActive: true,
+          ...scheduleFormUpdate,
+        });
+        setNextDueDateKey(scheduleFormUpdate.nextDueDateKey);
+      }
+
+      try {
+        await syncMonitoringMorningReminders();
+      } catch (error) {
+        console.warn('MONITORING REMINDER SYNC FAILED:', error);
+      }
+    } catch (error) {
+      console.log('MONITORING SCHEDULE ACTIVE TOGGLE FAILED:', error);
+      Alert.alert(
+        'עדכון ניטור הבוקר נכשל',
+        error instanceof Error ? error.message : 'לא הצלחנו לעדכן את ניטור הבוקר כרגע.',
       );
     } finally {
       setIsSaving(false);
@@ -206,12 +329,47 @@ export default function BiofeedbackMonitoringScheduleCreateScreen() {
           />
 
           <DateTimeField
-            label="תאריך ניטור הבא"
+            label="חלון ניטור הבא החל מ־"
             value={nextDueDateKey}
             mode="date"
             onChangeValue={setNextDueDateKey}
           />
         </View>
+
+        {morningSchedule ? (
+          <View style={styles.statusSection}>
+            <View style={styles.statusRow}>
+              <Text style={styles.statusLabel}>סטטוס</Text>
+              <Text
+                style={[
+                  styles.statusValue,
+                  morningSchedule.isActive ? styles.statusActive : styles.statusInactive,
+                ]}
+              >
+                {morningSchedule.isActive ? 'פעיל' : 'מושבת'}
+              </Text>
+            </View>
+
+            <Pressable
+              style={[
+                styles.toggleButton,
+                morningSchedule.isActive ? styles.disableButton : styles.enableButton,
+                (isSaving || isLoading) ? styles.saveButtonDisabled : null,
+              ]}
+              onPress={handleToggleActivePress}
+              disabled={isSaving || isLoading}
+            >
+              <Text
+                style={[
+                  styles.toggleButtonText,
+                  morningSchedule.isActive ? styles.disableButtonText : styles.enableButtonText,
+                ]}
+              >
+                {morningSchedule.isActive ? 'השבת ניטור בוקר' : 'הפעל ניטור בוקר'}
+              </Text>
+            </Pressable>
+          </View>
+        ) : null}
 
         <Pressable
           style={[styles.saveButton, isSaving || isLoading ? styles.saveButtonDisabled : null]}
@@ -245,6 +403,37 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 16,
     marginBottom: 16,
+  },
+  statusSection: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e3d7f4',
+    backgroundColor: '#fbf8ff',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    marginBottom: 16,
+  },
+  statusRow: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  statusLabel: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#4b5563',
+    textAlign: 'right',
+  },
+  statusValue: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  statusActive: {
+    color: '#1e4f8a',
+  },
+  statusInactive: {
+    color: '#6b7280',
   },
   description: {
     fontSize: 15,
@@ -303,5 +492,31 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: '#ffffff',
+  },
+  toggleButton: {
+    minHeight: 44,
+    borderRadius: 12,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 14,
+  },
+  enableButton: {
+    borderColor: '#1e4f8a',
+    backgroundColor: '#e3f2fd',
+  },
+  disableButton: {
+    borderColor: '#cbd5e1',
+    backgroundColor: '#ffffff',
+  },
+  toggleButtonText: {
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  enableButtonText: {
+    color: '#0d47a1',
+  },
+  disableButtonText: {
+    color: '#4b5563',
   },
 });

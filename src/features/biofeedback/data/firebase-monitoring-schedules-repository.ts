@@ -134,6 +134,21 @@ export async function listActiveMonitoringSchedules(): Promise<MonitoringSchedul
     .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
 }
 
+export async function listMonitoringSchedules(): Promise<MonitoringSchedule[]> {
+  const user = getCurrentUserOrThrow();
+  const monitoringSchedulesCollection = collection(
+    db,
+    'users',
+    user.uid,
+    'monitoringSchedules',
+  );
+  const snapshot = await getDocs(monitoringSchedulesCollection);
+
+  return snapshot.docs
+    .map((docSnapshot) => mapMonitoringScheduleDocument(docSnapshot, user.uid))
+    .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+}
+
 export async function getMonitoringScheduleById(
   scheduleId: string,
 ): Promise<MonitoringSchedule | null> {

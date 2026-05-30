@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+﻿import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import type { MonitoringScheduleCardSummary } from '../lib/monitoring-schedule-summary';
 
@@ -55,7 +55,7 @@ export default function MorningMonitoringCardSection({
           <Text style={styles.meta}>
             {summary.pendingSinceDateKey
               ? `ממתין מאז: ${summary.pendingSinceDateKey}`
-              : `תאריך יעד: ${summary.nextDueDateKey}`}
+              : `ניטור הבא החל מ־ ${summary.nextDueDateKey}`}
           </Text>
           {summary.overdueDays !== null && summary.overdueDays > 0 ? (
             <Text style={styles.meta}>{`באיחור: ${summary.overdueDays} ימים`}</Text>

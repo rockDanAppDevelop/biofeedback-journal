@@ -21,6 +21,31 @@ function addDaysToDateKey(dateKey: string, days: number): string {
   return toDateKey(date);
 }
 
+function getNextSundayAfterDateKeyWeek(dateKey: string): string {
+  const date = new Date(`${dateKey}T00:00:00`);
+  const daysUntilNextSunday = 7 - date.getDay();
+
+  return addDaysToDateKey(dateKey, daysUntilNextSunday);
+}
+
+function getAdditionalWeeksAfterNextSunday(
+  frequency: MonitoringScheduleFrequency,
+): number {
+  if (frequency === 'weekly') {
+    return 0;
+  }
+
+  if (frequency === 'biweekly') {
+    return 1;
+  }
+
+  if (frequency === 'triweekly') {
+    return 2;
+  }
+
+  return 3;
+}
+
 export function isMonitoringSchedulePending(schedule: MonitoringSchedule): boolean {
   return schedule.isActive && schedule.pendingSinceDateKey !== null;
 }
@@ -59,27 +84,17 @@ export function getNextMonitoringDueDateKey(
   fromDateKey: string,
   frequency: MonitoringScheduleFrequency,
 ): string {
-  if (frequency === 'weekly') {
-    return addDaysToDateKey(fromDateKey, 7);
-  }
+  const nextSundayDateKey = getNextSundayAfterDateKeyWeek(fromDateKey);
+  const additionalWeeks = getAdditionalWeeksAfterNextSunday(frequency);
 
-  if (frequency === 'biweekly') {
-    return addDaysToDateKey(fromDateKey, 14);
-  }
-
-  if (frequency === 'triweekly') {
-    return addDaysToDateKey(fromDateKey, 21);
-  }
-
-  return addDaysToDateKey(fromDateKey, 28);
+  return addDaysToDateKey(nextSundayDateKey, additionalWeeks * 7);
 }
 
 export function getNextMonitoringDueDateKeyAfterCompletion(
   schedule: MonitoringSchedule,
   completedDateKey: string,
 ): string {
-  const anchorDateKey = schedule.pendingSinceDateKey ?? schedule.nextDueDateKey;
-  let nextDueDateKey = getNextMonitoringDueDateKey(anchorDateKey, schedule.frequency);
+  let nextDueDateKey = getNextMonitoringDueDateKey(completedDateKey, schedule.frequency);
 
   while (nextDueDateKey <= completedDateKey) {
     nextDueDateKey = getNextMonitoringDueDateKey(nextDueDateKey, schedule.frequency);
